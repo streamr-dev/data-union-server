@@ -1,0 +1,22 @@
+{
+  "name": "streamr-community-products",
+  "version": "0.1.0",
+  "description": "Backend node for servicing the Streamr Marketplace community products",
+  "main": "index.js",
+  "scripts": {
+    "lint": "./node_modules/.bin/eslint src test",
+    "test": "mocha test/channel-runner.js && mocha --exit test/streamrChannel.js"
+  },
+  "author": "Streamr Network AG",
+  "license": "AGPL-3.0",
+  "dependencies": {
+    "etherlime": "^1.1.1",
+    "monoplasma": "^0.1.1",
+    "streamr-client": "^1.0.2",
+    "web3": "1.0.0-beta.37"
+  },
+  "devDependencies": {
+    "eslint": "^5.16.0",
+    "mocha": "^6.1.3"
+  }
+}
