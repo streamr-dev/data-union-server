@@ -7,16 +7,35 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Operator process",
-            "program": "${workspaceFolder}/start_operator.js"
+            "name": "Start server",
+            "program": "${workspaceFolder}/start_server.js"
+        }, {
+            "type": "node",
+            "request": "launch",
+            "name": "Run current file",
+            "program": "${file}"
         }, {
             "type": "node",
             "request": "launch",
             "name": "Mocha test current file",
             "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/mocha",
+            "env": {
+                "DEBUG": "*,-mocha:*"
+            },
             "runtimeArgs": [
                 "${file}",
                 "--exit"
+            ],
+            "internalConsoleOptions": "openOnSessionStart"
+        }, {
+            "type": "node",
+            "request": "launch",
+            "name": "Etherlime test current file",
+            "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/etherlime",
+            "runtimeArgs": [
+                "test",
+                "--solcVersion=0.4.24",
+                "${file}"
             ],
             "internalConsoleOptions": "openOnSessionStart"
         }

@@ -7,17 +7,17 @@ const cors = require("cors")
 const bodyParser = require("body-parser")
 const onProcessExit = require("exit-hook")
 
-const Web3 = require("web3")
+const { Wallet, ContractFactory, providers: { JsonRpcProvider } } = require("ethers")
 
 const getFileStore = require("monoplasma/src/fileStore")
-const Operator = require("monoplasma/src/operator")
-const { throwIfSetButNotContract } = require("monoplasma/src/utils/checkArguments")
+const Operator = require("./src/operator")
+const { throwIfSetButNotContract /*, throwIfNotSet */ } = require("./src/utils/checkArguments")
 const defaultServers = require("./defaultServers.json")
-const deployDemoToken = require("monoplasma/src/utils/deployDemoToken")
+const deployTestToken = require("./test/utils/deployTestToken")
 
 const operatorRouter = require("monoplasma/src/routers/member")
 const adminRouter = require("monoplasma/src/routers/admin")
-const Channel = require("./src/joinPartChannel")
+const Channel = require("./src/streamrChannel")
 
 const MonoplasmaJson = require("monoplasma/build/contracts/Monoplasma.json")
 
@@ -25,6 +25,8 @@ const {
     ETHEREUM_SERVER,
     ETHEREUM_NETWORK_ID,
     ETHEREUM_PRIVATE_KEY,
+    JOIN_PART_STREAM_NAME,
+    STREAMR_API_KEY,
     TOKEN_ADDRESS,
     CONTRACT_ADDRESS,
     BLOCK_FREEZE_SECONDS,
@@ -39,8 +41,6 @@ const {
 
     // if ETHEREUM_SERVER isn't specified, start a local Ethereum simulator (Ganache) in given port
     GANACHE_PORT,
-
-    JOIN_PART_CHANNEL_PORT,
 
     // web UI for revenue sharing demo
     WEBSERVER_PORT,
@@ -86,35 +86,40 @@ async function start() {
     }
 
     log(`Connecting to ${ethereumServer}`)
-    const web3 = new Web3(ethereumServer)
-    const account = web3.eth.accounts.wallet.add(privateKey)
+    const provider = new JsonRpcProvider(ethereumServer)
+    const wallet = new Wallet(privateKey, provider)
 
-    await throwIfSetButNotContract(web3, TOKEN_ADDRESS, "Environment variable TOKEN_ADDRESS")
-    await throwIfSetButNotContract(web3, CONTRACT_ADDRESS, "Environment variable CONTRACT_ADDRESS")
+    await throwIfSetButNotContract(wallet, TOKEN_ADDRESS, "Environment variable TOKEN_ADDRESS")
+    await throwIfSetButNotContract(wallet, CONTRACT_ADDRESS, "Environment variable CONTRACT_ADDRESS")
+    //throwIfNotSet(STREAMR_API_KEY, "Environment variable STREAMR_API_KEY")
 
     const opts = {
-        from: account.address,
+        from: wallet.address,
         gas: 4000000,
         gasPrice: GAS_PRICE_GWEI || 4000000000,
     }
 
+    // TODO: find another way to communicate config to demo than state.json
+
     // ignore the saved config / saved state if not using a fresh ganache instance
     // augment the config / saved state with variables that may be useful for the validators
     const config = RESET || ganache ? {} : await fileStore.loadState()
-    config.tokenAddress = TOKEN_ADDRESS || config.tokenAddress || await deployDemoToken(web3, TOKEN_NAME, TOKEN_SYMBOL, opts, log)
+    config.tokenAddress = TOKEN_ADDRESS || config.tokenAddress || await deployTestToken(wallet, TOKEN_NAME, TOKEN_SYMBOL, opts, log)
     config.blockFreezeSeconds = +BLOCK_FREEZE_SECONDS || config.blockFreezeSeconds || 20
-    config.contractAddress = CONTRACT_ADDRESS || config.contractAddress || await deployContract(web3, config.tokenAddress, config.blockFreezeSeconds, opts, log)
+    config.contractAddress = CONTRACT_ADDRESS || config.contractAddress || await deployContract(wallet, config.tokenAddress, config.blockFreezeSeconds, opts, log)
     config.ethereumServer = ethereumServer
     config.ethereumNetworkId = ETHEREUM_NETWORK_ID
-    config.channelPort = JOIN_PART_CHANNEL_PORT
-    config.operatorAddress = account.address
+    config.streamrApiKey = STREAMR_API_KEY || "NIwHuJtMQ9WRXeU5P54f6A6kcv29A4SNe4FDb06SEPyg"
+    config.joinPartStreamName = JOIN_PART_STREAM_NAME || `test-joinPartStream-${+new Date()}`
+    config.defaultReceiverAddress = wallet.address
+    config.operatorAddress = wallet.address
 
     log("Starting the joinPartChannel and Operator")
-    const adminChannel = new Channel(JOIN_PART_CHANNEL_PORT)
-    adminChannel.startServer()
-    const operatorChannel = new Channel(JOIN_PART_CHANNEL_PORT)
-    const operator = new Operator(web3, operatorChannel, config, fileStore, log, error)
-    await operator.start()
+    const adminChannel = new Channel(config.streamrApiKey, config.joinPartStreamName)
+    await adminChannel.startServer()
+    const operatorChannel = new Channel(config.streamrApiKey, config.joinPartStreamName)
+    const operator = new Operator(wallet, operatorChannel, fileStore, log, error)
+    await operator.start(config)
 
     log("Starting web server...")
     const port = WEBSERVER_PORT || 8080
@@ -124,21 +129,18 @@ async function start() {
     app.use(bodyParser.json({limit: "50mb"}))
     app.use("/api", operatorRouter(operator.plasma.getMemberApi()))
     app.use("/admin", adminRouter(adminChannel))
-    app.use("/demo", revenueDemoRouter(operator))
     app.use(express.static(path.join(__dirname, "demo/public")))
     app.listen(port, () => log(`Web server started at ${serverURL}`))
 
     log("[DONE]")
 }
 
-async function deployContract(web3, tokenAddress, blockFreezePeriodSeconds, sendOptions, log) {
+async function deployContract(eth, tokenAddress, blockFreezePeriodSeconds, sendOptions, log) {
     log(`Deploying root chain contract (token @ ${tokenAddress}, blockFreezePeriodSeconds = ${blockFreezePeriodSeconds})...`)
-    const Monoplasma = new web3.eth.Contract(MonoplasmaJson.abi)
-    const monoplasma = await Monoplasma.deploy({
-        data: MonoplasmaJson.bytecode,
-        arguments: [tokenAddress, blockFreezePeriodSeconds]
-    }).send(sendOptions)
-    return monoplasma.options.address
+    const deployer = new ContractFactory(MonoplasmaJson.abi, MonoplasmaJson.bytecode, eth)
+    const result = await deployer.deploy(tokenAddress, blockFreezePeriodSeconds)
+    await result.deployed()
+    return result.address
 }
 
 start().catch(error)

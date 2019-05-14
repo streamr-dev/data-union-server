@@ -1,6 +1,6 @@
-const Channel = require("../src/streamrChannel")
+const Channel = require("../../src/streamrChannel")
 
-const sleep = require("./sleep-promise")
+const sleep = require("../../src/utils/sleep-promise")
 
 async function start() {
     console.log("Starting server...")

@@ -1,21 +1,22 @@
 
 const assert = require("assert")
 
-const Channel = require("../src/streamrChannel")
+const Channel = require("../../src/streamrChannel")
 
-const { until } = require("./await-until")
-const assertFails = require("./assert-promise-fails")
+const { until } = require("../utils/await-until")
+const assertFails = require("../utils/assert-promise-fails")
 
 describe("streamrChannel", () => {
     it("gets messages through", async () => {
+        const sendChannel = new Channel("NIwHuJtMQ9WRXeU5P54f6A6kcv29A4SNe4FDb06SEPyg", "test12")
+        await sendChannel.startServer()
+
         const recvChannel = new Channel("NIwHuJtMQ9WRXeU5P54f6A6kcv29A4SNe4FDb06SEPyg", "test12")
         await recvChannel.listen()
         let joinMsg = [], partMsg = []
         recvChannel.on("join", msg => { joinMsg = msg })
         recvChannel.on("part", msg => { partMsg = msg })
 
-        const sendChannel = new Channel("NIwHuJtMQ9WRXeU5P54f6A6kcv29A4SNe4FDb06SEPyg", "test12")
-        await sendChannel.startServer()
         await sendChannel.publish("join", [
             "0xdc353aa3d81fc3d67eb49f443df258029b01d8ab",
             "0x4178babe9e5148c6d5fd431cd72884b07ad855a0",

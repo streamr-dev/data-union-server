@@ -1,8 +1,8 @@
 const path = require("path")
 const { spawn } = require("child_process")
 
-const { untilStreamContains } = require("./await-until")
-const sleep = require("./sleep-promise")
+const { untilStreamContains } = require("../utils/await-until")
+const sleep = require("../../src/utils/sleep-promise")
 
 const helperFile = path.normalize(path.join(__dirname, "channel"))
 

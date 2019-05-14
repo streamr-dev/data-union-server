@@ -1,4 +1,4 @@
-const sleep = require("./sleep-promise")
+const sleep = require("../../src/utils/sleep-promise")
 
 /**
  * @callback UntilCondition

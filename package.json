@@ -5,12 +5,16 @@
   "main": "index.js",
   "scripts": {
     "lint": "./node_modules/.bin/eslint src test",
-    "test": "mocha test/channel-runner.js && mocha --exit test/streamrChannel.js"
+    "build-contracts": "./node_modules/.bin/etherlime --solcVersion=0.4.24 compile",
+    "unit-tests": "./node_modules/.bin/mocha test/unit --exit",
+    "contract-tests": "npm run build-contracts && ./node_modules/.bin/etherlime test --solcVersion=0.4.24 test/contracts",
+    "test": "npm run unit-tests"
   },
   "author": "Streamr Network AG",
   "license": "AGPL-3.0",
   "dependencies": {
     "etherlime": "^1.1.1",
+    "ethers": "^4.0.27",
     "monoplasma": "^0.1.2",
     "streamr-client": "^1.0.2",
     "web3": "1.0.0-beta.37"
