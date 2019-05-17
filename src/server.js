@@ -7,25 +7,35 @@ const StreamrChannel = require("./streamrChannel")
 
 const CommunityProductJson = require("../build/CommunityProduct.json")
 
+const { throwIfNotSet } = require("./utils/checkArguments")
+
 function addressEquals(a1, a2) {
     return ethers.utils.getAddress(a1) === ethers.utils.getAddress(a2)
 }
+
+/**
+ * @typedef {string} EthereumAddress is hex string /0x[0-9A-Fa-f]^64/, return value from ethers.utils.getAddress
+ */
 
 module.exports = class CommunityProductServer {
     /**
      *
      * @param {Wallet} wallet from ethers.js
      */
-    constructor(wallet, streamrApiKey, storeDir, operatorConfig) {
+    constructor(wallet, streamrApiKey, storeDir, operatorConfig, log, error) {
+        throwIfNotSet(wallet, "Wallet argument to new CommunityProductServer")
+        throwIfNotSet(streamrApiKey, "Streamr API key argument to new CommunityProductServer")
+        throwIfNotSet(storeDir, "Store directory argument to new CommunityProductServer")
+
         this.wallet = wallet
         this.eth = wallet.provider
-        this.log = console.log
-        this.error = console.error
+        this.log = log || console.log
+        this.error = error || console.error
         this.communities = {}
         this.apiKey = streamrApiKey
         this.storeDir = storeDir
-        this.operatorConfig = operatorConfig
-        //this.whitelist = whitelist
+        this.operatorConfig = operatorConfig || {}
+        //this.whitelist = whitelist    // TODO
         //this.blacklist = blacklist
     }
 
@@ -76,35 +86,58 @@ module.exports = class CommunityProductServer {
         }
     }
 
-    async startOperating(address) {
-        const addr = ethers.utils.getAddress(address)
-        const contract = new ethers.Contract(addr, CommunityProductJson.abi, this.eth)
+    /**
+     * Create a join/part channel for the community when operator is being created
+     * Separated from startOperating to be better able to inject mocks in testing
+     * @param {EthereumAddress} communityAddress of the community to be operated
+     */
+    async getChannelFor(communityAddress) {
+        const address = ethers.utils.getAddress(communityAddress)
+        const contract = new ethers.Contract(address, CommunityProductJson.abi, this.eth)
         const operatorAddress = await contract.operator()
 
         if (!addressEquals(operatorAddress, this.wallet.address)) {
-            console.log(`Observed CommunityProduct requesting operator ${operatorAddress}, that's not work for me (${this.wallet.address})`)
-            return
+            throw new Error(`Observed CommunityProduct requesting operator ${operatorAddress}, not a job for me (${this.wallet.address})`)
         }
 
         const joinPartStreamId = await contract.joinPartStream()
 
         // TODO: check streams actually exist AND permissions are correct
-        if (!joinPartStreamId) { throw new Error(`Bad stream: ${joinPartStreamId}`) }
+        if (!joinPartStreamId) {
+            throw new Error(`Bad stream: ${joinPartStreamId}`)
+        }
 
-        const operatorChannel = new StreamrChannel(this.apiKey, joinPartStreamId)
+        const channel = new StreamrChannel(this.apiKey, joinPartStreamId)
+        return channel
+    }
 
-        const log = (...args) => { this.log(`${address}> `, ...args) }
-        const error = (...args) => { this.error(`${address}> `, ...args) }
+    /**
+     * Create a state and block store for the community when operator is being created
+     * Separated from startOperating to be better able to inject mocks in testing
+     * @param {EthereumAddress} communityAddress of the community to be operated
+     */
+    async getStoreFor(communityAddress) {
+        const address = ethers.utils.getAddress(communityAddress)
         const storeDir = `${this.storeDir}/${address}`
         const fileStore = getFileStore(storeDir)
+        return fileStore
+    }
+
+    async startOperating(communityAddress) {
+        const address = ethers.utils.getAddress(communityAddress)
+        const operatorChannel = await this.getChannelFor(address)
+        const operatorStore = await this.getStoreFor(address)
+        const log = (...args) => { this.log(`${address}> `, ...args) }
+        const error = (...args) => { this.error(`${address}> `, ...args) }
         const config = Object.assign({}, this.operatorConfig)
-        const operator = new MonoplasmaOperator(this.wallet, operatorChannel, fileStore, log, error)
+        const operator = new MonoplasmaOperator(this.wallet, operatorChannel, operatorStore, log, error)
         await operator.start(config)
 
-        this.communities[address] = {
+        const community = {
             address,
-            contract,
             operator,
         }
+        this.communities[address] = community
+        return community
     }
 }

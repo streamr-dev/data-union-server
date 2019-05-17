@@ -26,6 +26,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         this.store = store
         this.log = logFunc || (() => {})
         this.error = errorFunc || console.error
+        this.messageQueue = []
 
         this.filters = {}
         this.eventLogIndex = +new Date()
@@ -87,10 +88,12 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         }
 
         this.log("Listening to Ethereum events...")
-        this.tokenFilter = this.token.events.Transfer({ filter: { to: this.state.contractAddress } })
-        this.tokenFilter.on("data", event => {
+        const tokenFilter = this.token.filters.Transfer(null, this.state.contractAddress)
+        this.token.on(tokenFilter, (to, from, amount, event) => {
             this.eventQueue.push(event)
         })
+
+        /*
         // TODO: ethers.js re-org handling
         this.tokenFilter.on("changed", event => {
             const i = this.eventQueue.findIndex(e => e.blockNumber === event.blockNumber && e.transactionIndex === event.transactionIndex)
@@ -104,6 +107,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             }
         })
         this.tokenFilter.on("error", this.error)
+        */
     }
 
     async playbackUntil(blockNumber, txIndex=1000000) {
