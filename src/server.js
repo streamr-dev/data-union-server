@@ -47,7 +47,7 @@ module.exports = class CommunityProductServer {
         this.eth.on({ topics: [ethers.utils.id("OperatorChanged(address)")] }, async event => {
             this.log(JSON.stringify(event))
             const contractAddress = ethers.utils.getAddress(event.address)
-            await this.onOperatorChangeEventAt(contractAddress)
+            await this.onOperatorChangedEventAt(contractAddress)
         })
     }
 
@@ -129,7 +129,7 @@ module.exports = class CommunityProductServer {
         const operatorStore = await this.getStoreFor(address)
         const log = (...args) => { this.log(`${address}> `, ...args) }
         const error = (...args) => { this.error(`${address}> `, ...args) }
-        const config = Object.assign({}, this.operatorConfig)
+        const config = Object.assign({}, this.operatorConfig, { contractAddress: address })
         const operator = new MonoplasmaOperator(this.wallet, operatorChannel, operatorStore, log, error)
         await operator.start(config)
 

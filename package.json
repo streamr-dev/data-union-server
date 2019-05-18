@@ -2,8 +2,9 @@
   "name": "streamr-community-products",
   "version": "0.1.0",
   "description": "Backend node for servicing the Streamr Marketplace community products",
-  "main": "index.js",
+  "main": "start_server.js",
   "scripts": {
+    "start": "node start_server.js",
     "lint": "./node_modules/.bin/eslint src test",
     "build-contracts": "./node_modules/.bin/etherlime --solcVersion=0.4.24 compile",
     "unit-tests": "./node_modules/.bin/mocha test/unit --exit",

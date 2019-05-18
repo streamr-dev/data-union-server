@@ -27,9 +27,7 @@ module.exports = (server, logFunc) => {
     const router = express.Router()
 
     router.get("/", (req, res) => {
-        res.send({
-            status: "ok",
-        })
+        res.send(Object.keys(server.communities))
     })
 
     function parseOperator(req, res, next) {
@@ -39,7 +37,7 @@ module.exports = (server, logFunc) => {
             return
         }
         const community = server.communities[address]
-        if (!community) {
+        if (!community || !community.operator) {
             res.status(400).send({error: `We're not operating the community @ ${address}`})
             return
         }

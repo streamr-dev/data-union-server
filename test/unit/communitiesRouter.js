@@ -5,11 +5,10 @@ const bodyParser = require("body-parser")
 const assert = require("assert")
 const http = require("http")
 const fetch = require("node-fetch")
-const { Wallet, ContractFactory, providers: { JsonRpcProvider } } = require("ethers")
-
-const CommunityJson = require("../../build/CommunityProduct")
+const { Wallet, providers: { JsonRpcProvider } } = require("ethers")
 
 const deployTestToken = require("../utils/deployTestToken")
+const deployContract = require("../utils/deployCommunity")
 const startGanache = require("monoplasma/src/utils/startGanache")
 
 const MockChannel = require("monoplasma/test/utils/mockChannel")
@@ -32,14 +31,6 @@ const startState = {
 const joinPartStreamId = "joinpart"
 
 const CommunityProductServer = require("../../src/server")
-
-async function deployContract(wallet, operatorAddress, joinPartStreamId, tokenAddress, blockFreezePeriodSeconds, log) {
-    log && log(`Deploying root chain contract (token @ ${tokenAddress}, blockFreezePeriodSeconds = ${blockFreezePeriodSeconds})...`)
-    const deployer = new ContractFactory(CommunityJson.abi, CommunityJson.bytecode, wallet)
-    const result = await deployer.deploy(operatorAddress, joinPartStreamId, tokenAddress, blockFreezePeriodSeconds)
-    await result.deployed()
-    return result.address
-}
 
 describe("Community product server /communities router", () => {
     const port = 3031
