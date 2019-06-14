@@ -4,6 +4,12 @@ const cors = require("cors")
 const bodyParser = require("body-parser")
 const onProcessExit = require("exit-hook")
 
+const Sentry = require("@sentry/node")
+Sentry.init({
+    dsn: "https://cbb1e7aab0d541d3bf2f311a10adccee@sentry.io/1482184",
+    debug: true,
+})
+
 const { getDefaultProvider, Wallet, providers: { JsonRpcProvider } } = require("ethers")
 
 const Channel = require("./src/streamrChannel")
@@ -44,10 +50,20 @@ const {
     //EXTERNAL_WEBSERVER,
 } = process.env
 
-const log = QUIET ? () => {} : console.log
+// TODO: log Sentry Context/scope:
+//   Sentry.configureScope(scope => scope.setUser({id: community.address}))
+const log = QUIET ? () => {} : (...args) => {
+    console.log(...args)
+    Sentry.addBreadcrumb({
+        category: "log",
+        message: args.join("; "),
+        level: Sentry.Severity.Log
+    })
+}
 const error = (e, ...args) => {
     console.error(e.stack, args)
-    process.exit(1)
+    Sentry.captureException(e)
+    process.exit(1)   // TODO test: will Sentry have time to send the exception out?
 }
 
 const storeDir = fs.existsSync(STORE_DIR) ? STORE_DIR : __dirname + "/data"
@@ -133,4 +149,4 @@ async function createCommunity(wallet, tokenAddress, apiKey) {
     return communityAddress
 }
 
-start().catch(console.error)
+start().catch(error)
