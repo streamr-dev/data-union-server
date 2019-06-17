@@ -71,6 +71,7 @@ describe("Revenue sharing demo", () => {
 
         console.log("1.3) Wait until Operator starts")
         const stats = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/stats`).then(resp => resp.json())
+        console.log(`     Stats before adding: ${stats}`)
 
         console.log("2) Add members")
         const userList = [from,
@@ -87,9 +88,9 @@ describe("Revenue sharing demo", () => {
         channel.publish("join", userList)
         await sleep(1000)   // TODO: better way to check?
         const res2 = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/members`).then(resp => resp.json())
-        console.log(`   Members after adding: ${JSON.stringify(res2)}`)
+        console.log(`     Members after adding: ${JSON.stringify(res2)}`)
         const res2b = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/stats`).then(resp => resp.json())
-        console.log(`   Stats after adding: ${JSON.stringify(res2b)}`)
+        console.log(`     Stats after adding: ${JSON.stringify(res2b)}`)
 
         console.log("3) Send revenue in")
         for (let i = 0; i < 5; i++) {

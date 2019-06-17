@@ -59,6 +59,7 @@ module.exports = (server, logFunc) => {
         log(`Requested community stats @ ${req.params.communityAddress}`)
         const plasma = req.operator.watcher.plasma
         const channel = req.operator.watcher.channel
+        const joinPartStreamName = channel.joinPartStreamName
         const memberCount = plasma.getMemberCount()
         const totalEarnings = plasma.getTotalRevenue()
         const latestBlock = blockToApiObject(plasma.getLatestBlock())
@@ -68,6 +69,7 @@ module.exports = (server, logFunc) => {
             totalEarnings,
             latestBlock,
             latestWithdrawableBlock,
+            joinPartStreamName,
         })
     })
 

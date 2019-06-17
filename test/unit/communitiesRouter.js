@@ -44,7 +44,7 @@ describe("Community product server /communities router", () => {
     before(async function() {
         this.timeout(100000)
         const ganacheLog = msg => { log(" <Ganache> " + msg) }
-        ganache = await startGanache(8263, ganacheLog, ganacheLog, 4)
+        ganache = await startGanache(8266, ganacheLog, ganacheLog, 4)
         const provider = new JsonRpcProvider(ganache.httpUrl)
         const wallet = new Wallet(ganache.privateKeys[0], provider)
         await provider.getNetwork()
@@ -56,6 +56,7 @@ describe("Community product server /communities router", () => {
         const server = new CommunityProductServer(wallet, apiKey, storeDir, {
             tokenAddress,
             defaultReceiverAddress: wallet.address,
+            operatorAddress: wallet.address,
         })
         server.getStoreFor = () => mockStore(startState, initialBlock, log)
         server.getChannelFor = () => mockChannel
