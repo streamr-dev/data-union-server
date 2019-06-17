@@ -36,7 +36,27 @@ async function untilStreamContains(stream, target) {
     })
 }
 
+/**
+ * Resolves the promise once stream contains a match for target regex
+ * @param {Readable} stream to subscribe to
+ * @param {string} target string to search
+ */
+async function untilStreamMatches(stream, regex) {
+    return new Promise(done => {
+        function check(buffer) {
+            const data = buffer.toString()
+            const match = data.match(regex)
+            if (match) {
+                stream.off("data", check)
+                done(match)
+            }
+        }
+        stream.on("data", check)
+    })
+}
+
 module.exports = {
     until,
-    untilStreamContains
+    untilStreamContains,
+    untilStreamMatches,
 }

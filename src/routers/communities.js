@@ -21,7 +21,7 @@ function blockToApiObject(block) {
     }
 }
 
-/** @type {(server: CommunityProductServer) => Function} */
+/** @type {(server: CommunityProductServer, logFunc: Function<String>) => Function} */
 module.exports = (server, logFunc) => {
     const log = logFunc || process.env.QUIET ? () => {} : console.log
     const router = express.Router()
@@ -58,6 +58,7 @@ module.exports = (server, logFunc) => {
     router.get("/:communityAddress/stats", parseOperator, (req, res) => {
         log(`Requested community stats @ ${req.params.communityAddress}`)
         const plasma = req.operator.watcher.plasma
+        const channel = req.operator.watcher.channel
         const memberCount = plasma.getMemberCount()
         const totalEarnings = plasma.getTotalRevenue()
         const latestBlock = blockToApiObject(plasma.getLatestBlock())

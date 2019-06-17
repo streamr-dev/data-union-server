@@ -36,6 +36,8 @@ const {
     STORE_DIR,
     QUIET,
 
+    DEPLOY_TEST_COMMUNITY,
+
     // these will be used  1) for demo token  2) if TOKEN_ADDRESS doesn't support name() and symbol()
     TOKEN_SYMBOL,
     TOKEN_NAME,
@@ -100,15 +102,17 @@ async function start() {
         log("Starting Ethereum simulator...")
         const ganachePort = GANACHE_PORT || 8545
         const ganacheLog = msg => { log(" <Ganache> " + msg) }
-        ganache = await require("monoplasma/src/utils/startGanache")(ganachePort, ganacheLog, error)
-        const ganacheProvider = new JsonRpcProvider(ganache.url)
+        ganache = await require("monoplasma/src/utils/startGanache")(ganachePort, ganacheLog, error, 4)
+        const ganacheProvider = new JsonRpcProvider(ganache.httpUrl)
         wallet = new Wallet(ganache.privateKeys[0], ganacheProvider)   // use account 0: 0xa3d1f77acff0060f7213d7bf3c7fec78df847de1
         tokenAddress = await deployTestToken(wallet, TOKEN_NAME, TOKEN_SYMBOL, {}, log)
     }
 
-    log(`Starting community products server with operator address ${wallet.address}...`)
+    const operatorAddress = wallet.address
+    log(`Starting community products server with operator address ${operatorAddress}...`)
     const config = {
         tokenAddress,
+        operatorAddress,
         defaultReceiverAddress: wallet.address,
         blockFreezeSeconds: BLOCK_FREEZE_SECONDS || 1000,
         gasPrice: GAS_PRICE_GWEI || 4,
@@ -124,16 +128,19 @@ async function start() {
     const app = express()
     app.use(cors())
     app.use(bodyParser.json({limit: "50mb"}))
+    app.get("/config", (req, res) => { res.send(config) })
     app.use("/communities", getCommunitiesRouter(server))
     app.listen(port, () => log(`Web server started at ${serverURL}`))
 
     await sleep(200)
 
     // TODO: remove this, now it's there just so there's something to observe
-    app.use("/admin/deploy", (req, res) => createCommunity(wallet, tokenAddress, apiKey).then(communityAddress => res.send({ communityAddress })))
-    const communityAddress = await createCommunity(wallet, tokenAddress, apiKey)
-    await sleep(10000)
-    server.communities[communityAddress].operator.watcher.plasma.addMember(wallet.address, "Peekaboo")
+    if (DEPLOY_TEST_COMMUNITY) {
+        app.use("/admin/deploy", (req, res) => createCommunity(wallet, tokenAddress, apiKey).then(communityAddress => res.send({ communityAddress })))
+        const communityAddress = await createCommunity(wallet, tokenAddress, apiKey)
+        await sleep(10000)
+        server.communities[communityAddress].operator.watcher.plasma.addMember(wallet.address, "Peekaboo")
+    }
 
     log("[DONE]")
 }

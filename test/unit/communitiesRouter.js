@@ -31,6 +31,7 @@ const startState = {
 const joinPartStreamId = "joinpart"
 
 const CommunityProductServer = require("../../src/server")
+const getCommunitiesRouter = require("../../src/routers/communities")
 
 describe("Community product server /communities router", () => {
     const port = 3031
@@ -43,8 +44,8 @@ describe("Community product server /communities router", () => {
     before(async function() {
         this.timeout(100000)
         const ganacheLog = msg => { log(" <Ganache> " + msg) }
-        ganache = await startGanache(8263, ganacheLog, ganacheLog)
-        const provider = new JsonRpcProvider(ganache.url)
+        ganache = await startGanache(8263, ganacheLog, ganacheLog, 4)
+        const provider = new JsonRpcProvider(ganache.httpUrl)
         const wallet = new Wallet(ganache.privateKeys[0], provider)
         await provider.getNetwork()
         log("Deploying test token and Community contract...")
@@ -54,12 +55,10 @@ describe("Community product server /communities router", () => {
         const storeDir = path.join(os.tmpdir(), `communitiesRouter-test-${+new Date()}`)
         const server = new CommunityProductServer(wallet, apiKey, storeDir, {
             tokenAddress,
-            contractAddress,
             defaultReceiverAddress: wallet.address,
         })
         server.getStoreFor = () => mockStore(startState, initialBlock, log)
         server.getChannelFor = () => mockChannel
-        const getCommunitiesRouter = require("../../src/routers/communities")
         const router = getCommunitiesRouter(server)
         community = await server.startOperating(contractAddress)
         //mockChannel.publish("join", [])

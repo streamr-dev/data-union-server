@@ -40,18 +40,20 @@ module.exports = class CommunityProductServer {
     }
 
     async start() {
-        // TODO: check out https://github.com/ConsenSys/ethql for finding all CommunityProductCreated
-        this.eth.on("block", blockNumber => {
-            this.log(`Block ${blockNumber} observed`)
-        })
+        // TODO: check out https://github.com/ConsenSys/ethql for finding all OperatorChanged events
+        // When a new CommunityProduct is created, it will emit OperatorChanged with operator's address
         this.eth.on({ topics: [ethers.utils.id("OperatorChanged(address)")] }, async event => {
             this.log(JSON.stringify(event))
             const contractAddress = ethers.utils.getAddress(event.address)
             await this.onOperatorChangedEventAt(contractAddress)
         })
+        this.eth.on("block", blockNumber => {
+            this.log(`Block ${blockNumber} observed`)
+        })
     }
 
     async stop() {
+        this.eth.removeAllListeners()
         // TODO: hand over operators to another server?
     }
 
@@ -100,14 +102,14 @@ module.exports = class CommunityProductServer {
             throw new Error(`Observed CommunityProduct requesting operator ${operatorAddress}, not a job for me (${this.wallet.address})`)
         }
 
-        const joinPartStreamId = await contract.joinPartStream()
+        const joinPartStreamName = await contract.joinPartStream()
 
         // TODO: check streams actually exist AND permissions are correct
-        if (!joinPartStreamId) {
-            throw new Error(`Bad stream: ${joinPartStreamId}`)
+        if (!joinPartStreamName) {
+            throw new Error(`Bad stream: ${joinPartStreamName}`)
         }
 
-        const channel = new StreamrChannel(this.apiKey, joinPartStreamId)
+        const channel = new StreamrChannel(this.apiKey, joinPartStreamName)
         return channel
     }
 
@@ -136,6 +138,8 @@ module.exports = class CommunityProductServer {
         const community = {
             address,
             operator,
+            apiKey: this.apiKey,
+            joinPartStreamName: operatorChannel.joinPartStreamName,
         }
         this.communities[address] = community
         return community

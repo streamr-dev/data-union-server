@@ -1,5 +1,6 @@
 const MonoplasmaWatcher = require("./watcher")
 const sleep = require("./utils/sleep-promise")
+const { throwIfBadAddress } = require("./utils/checkArguments")
 
 module.exports = class MonoplasmaOperator {
 
@@ -9,6 +10,8 @@ module.exports = class MonoplasmaOperator {
     }
 
     async start(config) {
+        throwIfBadAddress(config.operatorAddress, "MonoplasmaOperator argument config.operatorAddress")
+
         this.finalityWaitPeriodSeconds = config.finalityWaitPeriodSeconds || 3600
         this.address = config.operatorAddress
         this.gasPrice = config.gasPrice || 4000000000  // 4 gwei
