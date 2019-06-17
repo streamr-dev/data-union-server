@@ -98,10 +98,7 @@ async function start() {
         gasPrice: GAS_PRICE_GWEI || 4000000000,
     }
 
-    // TODO: find another way to communicate config to demo than state.json
-
     // ignore the saved config / saved state if not using a fresh ganache instance
-    // augment the config / saved state with variables that may be useful for the validators
     const config = RESET || ganache ? {} : await fileStore.loadState()
     config.tokenAddress = TOKEN_ADDRESS || config.tokenAddress || await deployTestToken(wallet, TOKEN_NAME, TOKEN_SYMBOL, opts, log)
     config.operatorAddress = wallet.address
@@ -109,9 +106,12 @@ async function start() {
     config.streamrApiKey = STREAMR_API_KEY || "NIwHuJtMQ9WRXeU5P54f6A6kcv29A4SNe4FDb06SEPyg"
     config.joinPartStreamName = JOIN_PART_STREAM_NAME || `test-joinPartStream-${+new Date()}`
     config.contractAddress = CONTRACT_ADDRESS || config.contractAddress || await deployContract(wallet, config.operatorAddress, config.joinPartStreamName, config.tokenAddress, config.blockFreezeSeconds, log)
+    config.defaultReceiverAddress = wallet.address
+
+    // augment the config / saved state with variables that may be useful for the validators
+    // TODO: find another way to communicate config to demo than state.json
     config.ethereumServer = ethereumServer
     config.ethereumNetworkId = ETHEREUM_NETWORK_ID
-    config.defaultReceiverAddress = wallet.address
 
     log("Starting the joinPartChannel and Operator")
     const adminChannel = new Channel(config.streamrApiKey, config.joinPartStreamName)
