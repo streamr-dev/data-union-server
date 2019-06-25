@@ -137,9 +137,12 @@ async function start() {
     // TODO: remove this, now it's there just so there's something to observe
     if (DEPLOY_TEST_COMMUNITY) {
         app.use("/admin/deploy", (req, res) => createCommunity(wallet, tokenAddress, apiKey).then(communityAddress => res.send({ communityAddress })))
-        const communityAddress = await createCommunity(wallet, tokenAddress, apiKey)
+        const { address, channel } = await createCommunity(wallet, tokenAddress, apiKey)
+        log(`Deployed community at ${address}`)
         await sleep(10000)
-        server.communities[communityAddress].operator.watcher.plasma.addMember(wallet.address, "Peekaboo")
+        // TODO: for some reason, seems the join doesn't go through
+        await channel.publish("join", [wallet.address])
+        //server.communities[communityAddress].operator.watcher.plasma.addMember(wallet.address, "Peekaboo")
     }
 
     log("[DONE]")
@@ -149,11 +152,8 @@ async function createCommunity(wallet, tokenAddress, apiKey) {
     log("Creating a community")
     const channel = new Channel(apiKey)
     await channel.startServer()
-    const communityAddress = await deployContract(wallet, wallet.address, channel.joinPartStreamName, tokenAddress, 1000)
-    await sleep(100)
-    // TODO: for some reason, the join doesn't go through
-    await channel.publish("join", [wallet.address])
-    return communityAddress
+    const address = await deployContract(wallet, wallet.address, channel.joinPartStreamName, tokenAddress, 1000)
+    return { address, channel }
 }
 
 start().catch(error)
