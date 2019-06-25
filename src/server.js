@@ -17,6 +17,9 @@ function addressEquals(a1, a2) {
  * @typedef {string} EthereumAddress is hex string /0x[0-9A-Fa-f]^64/, return value from ethers.utils.getAddress
  */
 
+/**
+ * @property {Map<EthereumAddress, Community>} communities
+ */
 module.exports = class CommunityProductServer {
     /**
      *
@@ -31,7 +34,7 @@ module.exports = class CommunityProductServer {
         this.eth = wallet.provider
         this.log = log || console.log
         this.error = error || console.error
-        this.communities = {}
+        this.communities = {}       // mapping: Ethereum address => Community object
         this.apiKey = streamrApiKey
         this.storeDir = storeDir
         this.operatorConfig = operatorConfig || {}
@@ -40,6 +43,7 @@ module.exports = class CommunityProductServer {
     }
 
     async start() {
+        // TODO: playback (e.g. after crash), resume operating existing communities
         // TODO: check out https://github.com/ConsenSys/ethql for finding all OperatorChanged events
         // When a new CommunityProduct is created, it will emit OperatorChanged with operator's address
         this.eth.on({ topics: [ethers.utils.id("OperatorChanged(address)")] }, async event => {
