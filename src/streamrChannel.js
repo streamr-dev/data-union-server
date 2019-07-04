@@ -24,7 +24,10 @@ const State = {
 module.exports = class StreamrChannel extends EventEmitter {
     constructor(apiKey, joinPartStreamName) {
         super()
-        this.client = new StreamrClient({ apiKey })
+        this.client = new StreamrClient({
+            apiKey,         // TODO: use ethereum address instead of apiKey
+            retryResendAfter: 1000,
+        })
         this.joinPartStreamName = joinPartStreamName || `Join-Part-${apiKey.slice(0, 2)}-${Date.now()}`
         this.mode = State.CLOSED
     }
@@ -72,7 +75,9 @@ module.exports = class StreamrChannel extends EventEmitter {
         const sub = this.client.subscribe({
             stream: stream.id,
             resend: {
-                timestamp: syncStartTimestamp || 0,
+                from: {
+                    timestamp: syncStartTimestamp || 0,
+                },
             },
         }, (msg, meta) => {
             this.lastMessageTimestamp = meta.timestamp
@@ -87,10 +92,10 @@ module.exports = class StreamrChannel extends EventEmitter {
         return new Promise((done, fail) => {
             sub.on("error", fail)
             sub.on("resent", done)
-            sub.on("no_resend", done)
-
-            // TODO: remove this hack after finding out why neither "resent" nor "no_resend" happens
-            setTimeout(done, 100)
+            sub.on("no_resend", () => {
+                // give some time for retryResendAfter
+                setTimeout(done, 1500)
+            })
         })
     }
 
@@ -99,7 +104,9 @@ module.exports = class StreamrChannel extends EventEmitter {
         if (!this.mode) { throw new Error("Can't close, already closed")}
         this.emit("close")
         this.removeAllListeners()
-        this.client.disconnect()
+        if (this.client.connection.state !== "disconnected") {
+            this.client.disconnect()
+        }
         this.mode = State.CLOSED
     }
 }
