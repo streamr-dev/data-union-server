@@ -13,17 +13,17 @@ async function replayOn(plasma, events, messages) {
 
 /** Transition the MonoplasmaState by given Ethereum event or Streamr stream message */
 async function replayEvent(plasma, event) {
-    const type = event.event || event.topic
+    const type = event.event || event.topic     // stream messages have "topic"
     switch (type) {
         // event Transfer(address indexed from, address indexed to, uint256 value);
         case "Transfer": {
-            const { value } = event.returnValues
+            const { value } = event.args
             log(`${value} tokens received @ block ${event.blockNumber}`)
             plasma.addRevenue(value)
         } break
         // event BlockCreated(uint blockNumber, bytes32 rootHash, string ipfsHash);
         case "BlockCreated": {
-            const blockNumber = +event.returnValues.blockNumber
+            const blockNumber = +event.args.blockNumber
             log(`Storing block ${blockNumber}`)
             await plasma.storeBlock(blockNumber)
         } break
