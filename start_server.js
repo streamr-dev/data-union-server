@@ -10,10 +10,16 @@ Sentry.init({
     debug: true,
 })
 
-const { getDefaultProvider, Wallet, providers: { JsonRpcProvider } } = require("ethers")
+const {
+    Contract,
+    utils,
+    getDefaultProvider,
+    Wallet,
+    providers: { JsonRpcProvider }
+} = require("ethers")
 
 const Channel = require("./src/streamrChannel")
-const { throwIfNotContract } = require("./src/utils/checkArguments")
+const { throwIfNotContract, throwIfBadAddress } = require("./src/utils/checkArguments")
 const deployTestToken = require("./test/utils/deployTestToken")
 const deployContract = require("./test/utils/deployCommunity")
 const sleep = require("./src/utils/sleep-promise")
@@ -36,7 +42,7 @@ const {
     STORE_DIR,
     QUIET,
 
-    DEPLOY_TEST_COMMUNITY,
+    DEVELOPER_MODE,
 
     // these will be used  1) for demo token  2) if TOKEN_ADDRESS doesn't support name() and symbol()
     TOKEN_SYMBOL,
@@ -63,12 +69,12 @@ const log = QUIET ? () => {} : (...args) => {
     })
 }
 const error = (e, ...args) => {
-    console.error(e.stack, args)
+    console.error(e.stack, ...args)
     Sentry.captureException(e)
     process.exit(1)   // TODO test: will Sentry have time to send the exception out?
 }
 
-const storeDir = fs.existsSync(STORE_DIR) ? STORE_DIR : __dirname + "/data"
+const storeDir = fs.existsSync(STORE_DIR) ? STORE_DIR : __dirname + "/store"
 const apiKey = STREAMR_API_KEY || "NIwHuJtMQ9WRXeU5P54f6A6kcv29A4SNe4FDb06SEPyg"
 
 let ganache = null
@@ -96,8 +102,6 @@ async function start() {
         const privateKey = ETHEREUM_PRIVATE_KEY.startsWith("0x") ? ETHEREUM_PRIVATE_KEY : "0x" + ETHEREUM_PRIVATE_KEY
         if (privateKey.length !== 66) { throw new Error("Malformed private key, must be 64 hex digits long (optionally prefixed with '0x')") }
         wallet = new Wallet(privateKey, provider)
-        await throwIfNotContract(wallet, TOKEN_ADDRESS, "Environment variable TOKEN_ADDRESS")
-        tokenAddress = TOKEN_ADDRESS
     } else {
         log("Starting Ethereum simulator...")
         const ganachePort = GANACHE_PORT || 8545
@@ -105,8 +109,17 @@ async function start() {
         ganache = await require("monoplasma/src/utils/startGanache")(ganachePort, ganacheLog, error, 4)
         const ganacheProvider = new JsonRpcProvider(ganache.httpUrl)
         wallet = new Wallet(ganache.privateKeys[0], ganacheProvider)   // use account 0: 0xa3d1f77acff0060f7213d7bf3c7fec78df847de1
+    }
+
+    if (TOKEN_ADDRESS) {
+        await throwIfNotContract(wallet.provider, TOKEN_ADDRESS, "Environment variable TOKEN_ADDRESS")
+        tokenAddress = TOKEN_ADDRESS
+    } else {
         tokenAddress = await deployTestToken(wallet, TOKEN_NAME, TOKEN_SYMBOL, {}, log)
     }
+
+    // TODO: load server state, find communities from store
+    // TODO: getLogs from blockchain to find communities?
 
     const operatorAddress = wallet.address
     log(`Starting community products server with operator address ${operatorAddress}...`)
@@ -115,9 +128,8 @@ async function start() {
         operatorAddress,
         defaultReceiverAddress: wallet.address,
         blockFreezeSeconds: BLOCK_FREEZE_SECONDS || 1000,
-        gasPrice: GAS_PRICE_GWEI || 4,
-        finalityWaitSeconds: FINALITY_WAIT_SECONDS || 1000,
-        lastBlockNumber: 666, // skip playback for now, TODO: fix it
+        gasPrice: utils.parseUnits(GAS_PRICE_GWEI || "4", "gwei"),
+        finalityWaitSeconds: FINALITY_WAIT_SECONDS || 1000
     }
     const server = new CommunityProductServer(wallet, apiKey, storeDir, config, log, error)
     await server.start()
@@ -133,27 +145,53 @@ async function start() {
     app.listen(port, () => log(`Web server started at ${serverURL}`))
 
     await sleep(200)
-
-    // TODO: remove this, now it's there just so there's something to observe
-    if (DEPLOY_TEST_COMMUNITY) {
-        app.use("/admin/deploy", (req, res) => createCommunity(wallet, tokenAddress, apiKey).then(communityAddress => res.send({ communityAddress })))
-        const { address, channel } = await createCommunity(wallet, tokenAddress, apiKey)
-        log(`Deployed community at ${address}`)
-        await sleep(10000)
-        // TODO: for some reason, seems the join doesn't go through
-        await channel.publish("join", [wallet.address])
-        //server.communities[communityAddress].operator.watcher.plasma.addMember(wallet.address, "Peekaboo")
-    }
-
     log("[DONE]")
+
+    if (DEVELOPER_MODE) {
+        const { communityAddress, channel } = await createCommunity(wallet, tokenAddress, apiKey)
+        log(`Deployed community at ${communityAddress}, waiting for server to notice...`)
+        await server.communityIsRunning(communityAddress)
+
+        app.use("/admin/addRevenue", (req, res) => transfer(wallet, communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
+        app.use("/admin/deploy", (req, res) => createCommunity(wallet, tokenAddress, apiKey).then(({ communityAddress }) => res.send({ communityAddress })).catch(error => res.status(500).send({error})))
+        app.use("/admin/addTo/:communityAddress", (req, res) => transfer(wallet, req.params.communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
+
+        await sleep(500)
+        await channel.publish("join", [
+            wallet.address,
+            "0xdc353aa3d81fc3d67eb49f443df258029b01d8ab",
+            "0x4178babe9e5148c6d5fd431cd72884b07ad855a0",
+        ])
+        while (server.communities[communityAddress].operator.watcher.messageQueue.length > 0) {
+            await sleep(1000)
+        }
+
+        await transfer(wallet, communityAddress, tokenAddress)
+
+        // this is here just so it's easy to add a breakpoint and inspect this scope
+        for (;;) {
+            await sleep(1000)
+        }
+    }
+}
+
+const ERC20Mintable = require("./build/ERC20Mintable.json")
+async function transfer(wallet, targetAddress, tokenAddress, amount) {
+    throwIfBadAddress(targetAddress, "token transfer target address")
+    // TODO: null token address => attempt ether transfer?
+    throwIfNotContract(tokenAddress, "token address")
+    const token = new Contract(tokenAddress, ERC20Mintable.abi, wallet)
+    const tx = await token.transfer(targetAddress, amount || utils.parseEther("1"))
+    const tr = await tx.wait(1)
+    return tr
 }
 
 async function createCommunity(wallet, tokenAddress, apiKey) {
     log("Creating a community")
     const channel = new Channel(apiKey)
     await channel.startServer()
-    const address = await deployContract(wallet, wallet.address, channel.joinPartStreamName, tokenAddress, 1000)
-    return { address, channel }
+    const communityAddress = await deployContract(wallet, wallet.address, channel.joinPartStreamName, tokenAddress, 1000)
+    return { communityAddress, channel }
 }
 
 start().catch(error)

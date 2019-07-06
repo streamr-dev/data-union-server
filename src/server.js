@@ -38,6 +38,7 @@ module.exports = class CommunityProductServer {
         this.apiKey = streamrApiKey
         this.storeDir = storeDir
         this.operatorConfig = operatorConfig || {}
+        this.communityIsRunningPromises = {}
         //this.whitelist = whitelist    // TODO
         //this.blacklist = blacklist
     }
@@ -46,13 +47,12 @@ module.exports = class CommunityProductServer {
         // TODO: playback (e.g. after crash), resume operating existing communities
         // TODO: check out https://github.com/ConsenSys/ethql for finding all OperatorChanged events
         // When a new CommunityProduct is created, it will emit OperatorChanged with operator's address
-        this.eth.on({ topics: [ethers.utils.id("OperatorChanged(address)")] }, async event => {
+        this.eth.on({ topics: [ethers.utils.id("OperatorChanged(address)")] }, event => {
             this.log(JSON.stringify(event))
             const contractAddress = ethers.utils.getAddress(event.address)
-            await this.onOperatorChangedEventAt(contractAddress)
-        })
-        this.eth.on("block", blockNumber => {
-            this.log(`Block ${blockNumber} observed`)
+            this.onOperatorChangedEventAt(contractAddress).catch(err => {
+                this.error(err.stack)
+            })
         })
     }
 
@@ -71,13 +71,13 @@ module.exports = class CommunityProductServer {
         if (community) {
             if (!community.contract) {
                 // abuse mitigation: only serve one per event.address
-                //   normally CommunityProduct shouldn't send several requests
-                this.error(`Very rapid OperatorChanged events from ${address}`)
+                //   normally CommunityProduct shouldn't send several requests (potential spam attack attempt)
+                this.error(`Too rapid OperatorChanged events from ${address}, community is still launching`)
                 return
             }
             const newOperatorAddress = await community.contract.operator()
             if (addressEquals(newOperatorAddress, this.wallet.address)) {
-                this.error(`Repeated OperatorChanged events from ${address}`)
+                this.error(`Repeated OperatorChanged("${newOperatorAddress}") events from ${address}`)
                 return
             } else {
                 // operator was changed, we can stop running the operator process
@@ -86,10 +86,41 @@ module.exports = class CommunityProductServer {
             }
         } else {
             // rapid event spam stopper (from one contract)
-            this.communities[address] = {}
+            this.communities[address] = {
+                state: "launching",
+                eventDetectedAt: Date.now(),
+            }
 
-            await this.startOperating(address)
+            try {
+                const result = await this.startOperating(address)
+                if (address in this.communityIsRunningPromises) {
+                    this.communityIsRunningPromises[address].setRunning(result)
+                }
+            } catch (err) {
+                if (address in this.communityIsRunningPromises) {
+                    this.communityIsRunningPromises[address].setFailed(err)
+                }
+            }
         }
+    }
+
+    /**
+     * Helper function to await community deployments (after smart contract sent)
+     * @param {EthereumAddress} address of the community to watch
+     * @returns {Promise} that resolves when community is successfully started, or fails if starting fails
+     */
+    async communityIsRunning(address) {
+        if (!(address in this.communityIsRunningPromises)) {
+            let setRunning, setFailed
+            const promise = new Promise((done, fail) => {
+                setRunning = done
+                setFailed = fail
+            })
+            this.communityIsRunningPromises[address] = {
+                promise, setRunning, setFailed
+            }
+        }
+        return this.communityIsRunningPromises[address].promise
     }
 
     /**
@@ -134,12 +165,13 @@ module.exports = class CommunityProductServer {
         const operatorChannel = await this.getChannelFor(address)
         const operatorStore = await this.getStoreFor(address)
         const log = (...args) => { this.log(`${address}> `, ...args) }
-        const error = (...args) => { this.error(`${address}> `, ...args) }
+        const error = (e, ...args) => { this.error(e, `\n${address}> `, ...args) }
         const config = Object.assign({}, this.operatorConfig, { contractAddress: address })
         const operator = new MonoplasmaOperator(this.wallet, operatorChannel, operatorStore, log, error)
         await operator.start(config)
 
         const community = {
+            state: "running",
             address,
             operator,
             apiKey: this.apiKey,

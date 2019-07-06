@@ -1,12 +1,16 @@
+const { Contract } = require("ethers")
+
 const MonoplasmaState = require("./state")
 const MonoplasmaWatcher = require("./watcher")
 
-module.exports = class MonoplasmaValidator extends MonoplasmaWatcher {
-    constructor(watchedAccounts, myAddress, ...args) {
-        super(...args)
+const MonoplasmaJson = require("../build/Monoplasma.json")
 
+module.exports = class MonoplasmaValidator {
+    constructor(watchedAccounts, wallet, joinPartChannel, store, logFunc, errorFunc) {
         this.watchedAccounts = watchedAccounts
-        this.address = myAddress
+        this.wallet = wallet
+        this.watcher = new MonoplasmaWatcher(wallet.provider, joinPartChannel, store, logFunc, errorFunc)
+
         this.eventQueue = []
         this.lastSavedBlock = null
         this.validatedPlasma = new MonoplasmaState(0, [], {
@@ -17,12 +21,12 @@ module.exports = class MonoplasmaValidator extends MonoplasmaWatcher {
     }
 
     async start() {
-        await super.start()
+        await this.watcher.start()
+        this.contract = new Contract(this.watcher.state.contractAddress, MonoplasmaJson.abi, this.wallet)
 
-        this.log("Starting validator's BlockCreated listener")
         const self = this
-        const blockFilter = this.contract.events.BlockCreated({})
-        blockFilter.on("data", event => self.checkBlock(event.returnValues).catch(this.error))
+        this.log("Starting validator's BlockCreated listener")
+        this.watcher.on("blockCreated", event => self.checkBlock(event.args).catch(self.error))
     }
 
     async checkBlock(block) {
@@ -56,12 +60,6 @@ module.exports = class MonoplasmaValidator extends MonoplasmaWatcher {
      * @param List<MonoplasmaMember> members during the block where exit is attempted
      */
     async exit(blockNumber, members) {
-        const opts = {
-            from: this.address,
-            gas: 4000000,
-            gasPrice: this.state.gasPrice
-        }
-
         // TODO: sleep until block freeze period is over
 
         // There should be no hurry, so sequential execution is ok, and it might hurt to send() all at once.
@@ -69,7 +67,9 @@ module.exports = class MonoplasmaValidator extends MonoplasmaWatcher {
         //return Promise.all(members.map(m => contract.methods.withdrawAll(blockNumber, m.earnings, m.proof).send(opts)))
         for (const m of members) {
             this.log(`Recording the earnings for ${m.address}: ${m.earnings}`)
-            await this.contract.methods.prove(blockNumber, m.address, m.earnings, m.proof).send(opts).catch(console.error)
+            const tx = await this.contract.prove(blockNumber, m.address, m.earnings, m.proof)
+            const tr = await tx.wait(2)
+            this.log(`"Prove" transaction: ${JSON.stringify(tr)}`)
         }
     }
 

@@ -7,7 +7,7 @@ const cors = require("cors")
 const bodyParser = require("body-parser")
 const onProcessExit = require("exit-hook")
 
-const { Wallet, providers: { JsonRpcProvider } } = require("ethers")
+const { utils, Wallet, providers: { JsonRpcProvider } } = require("ethers")
 
 const getFileStore = require("monoplasma/src/fileStore")
 const Operator = require("./src/operator")
@@ -95,7 +95,7 @@ async function start() {
     const opts = {
         from: wallet.address,
         gas: 4000000,
-        gasPrice: GAS_PRICE_GWEI || 4000000000,
+        gasPrice: utils.parseUnits(GAS_PRICE_GWEI || "4", "gwei"),
     }
 
     // ignore the saved config / saved state if not using a fresh ganache instance

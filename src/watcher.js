@@ -30,6 +30,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
 
         this.filters = {}
         this.eventLogIndex = +new Date()
+        this.blockTimestampCache = {}
     }
 
     /**
@@ -41,9 +42,16 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         await throwIfSetButNotContract(this.eth, config.contractAddress, "contractAddress from initial config")
         throwIfSetButBadAddress(config.defaultReceiverAddress, "defaultReceiverAddress from initial config")
 
+        this.eth.on("block", blockNumber => {
+            if (blockNumber % 10 === 0) { this.log(`Block ${blockNumber} observed`) }
+            this.state.lastObservedBlockNumber = blockNumber
+        })
+
         this.log("Initializing Monoplasma state...")
         const savedState = config.reset ? {} : await this.store.loadState()
-        this.state = Object.assign({}, savedState, config)
+        this.state = Object.assign({
+            lastBlockNumber: 0,
+        }, savedState, config)
 
         throwIfBadAddress(this.state.defaultReceiverAddress, "defaultReceiverAddress")
 
@@ -63,34 +71,47 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         this.plasma = new MonoplasmaState(this.state.blockFreezeSeconds, savedMembers, this.store, this.state.defaultReceiverAddress)
 
         this.log("Syncing Monoplasma state...")
-        const playbackStartingBlock = this.state.lastBlockNumber || 0
         const playbackStartingTimestamp = this.state.lastMessageTimestamp || 0
+        const playbackStartingBlock = this.state.blockNumber || 0
 
-        const currentBlock = await this.eth.getBlockNumber()
-        if (playbackStartingBlock <= currentBlock) {
-            this.log(`Retrieving events from blocks ${playbackStartingBlock}...${currentBlock}`)
-            const blockCreateEvents = await this.contract.getPastEvents("BlockCreated", { playbackStartingBlock, latestBlock: currentBlock })
-            const transferEvents = await this.token.getPastEvents("Transfer", { filter: { to: this.state.contractAddress }, playbackStartingBlock, latestBlock: currentBlock })
-            this.eventQueue = mergeEventLists(blockCreateEvents, transferEvents)
-            this.lastCreatedBlock = blockCreateEvents.slice(-1)[0]
+        this.log(`Retrieving events starting from block ${playbackStartingBlock}...`)
+        const blockCreateFilter = this.contract.filters.BlockCreated()
+        const tokenTransferFilter = this.token.filters.Transfer(null, this.contract.address)
+        blockCreateFilter.fromBlock = tokenTransferFilter.fromBlock = playbackStartingBlock
+        const blockCreateEvents = await this.eth.getLogs(blockCreateFilter)
+        const transferEvents = await this.eth.getLogs(tokenTransferFilter)
+        this.eventQueue = mergeEventLists(blockCreateEvents, transferEvents)
+        this.lastCreatedBlock = blockCreateEvents && blockCreateEvents.length > 0 ?
+            blockCreateEvents.slice(-1)[0] : { blockNumber: 0, transactionIndex: 0 }
+
+        // TODO: maybe harvest block timestamps from provider in the background, save to store?
+        //   Blocking could be very long in case of long-lived community...
+        this.log(`Retrieving block timestamps for ${this.eventQueue.length} events...`)
+        for (const event of this.eventQueue) {
+            event.timestamp = await this.getBlockTimestamp(event.blockNumber)
         }
 
         this.log("Listening to joins/parts from the Channel...")
         this.channel.on("message", (topic, addressList, meta) => {
-            this.messageQueue.push({ topic, addressList, meta })
+            this.messageQueue.push({ topic, addressList, timestamp: meta.messageId.timestamp })
         })
         await this.channel.listen(playbackStartingTimestamp)    // replay messages until in sync
         this.channel.on("error", this.error)
 
-        if (this.lastCreatedBlock) {
-            const { blockNumber, transactionIndex } = this.lastCreatedBlock
-            await this.playbackUntil(blockNumber, transactionIndex)
-        }
+        const { blockNumber, transactionIndex } = this.lastCreatedBlock
+        await this.playbackUntilBlock(blockNumber, transactionIndex)
 
         this.log("Listening to Ethereum events...")
-        const tokenFilter = this.token.filters.Transfer(null, this.state.contractAddress)
-        this.token.on(tokenFilter, (to, from, amount, event) => {
+        this.token.on(tokenTransferFilter, async (to, from, amount, event) => {
+            event.timestamp = await this.getBlockTimestamp(event.blockNumber)
             this.eventQueue.push(event)
+            this.emit("tokensReceived", event)
+        })
+
+        this.contract.on(blockCreateFilter, async (to, from, amount, event) => {
+            event.timestamp = await this.getBlockTimestamp(event.blockNumber)
+            this.lastCreatedBlock = event
+            this.emit("blockCreated", event)
         })
 
         /*
@@ -110,9 +131,21 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         */
     }
 
-    async playbackUntil(blockNumber, txIndex=1000000) {
-        const block = await this.eth.getBlock(blockNumber)
-        const timestamp = block.timestamp
+    async stop() {
+        this.tokenFilter.unsubscribe()
+        this.channel.close()
+    }
+
+    async playbackUntilBlock(blockNumber, txIndex=1000000) {
+        if (blockNumber <= this.state.lastBlockNumber) {
+            this.log(`Playback skipped: block ${blockNumber} requested, ${this.state.lastBlockNumber} marked played back`)
+            return
+        }
+        // TODO: use getLogs here to get the past events up to blockNumber instead of using this.eventQueue
+        //   This is the MVP re-org handling mechanism: after finalityWaitPeriod, do a playback
+        //   There's probably no need to do similar playback with messages since they're final on arrival
+        //   It's fine to use the this.messageQueue though, the shouldn't change
+        const timestamp = await this.getBlockTimestamp(blockNumber)
         this.log(`Playing back until block ${blockNumber} tx ${txIndex}, t = ${timestamp}`)
         const [oldEvents, newEvents] = partitionArray(this.eventQueue, event =>
             event.blockNumber <= blockNumber && event.transactionIndex < txIndex
@@ -123,11 +156,20 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         await replayOn(this.plasma, oldEvents, oldMessages)
         this.eventQueue = newEvents
         this.messageQueue = newMessages
+        this.state.lastBlockNumber = blockNumber
     }
 
-    async stop() {
-        this.tokenFilter.unsubscribe()
-        this.channel.close()
+    /**
+     * Cache the timestamps of blocks in milliseconds
+     * TODO: also store the cache? It's immutable after all...
+     * @param {Number} blockNumber
+     */
+    async getBlockTimestamp(blockNumber) {
+        if (!(blockNumber in this.blockTimestampCache)) {
+            const block = await this.eth.getBlock(blockNumber)
+            this.blockTimestampCache[blockNumber] = block.timestamp * 1000
+        }
+        return this.blockTimestampCache[blockNumber]
     }
 
     /**
