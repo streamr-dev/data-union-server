@@ -1,8 +1,13 @@
 const { spawn } = require("child_process")
 const fetch = require("node-fetch")
 const assert = require("assert")
-const etherlime = require("etherlime")
-const { utils: { parseEther }, Wallet, providers: { JsonRpcProvider } } = require("ethers")
+//const etherlime = require("etherlime")
+const {
+    Contract,
+    utils: { parseEther },
+    Wallet,
+    providers: { JsonRpcProvider }
+} = require("ethers")
 
 const StreamrChannel = require("../../src/streamrChannel")
 
@@ -12,7 +17,7 @@ const deployContract = require("../utils/deployCommunity")
 const log = console.log  // () => {}
 
 const ERC20Mintable = require("../../build/ERC20Mintable.json")
-const CommunityJson = require("../../build/CommunityProduct.json")
+const CommunityProduct = require("../../build/CommunityProduct.json")
 
 const STREAMR_API_KEY = "NIwHuJtMQ9WRXeU5P54f6A6kcv29A4SNe4FDb06SEPyg"
 const STORE_DIR = __dirname + `/test-store-${+new Date()}`
@@ -20,7 +25,7 @@ const GANACHE_PORT = 8546
 const WEBSERVER_PORT = 3031
 const BLOCK_FREEZE_SECONDS = 1
 
-describe("Revenue sharing demo", () => {
+describe("Community product demo", () => {
     let operatorProcess
     //const admin = "0x7ab741b57e8d94dd7e1a29055646bafde7010f38a900f55bbd7647880faa6ee8"
 
@@ -54,7 +59,6 @@ describe("Revenue sharing demo", () => {
         console.log("--- Server started, getting the operator config ---")
         const config = await fetch(`http://localhost:${WEBSERVER_PORT}/config`).then(resp => resp.json())
         console.log(config)
-        const token = await etherlime.ContractAt(ERC20Mintable, config.tokenAddress)
 
         console.log("1) Create a new Community product")
 
@@ -67,11 +71,13 @@ describe("Revenue sharing demo", () => {
         const wallet = new Wallet(privateKey, ganacheProvider)
         const communityAddress = await deployContract(wallet, config.operatorAddress, channel.joinPartStreamName, config.tokenAddress, BLOCK_FREEZE_SECONDS, log)
 
-        await sleep(1000)
-
         console.log("1.3) Wait until Operator starts")
-        const stats = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/stats`).then(resp => resp.json())
-        console.log(`     Stats before adding: ${stats}`)
+        let stats = { error: true }
+        while (stats.error) {
+            await sleep(100)
+            stats = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/stats`).then(resp => resp.json())
+        }
+        console.log(`     Stats before adding: ${JSON.stringify(stats)}`)
 
         console.log("2) Add members")
         const userList = [from,
@@ -93,12 +99,14 @@ describe("Revenue sharing demo", () => {
         console.log(`     Stats after adding: ${JSON.stringify(res2b)}`)
 
         console.log("3) Send revenue in")
+        const token = new Contract(config.tokenAddress, ERC20Mintable.abi, wallet)
         for (let i = 0; i < 5; i++) {
             console.log("   Sending 10 tokens to CommunityProduct contract...")
-            await token.transfer(communityAddress, parseEther("10"))
+            const tx = await token.transfer(communityAddress, parseEther("10"))
+            await tx.wait(1)
 
             // TODO: things will break if revenue is added too fast. You can remove the below row to try and fix it.
-            await sleep(5000)
+            await sleep(500)
 
             // check total revenue
             const res3 = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/stats`).then(resp => resp.json())
@@ -109,14 +117,18 @@ describe("Revenue sharing demo", () => {
         await sleep(2000)
 
         console.log("4) Check tokens were distributed & withdraw")
-        const res4 = await fetch(`http://localhost:${WEBSERVER_PORT}/api/members/${from}`).then(resp => resp.json())
-        console.log(res4)
+        const res4 = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/members/${from}`).then(resp => resp.json())
+        console.log(JSON.stringify(res4))
 
         const balanceBefore = await token.balanceOf(from)
         console.log(`   Token balance before: ${balanceBefore}`)
 
-        const contract = await etherlime.ContractAt(CommunityJson, communityAddress)
+        const contract = new Contract(communityAddress, CommunityProduct.abi, wallet)
         await contract.withdrawAll(res4.withdrawableBlockNumber, res4.withdrawableEarnings, res4.proof)
+
+        await sleep(500)
+        const res4b = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/members/${from}`).then(resp => resp.json())
+        console.log(JSON.stringify(res4b))
 
         const balanceAfter = await token.balanceOf(from)
         console.log(`   Token balance after: ${balanceAfter}`)
@@ -126,9 +138,14 @@ describe("Revenue sharing demo", () => {
 
         assert(difference.eq(parseEther("5")))
     })
+    afterEach(() => {
+        if (operatorProcess) {
+            operatorProcess.kill()
+            operatorProcess = null
+        }
+    })
 
     after(() => {
-        operatorProcess.kill()
         spawn("rm", ["-rf", STORE_DIR])
     })
 })

@@ -5,6 +5,7 @@ module.exports = {
         before: "readonly",
         beforeEach: "readonly",
         after: "readonly",
+        afterEach: "readonly",
     },
     rules: {
         "no-console": 0,
