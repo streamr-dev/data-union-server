@@ -37,8 +37,13 @@ module.exports = (server, logFunc) => {
             return
         }
         const community = server.communities[address]
-        if (!community || !community.operator) {
-            res.status(400).send({error: `We're not operating the community @ ${address}`})
+        if (!community) {
+            res.status(404).send({error: `We're not operating the community @ ${address}`})
+            return
+        }
+        if (!community.operator) {
+            // TODO: track how long starting has been in progress, re-try after a timeout?
+            res.status(503).send({error: `Community is being started @ ${address}`, community})
             return
         }
         req.operator = community.operator
