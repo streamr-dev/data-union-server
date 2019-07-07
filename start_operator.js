@@ -7,7 +7,7 @@ const cors = require("cors")
 const bodyParser = require("body-parser")
 const onProcessExit = require("exit-hook")
 
-const { utils, Wallet, providers: { JsonRpcProvider } } = require("ethers")
+const { Wallet, providers: { JsonRpcProvider } } = require("ethers")
 
 const getFileStore = require("monoplasma/src/fileStore")
 const Operator = require("./src/operator")
@@ -29,7 +29,7 @@ const {
     TOKEN_ADDRESS,
     CONTRACT_ADDRESS,
     BLOCK_FREEZE_SECONDS,
-    GAS_PRICE_GWEI,
+    //GAS_PRICE_GWEI,
     RESET,
     STORE_DIR,
     QUIET,
@@ -81,26 +81,21 @@ async function start() {
         const ganachePort = GANACHE_PORT || 8545
         const ganacheLog = msg => { log(" <Ganache> " + msg) }
         ganache = await require("monoplasma/src/utils/startGanache")(ganachePort, ganacheLog, error)
-        ethereumServer = ganache.url
+        ethereumServer = ganache.httpUrl
     }
 
     log(`Connecting to ${ethereumServer}`)
     const provider = new JsonRpcProvider(ethereumServer)
+    // TODO: add or ignore? { gasPrice: utils.parseUnits(GAS_PRICE_GWEI || "4", "gwei") }
     const wallet = new Wallet(privateKey, provider)
 
     await throwIfSetButNotContract(wallet, TOKEN_ADDRESS, "Environment variable TOKEN_ADDRESS")
     await throwIfSetButNotContract(wallet, CONTRACT_ADDRESS, "Environment variable CONTRACT_ADDRESS")
     //throwIfNotSet(STREAMR_API_KEY, "Environment variable STREAMR_API_KEY")
 
-    const opts = {
-        from: wallet.address,
-        gas: 4000000,
-        gasPrice: utils.parseUnits(GAS_PRICE_GWEI || "4", "gwei"),
-    }
-
     // ignore the saved config / saved state if not using a fresh ganache instance
     const config = RESET || ganache ? {} : await fileStore.loadState()
-    config.tokenAddress = TOKEN_ADDRESS || config.tokenAddress || await deployTestToken(wallet, TOKEN_NAME, TOKEN_SYMBOL, opts, log)
+    config.tokenAddress = TOKEN_ADDRESS || config.tokenAddress || await deployTestToken(wallet, TOKEN_NAME, TOKEN_SYMBOL, log)
     config.operatorAddress = wallet.address
     config.blockFreezeSeconds = +BLOCK_FREEZE_SECONDS || config.blockFreezeSeconds || 20
     config.streamrApiKey = STREAMR_API_KEY || "NIwHuJtMQ9WRXeU5P54f6A6kcv29A4SNe4FDb06SEPyg"
@@ -126,7 +121,7 @@ async function start() {
     const app = express()
     app.use(cors())
     app.use(bodyParser.json({limit: "50mb"}))
-    app.use("/api", operatorRouter(operator.plasma.getMemberApi()))
+    app.use("/api", operatorRouter(operator.watcher.plasma.getMemberApi()))
     app.use("/admin", adminRouter(adminChannel))
     app.use(express.static(path.join(__dirname, "demo/public")))
     app.listen(port, () => log(`Web server started at ${serverURL}`))

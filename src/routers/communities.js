@@ -2,6 +2,7 @@ const express = require("express")
 const BN = require("bn.js")
 const ethers = require("ethers")
 
+/** Convert Ethereum address into checksummed case */
 function parseAddress(address) {
     try {
         return ethers.utils.getAddress(address)
@@ -61,7 +62,7 @@ module.exports = (server, logFunc) => {
     })
 
     router.get("/:communityAddress/stats", parseOperator, (req, res) => {
-        log(`Requested community stats @ ${req.params.communityAddress}`)
+        log(`HTTP ${req.params.communityAddress}> Requested community stats`)
         const plasma = req.operator.watcher.plasma
         const channel = req.operator.watcher.channel
         const joinPartStreamName = channel.joinPartStreamName
@@ -79,7 +80,7 @@ module.exports = (server, logFunc) => {
     })
 
     router.get("/:communityAddress/members", parseOperator, (req, res) => {
-        log(`Requested monoplasma members @ ${req.params.communityAddress}`)
+        log(`HTTP ${req.params.communityAddress}> Requested monoplasma members`)
         const plasma = req.operator.watcher.plasma
         res.send(plasma.getMembers())
     })
@@ -91,7 +92,7 @@ module.exports = (server, logFunc) => {
             res.status(400).send({error: `Bad Ethereum address: ${req.params.address}`})
             return
         }
-        log(`Requested member ${address} of ${req.params.communityAddress}`)
+        log(`HTTP ${req.params.communityAddress}> Requested member ${address}`)
         const member = plasma.getMember(address)
         if (!member) {
             res.status(404).send({error: `Member not found: ${address} in ${req.params.communityAddress}`})

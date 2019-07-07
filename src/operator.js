@@ -37,33 +37,40 @@ module.exports = class MonoplasmaOperator {
     // TODO: block publishing should be based on value-at-risk, that is, publish after so-and-so many tokens received
     async onTokensReceived(event) {
         const blockNumber = event.blockNumber
-        if (blockNumber >= this.watcher.lastCreatedBlock.blockNumber + this.minIntervalBlocks) {
+        const lastBlock = this.lastPublishedBlock || this.watcher.lastCreatedBlock.blockNumber
+        if (blockNumber >= lastBlock + this.minIntervalBlocks) {
             await this.publishBlock(blockNumber)
+        } else {
+            this.log(`Skipped publishing at ${blockNumber}, last publish at ${lastBlock}`)
         }
     }
 
     /**
      * Sync watcher to the given block and publish the state AFTER it into blockchain
-     * @param {Number} blockNumber to sync up to
+     * @param {Number} rootchainBlockNumber to sync up to
      * @returns {Promise<TransactionReceipt>}
      */
-    async publishBlock(blockNumber) {
+    async publishBlock(rootchainBlockNumber) {
+        // TODO: would mutex for publishing blocks make sense? Consider (finality wait period + delay) vs block publishing interval
         //if (this.publishBlockInProgress) { throw new Error(`Currently publishing block ${this.publishBlockInProgress}, please wait that it completes before attempting another`) }
         //this.publishBlockInProgress = blockNumber
         await sleep(0)          // ensure lastObservedBlockNumber is updated since this likely happens as a response to event
+        const blockNumber = rootchainBlockNumber || this.watcher.state.lastObservedBlockNumber
+        if (blockNumber <= this.watcher.lastCreatedBlock.blockNumber) {
+            throw new Error(`Block #${this.watcher.lastCreatedBlock.blockNumber} has already been published, can't publish #${blockNumber}`)
+        }
+        this.lastPublishedBlock = blockNumber
 
-        const bnum = blockNumber || this.watcher.state.lastObservedBlockNumber
-        await this.watcher.playbackUntilBlock(bnum)
+        // MVP re-org resilience is accomplished by assuming finality magically happens after finalityWaitPeriodSeconds
+        this.log(`Waiting ${this.finalityWaitPeriodSeconds} sec before publishing block ${blockNumber}`)
+        await sleep(this.finalityWaitPeriodSeconds * 1000)
+
+        await this.watcher.playbackUntilBlock(blockNumber)
         const hash = this.watcher.plasma.getRootHash()
         const ipfsHash = ""     // TODO: upload this.watcher.plasma to IPFS while waiting for finality
 
-        this.log(`Waiting ${this.finalityWaitPeriodSeconds} sec before publishing block ${bnum} (hash=${hash})`)
-        await sleep(this.finalityWaitPeriodSeconds * 1000)
-        if (bnum <= this.watcher.lastCreatedBlock.blockNumber) {
-            throw new Error(`Block #${this.watcher.lastCreatedBlock.blockNumber} has already been published, can't publish #${bnum}`)
-        }
-        const tx = await this.contract.commit(bnum, hash, ipfsHash)
-        await this.watcher.plasma.storeBlock(bnum)
+        const tx = await this.contract.commit(blockNumber, hash, ipfsHash)
+        await this.watcher.plasma.storeBlock(blockNumber)
         return tx.wait(2)   // confirmations
         //this.publishBlockInProgress = false
     }

@@ -1,6 +1,6 @@
 const EventEmitter = require("events")
 
-const { Contract } = require("ethers")
+const { Contract, utils } = require("ethers")
 
 const MonoplasmaState = require("monoplasma/src/state")
 const { replayOn, mergeEventLists } = require("./utils/events")
@@ -82,7 +82,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         const transferEvents = await this.eth.getLogs(tokenTransferFilter)
         this.eventQueue = mergeEventLists(blockCreateEvents, transferEvents)
         this.lastCreatedBlock = blockCreateEvents && blockCreateEvents.length > 0 ?
-            blockCreateEvents.slice(-1)[0] : { blockNumber: 0, transactionIndex: 0 }
+            blockCreateEvents.slice(-1)[0].args : { blockNumber: 0 }
 
         // TODO: maybe harvest block timestamps from provider in the background, save to store?
         //   Blocking could be very long in case of long-lived community...
@@ -92,15 +92,17 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         }
 
         this.log("Listening to joins/parts from the Channel...")
-        this.channel.on("message", (topic, addressList, meta) => {
+        this.channel.on("message", (topic, addresses, meta) => {
+            // convert incoming addresses to checksum addresses
+            const addressList = addresses.map(utils.getAddress)
             this.messageQueue.push({ topic, addressList, timestamp: meta.messageId.timestamp })
         })
         await this.channel.listen(playbackStartingTimestamp)    // replay messages until in sync
         this.channel.on("error", this.error)
 
-        const { blockNumber, transactionIndex } = this.lastCreatedBlock
-        await this.playbackUntilBlock(blockNumber, transactionIndex)
+        await this.playbackUntilBlock(this.lastCreatedBlock.blockNumber)
 
+        // TODO: this should NOT be used for playbackUntilBlock, only for realtimeState
         this.log("Listening to Ethereum events...")
         this.token.on(tokenTransferFilter, async (to, from, amount, event) => {
             event.timestamp = await this.getBlockTimestamp(event.blockNumber)
@@ -110,7 +112,8 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
 
         this.contract.on(blockCreateFilter, async (to, from, amount, event) => {
             event.timestamp = await this.getBlockTimestamp(event.blockNumber)
-            this.lastCreatedBlock = event
+            this.log(`Observed creation of block ${+event.args.blockNumber} at block ${event.blockNumber}`)
+            this.lastCreatedBlock = event.args
             this.emit("blockCreated", event)
         })
 
@@ -136,7 +139,11 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         this.channel.close()
     }
 
-    async playbackUntilBlock(blockNumber, txIndex=1000000) {
+    /**
+     * Advance the "committed" or "final" state which reflects the blocks committed by the operator
+     * @param {*} blockNumber from BlockCreated event
+     */
+    async playbackUntilBlock(blockNumber) {
         if (blockNumber <= this.state.lastBlockNumber) {
             this.log(`Playback skipped: block ${blockNumber} requested, ${this.state.lastBlockNumber} marked played back`)
             return
@@ -146,9 +153,9 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         //   There's probably no need to do similar playback with messages since they're final on arrival
         //   It's fine to use the this.messageQueue though, the shouldn't change
         const timestamp = await this.getBlockTimestamp(blockNumber)
-        this.log(`Playing back until block ${blockNumber} tx ${txIndex}, t = ${timestamp}`)
+        this.log(`Playing back up to (end of) block ${blockNumber}, t = ${timestamp}`)
         const [oldEvents, newEvents] = partitionArray(this.eventQueue, event =>
-            event.blockNumber <= blockNumber && event.transactionIndex < txIndex
+            event.blockNumber <= blockNumber
         )
         const [oldMessages, newMessages] = partitionArray(this.messageQueue, msg =>
             msg.timestamp < timestamp

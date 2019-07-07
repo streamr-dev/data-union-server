@@ -115,7 +115,7 @@ async function start() {
         await throwIfNotContract(wallet.provider, TOKEN_ADDRESS, "Environment variable TOKEN_ADDRESS")
         tokenAddress = TOKEN_ADDRESS
     } else {
-        tokenAddress = await deployTestToken(wallet, TOKEN_NAME, TOKEN_SYMBOL, {}, log)
+        tokenAddress = await deployTestToken(wallet, TOKEN_NAME, TOKEN_SYMBOL, log)
     }
 
     // TODO: load server state, find communities from store
