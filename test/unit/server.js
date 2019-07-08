@@ -3,9 +3,10 @@ const sleep = require("../../src/utils/sleep-promise")
 const sinon = require("sinon")
 const os = require("os")
 const path = require("path")
-const { Wallet, providers: { JsonRpcProvider } } = require("ethers")
+const { Wallet, providers: { Web3Provider } } = require("ethers")
 
-const startGanache = require("monoplasma/src/utils/startGanache")
+const ganache = require("ganache-core")
+
 const mockStore = require("monoplasma/test/utils/mockStore")
 const MockStreamrChannel = require("../utils/mockStreamrChannel")
 const deployTestToken = require("../utils/deployTestToken")
@@ -36,19 +37,22 @@ const log = (...args) => {
 
 const CommunityProductServer = require("../../src/server")
 describe("CommunityProductServer", () => {
-    let ganache
     let tokenAddress
     let wallet
     let server
     before(async function () {
-        this.timeout(100000)
-        const ganacheLog = () => {} // msg => { log(" <Ganache> " + msg) }
-        ganache = await startGanache(8263, ganacheLog, ganacheLog, ganacheBlockIntervalSeconds)
-        const provider = new JsonRpcProvider(ganache.httpUrl)
-        wallet = new Wallet(ganache.privateKeys[0], provider)
-        const network = await provider.getNetwork()
-        console.log(`Deploying test token and Community contract (network id = ${network.chainId})...`)
+        const secretKey = "0x1234567812345678123456781234567812345678123456781234567812345678"
+        const provider = new Web3Provider(ganache.provider({
+            accounts: [{ secretKey, balance: "0xffffffffffffffffffffffffff" }],
+            logger: { log },
+        }))
+        wallet = new Wallet(secretKey, provider)
+        await provider.getNetwork()     // wait until ganache is up and ethers.js ready
+
+        console.log("Deploying test token...")
         tokenAddress = await deployTestToken(wallet)
+
+        log("Starting CommunityProductServer...")
         const storeDir = path.join(os.tmpdir(), `communitiesRouter-test-${+new Date()}`)
         const config = {
             tokenAddress,
@@ -62,7 +66,6 @@ describe("CommunityProductServer", () => {
     })
 
     after(async () => {
-        ganache.shutdown()
         await server.stop()
     })
 
