@@ -5,11 +5,11 @@ const bodyParser = require("body-parser")
 const assert = require("assert")
 const http = require("http")
 const fetch = require("node-fetch")
-const { Wallet, providers: { JsonRpcProvider } } = require("ethers")
+const { Wallet, providers: { Web3Provider } } = require("ethers")
 
 const deployTestToken = require("../utils/deployTestToken")
 const deployContract = require("../utils/deployCommunity")
-const startGanache = require("monoplasma/src/utils/startGanache")
+const ganache = require("ganache-core")
 
 const MockChannel = require("monoplasma/test/utils/mockChannel")
 const mockChannel = new MockChannel()
@@ -38,19 +38,22 @@ describe("Community product server /communities router", () => {
     const serverURL = `http://localhost:${port}`
 
     let httpServer
-    let ganache
     let tokenAddress
     let community
     before(async function() {
-        this.timeout(100000)
-        const ganacheLog = msg => { log(" <Ganache> " + msg) }
-        ganache = await startGanache(8266, ganacheLog, ganacheLog, 4)
-        const provider = new JsonRpcProvider(ganache.httpUrl)
-        const wallet = new Wallet(ganache.privateKeys[0], provider)
-        await provider.getNetwork()
+        const secretKey = "0x1234567812345678123456781234567812345678123456781234567812345678"
+        const provider = new Web3Provider(ganache.provider({
+            accounts: [{ secretKey, balance: "0xffffffffffffffffffffffffff" }],
+            logger: { log },
+        }))
+        const wallet = new Wallet(secretKey, provider)
+        await provider.getNetwork()     // wait until ganache is up and ethers.js ready
+
         log("Deploying test token and Community contract...")
         tokenAddress = await deployTestToken(wallet)
         const contractAddress = await deployContract(wallet, wallet.address, joinPartStreamId, tokenAddress, 1000)
+
+        log("Starting CommunityProductServer...")
         const apiKey = "NIwHuJtMQ9WRXeU5P54f6A6kcv29A4SNe4FDb06SEPyg"
         const storeDir = path.join(os.tmpdir(), `communitiesRouter-test-${+new Date()}`)
         const server = new CommunityProductServer(wallet, apiKey, storeDir, {
@@ -64,6 +67,7 @@ describe("Community product server /communities router", () => {
         community = await server.startOperating(contractAddress)
         //mockChannel.publish("join", [])
 
+        log("Starting CommunitiesRouter...")
         const app = express()
         app.use(bodyParser.json())
         app.use("/communities", router)
@@ -92,7 +96,6 @@ describe("Community product server /communities router", () => {
     })
 
     after(() => {
-        ganache.shutdown()
         httpServer.close()
     })
 })
