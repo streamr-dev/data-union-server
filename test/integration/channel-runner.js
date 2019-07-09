@@ -8,7 +8,7 @@ const helperFile = path.normalize(path.join(__dirname, "channel"))
 
 describe("Channel", () => {
     // TODO: fix it
-    it.skip("gets messages through", async function () {
+    it("gets messages through", async function () {
         const client0 = spawn("node", [`${helperFile}-client.js`])
         await sleep(10)
         const client1 = spawn("node", [`${helperFile}-client.js`])
