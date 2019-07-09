@@ -2,9 +2,11 @@ const Channel = require("../../src/streamrChannel")
 
 const sleep = require("../../src/utils/sleep-promise")
 
+const privateKey = "0x1234567812345678123456781234567812354678123456781234567812345678"
+
 async function start() {
     console.log("Starting listener...")
-    const channel = new Channel("NIwHuJtMQ9WRXeU5P54f6A6kcv29A4SNe4FDb06SEPyg", "test1")
+    const channel = new Channel(privateKey, "Channel-integration-test1")
     await channel.listen()
 
     let joinOk = false

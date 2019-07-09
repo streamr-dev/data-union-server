@@ -1,5 +1,6 @@
 const EventEmitter = require("events")
 const StreamrClient = require("streamr-client")
+const { utils } = require("ethers")
 
 /**
  * @typedef {string} State
@@ -19,16 +20,21 @@ const State = {
  * @typedef {Object} StreamrChannel
  * @property {StreamrClient} client
  * @property {string} streamName
+ * @property {string} streamrWsUrl default is "wss://www.streamr.com/api/v1/ws"
+ * @property {string} streamrHttpUrl default is "https://www.streamr.com/api/v1"
  * @property {State} mode
  */
 module.exports = class StreamrChannel extends EventEmitter {
-    constructor(apiKey, joinPartStreamName) {
+    constructor(privateKey, joinPartStreamName, streamrWsUrl, streamrHttpUrl) {
         super()
-        this.client = new StreamrClient({
-            apiKey,         // TODO: use ethereum address instead of apiKey
+        const opts = {
+            auth: { privateKey },
             retryResendAfter: 1000,
-        })
-        this.joinPartStreamName = joinPartStreamName || `Join-Part-${apiKey.slice(0, 2)}-${Date.now()}`
+        }
+        if (streamrWsUrl) { opts.url = streamrWsUrl }
+        if (streamrHttpUrl) { opts.restUrl = streamrHttpUrl }
+        this.client = new StreamrClient(opts)
+        this.joinPartStreamName = joinPartStreamName || `Join-Part-${utils.computeAddress(privateKey).slice(0, 10)}-${Date.now()}`
         this.mode = State.CLOSED
     }
 

@@ -6,15 +6,19 @@ const Channel = require("../../src/streamrChannel")
 const { until } = require("../utils/await-until")
 const assertFails = require("../utils/assert-promise-fails")
 
-// TODO: replace apikey with (throw-away) Ethereum private key
-const apiKey = "NIwHuJtMQ9WRXeU5P54f6A6kcv29A4SNe4FDb06SEPyg"
+const privateKey = "0x1234567812345678123456781234567812354678123456781234567812345678"
+
+const urls = {
+    ws: process.env.STREAMR_WS_URL,
+    http: process.env.STREAMR_HTTP_URL,
+}
 
 describe("streamrChannel", () => {
     it("gets messages through", async () => {
-        const sendChannel = new Channel(apiKey, "streamrChannel-test2")
+        const sendChannel = new Channel(privateKey, "streamrChannel-test2", urls.ws, urls.http)
         await sendChannel.startServer()
 
-        const recvChannel = new Channel(apiKey, "streamrChannel-test2")
+        const recvChannel = new Channel(privateKey, "streamrChannel-test2", urls.ws, urls.http)
         await recvChannel.listen()
         let joinMsg = [], partMsg = []
         recvChannel.on("join", msg => { joinMsg = msg })
@@ -39,7 +43,7 @@ describe("streamrChannel", () => {
     }).timeout(5000)
 
     it("can't double-start server", async () => {
-        const channel = new Channel(apiKey, "streamrChannel-test1")
+        const channel = new Channel(privateKey, "streamrChannel-test1", urls.ws, urls.http)
         await channel.startServer()
         assertFails(channel.startServer(), "Already started as server")
         assertFails(channel.listen(), "Already started as server")
@@ -47,7 +51,7 @@ describe("streamrChannel", () => {
     })
 
     it("can't double-start client", async () => {
-        const channel = new Channel(apiKey, "streamrChannel-test1")
+        const channel = new Channel(privateKey, "streamrChannel-test1", urls.ws, urls.http)
         await channel.listen()
         assertFails(channel.startServer(), "Already started as client")
         assertFails(channel.listen(), "Already started as client")
@@ -57,7 +61,7 @@ describe("streamrChannel", () => {
     it("listen() promise resolves after old messages have arrived", async () => {
         const streamName = "streamrChannel-test3-" + Date.now()
 
-        const sendChannel = new Channel(apiKey, streamName)
+        const sendChannel = new Channel(privateKey, streamName, urls.ws, urls.http)
         await sendChannel.startServer()
 
         const sendQueue = [
@@ -71,7 +75,7 @@ describe("streamrChannel", () => {
         await sendChannel.close()
 
         const recvQueue = []
-        const recvChannel = new Channel(apiKey, streamName)
+        const recvChannel = new Channel(privateKey, streamName, urls.ws, urls.http)
         recvChannel.on("message", (topic, addressList) => {
             recvQueue.push([topic, addressList])
         })

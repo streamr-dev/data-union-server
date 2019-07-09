@@ -33,6 +33,8 @@ const {
     ETHEREUM_PRIVATE_KEY,
     STREAMR_API_KEY,
     TOKEN_ADDRESS,
+    STREAMR_WS_URL,
+    STREAMR_HTTP_URL,
 
     BLOCK_FREEZE_SECONDS,
     FINALITY_WAIT_SECONDS,
@@ -51,11 +53,8 @@ const {
     // if ETHEREUM_SERVER isn't specified, start a local Ethereum simulator (Ganache) in given port
     GANACHE_PORT,
 
-    // web UI for revenue sharing demo
+    // HTTP API for /config and /communities endpoints
     WEBSERVER_PORT,
-    // don't launch web server in start_operator script
-    //   by default start serving static files under demo/public. This is for dev where UI is launched with `npm start` under demo directory.
-    //EXTERNAL_WEBSERVER,
 } = process.env
 
 // TODO: log Sentry Context/scope:
@@ -129,7 +128,9 @@ async function start() {
         defaultReceiverAddress: wallet.address,
         blockFreezeSeconds: BLOCK_FREEZE_SECONDS || 1000,
         gasPrice: utils.parseUnits(GAS_PRICE_GWEI || "4", "gwei"),
-        finalityWaitSeconds: FINALITY_WAIT_SECONDS || 1000
+        finalityWaitSeconds: FINALITY_WAIT_SECONDS || 1000,
+        streamrWsUrl: STREAMR_WS_URL,
+        streamrHttpUrl: STREAMR_HTTP_URL,
     }
     const server = new CommunityProductServer(wallet, apiKey, storeDir, config, log, error)
     await server.start()
@@ -186,9 +187,9 @@ async function transfer(wallet, targetAddress, tokenAddress, amount) {
     return tr
 }
 
-async function createCommunity(wallet, tokenAddress, apiKey) {
+async function createCommunity(wallet, tokenAddress) {
     log("Creating a community")
-    const channel = new Channel(apiKey)
+    const channel = new Channel(wallet.privateKey)
     await channel.startServer()
     const communityAddress = await deployContract(wallet, wallet.address, channel.joinPartStreamName, tokenAddress, 1000)
     return { communityAddress, channel }

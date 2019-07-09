@@ -25,7 +25,6 @@ const {
     ETHEREUM_NETWORK_ID,
     ETHEREUM_PRIVATE_KEY,
     JOIN_PART_STREAM_NAME,
-    STREAMR_API_KEY,
     TOKEN_ADDRESS,
     CONTRACT_ADDRESS,
     BLOCK_FREEZE_SECONDS,
@@ -98,7 +97,6 @@ async function start() {
     config.tokenAddress = TOKEN_ADDRESS || config.tokenAddress || await deployTestToken(wallet, TOKEN_NAME, TOKEN_SYMBOL, log)
     config.operatorAddress = wallet.address
     config.blockFreezeSeconds = +BLOCK_FREEZE_SECONDS || config.blockFreezeSeconds || 20
-    config.streamrApiKey = STREAMR_API_KEY || "NIwHuJtMQ9WRXeU5P54f6A6kcv29A4SNe4FDb06SEPyg"
     config.joinPartStreamName = JOIN_PART_STREAM_NAME || `test-joinPartStream-${+new Date()}`
     config.contractAddress = CONTRACT_ADDRESS || config.contractAddress || await deployContract(wallet, config.operatorAddress, config.joinPartStreamName, config.tokenAddress, config.blockFreezeSeconds, log)
     config.defaultReceiverAddress = wallet.address
@@ -109,9 +107,9 @@ async function start() {
     config.ethereumNetworkId = ETHEREUM_NETWORK_ID
 
     log("Starting the joinPartChannel and Operator")
-    const adminChannel = new Channel(config.streamrApiKey, config.joinPartStreamName)
+    const adminChannel = new Channel(privateKey, config.joinPartStreamName)
     await adminChannel.startServer()
-    const operatorChannel = new Channel(config.streamrApiKey, config.joinPartStreamName)
+    const operatorChannel = new Channel(privateKey, config.joinPartStreamName)
     const operator = new Operator(wallet, operatorChannel, fileStore, log, error)
     await operator.start(config)
 
