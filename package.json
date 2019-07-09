@@ -19,8 +19,9 @@
     "bn.js": "4.11.8",
     "etherlime": "^1.1.1",
     "ethers": "^4.0.27",
+    "exit-hook": "^2.2.0",
     "ganache-cli": "^6.4.3",
-    "monoplasma": "git://github.com/streamr-dev/monoplasma.git#master",
+    "monoplasma": "^0.1.5",
     "streamr-client": "2.1.0",
     "web3": "1.0.0-beta.37"
   },
