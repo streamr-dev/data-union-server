@@ -23,7 +23,7 @@ ENV GANACHE_PORT 8550
 #ENV FINALITY_WAIT_SECONDS 60
 #ENV GAS_PRICE_GWEI 4
 
-ENV STREAMR_API_KEY "tester1-api-key"
+#ENV STREAMR_API_KEY "tester1-api-key"
 ENV STREAMR_WS_URL "ws://localhost:8890/api/v1/ws"
 ENV STREAMR_HTTP_URL "http://localhost:8081/streamr-core/api/v1"
 

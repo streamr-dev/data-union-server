@@ -1,6 +1,6 @@
 module.exports = class MockStreamrChannel {
-    constructor(apiKey, joinPartStreamName) {
-        this.joinPartStreamName = joinPartStreamName || `Join-Part-Mock-${apiKey.slice(0, 2)}-${Date.now()}`
+    constructor(key, joinPartStreamName) {
+        this.joinPartStreamName = joinPartStreamName || `Join-Part-Mock-${key.slice(0, 2)}-${Date.now()}`
         this.mode = ""
         this.listeners = {
             join: [],

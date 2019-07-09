@@ -18,7 +18,6 @@ const deployContract = require("../utils/deployCommunity")
 const ERC20Mintable = require("../../build/ERC20Mintable.json")
 const CommunityProduct = require("../../build/CommunityProduct.json")
 
-const STREAMR_API_KEY = "NIwHuJtMQ9WRXeU5P54f6A6kcv29A4SNe4FDb06SEPyg"
 const STORE_DIR = __dirname + `/test-store-${+new Date()}`
 const GANACHE_PORT = 8546
 const WEBSERVER_PORT = 8080
@@ -47,7 +46,6 @@ describe("Community product demo", () => {
                 GANACHE_PORT,
                 WEBSERVER_PORT,
                 BLOCK_FREEZE_SECONDS,
-                STREAMR_API_KEY,
                 RESET: "yesplease",
             }
         })

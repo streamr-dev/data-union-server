@@ -25,9 +25,8 @@ module.exports = class CommunityProductServer {
      *
      * @param {Wallet} wallet from ethers.js
      */
-    constructor(wallet, streamrApiKey, storeDir, operatorConfig, log, error) {
+    constructor(wallet, storeDir, operatorConfig, log, error) {
         throwIfNotSet(wallet, "Wallet argument to new CommunityProductServer")
-        throwIfNotSet(streamrApiKey, "Streamr API key argument to new CommunityProductServer")
         throwIfNotSet(storeDir, "Store directory argument to new CommunityProductServer")
 
         this.wallet = wallet
@@ -35,7 +34,6 @@ module.exports = class CommunityProductServer {
         this.log = log || console.log
         this.error = error || console.error
         this.communities = {}       // mapping: Ethereum address => Community object
-        this.apiKey = streamrApiKey
         this.storeDir = storeDir
         this.operatorConfig = operatorConfig || {}
         this.communityIsRunningPromises = {}
@@ -144,7 +142,7 @@ module.exports = class CommunityProductServer {
             throw new Error(`Bad stream: ${joinPartStreamName}`)
         }
 
-        const channel = new StreamrChannel(this.apiKey, joinPartStreamName)
+        const channel = new StreamrChannel(this.wallet.privateKey, joinPartStreamName)
         return channel
     }
 
@@ -174,7 +172,6 @@ module.exports = class CommunityProductServer {
             state: "running",
             address,
             operator,
-            apiKey: this.apiKey,
             joinPartStreamName: operatorChannel.joinPartStreamName,
         }
         this.communities[address] = community

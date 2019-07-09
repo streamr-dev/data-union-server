@@ -18,7 +18,6 @@
             "name": "Start server (rinkeby)",
             "program": "${workspaceFolder}/start_server.js",
             "env": {
-                "STREAMR_API_KEY": "NIwHuJtMQ9WRXeU5P54f6A6kcv29A4SNe4FDb06SEPyg",
                 "ETHEREUM_NETWORK": "rinkeby",
                 "ETHEREUM_PRIVATE_KEY": "6E340F41A1C6E03E6E0A4E9805D1CEA342F6A299E7C931D6F3DA6DD34CB6E17D",
                 "TOKEN_ADDRESS": "0x0c89795f75eEA923Cd1faEea50777c1B87787A06",

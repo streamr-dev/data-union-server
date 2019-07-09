@@ -13,7 +13,6 @@ const deployTestToken = require("../utils/deployTestToken")
 const deployContract = require("../utils/deployCommunity")
 
 const joinPartStreamName = "joinpart-server-test"
-const apiKey = "NIwHuJtMQ9WRXeU5P54f6A6kcv29A4SNe4FDb06SEPyg"
 const ganacheBlockIntervalSeconds = 4
 const members = [
     { address: "0x2F428050ea2448ed2e4409bE47e1A50eBac0B2d2", earnings: "50" },
@@ -59,9 +58,9 @@ describe("CommunityProductServer", () => {
             defaultReceiverAddress: wallet.address,
             operatorAddress: wallet.address,
         }
-        server = new CommunityProductServer(wallet, apiKey, storeDir, config, log, log)
+        server = new CommunityProductServer(wallet, storeDir, config, log, log)
         server.getStoreFor = () => mockStore(startState, initialBlock, log)
-        server.getChannelFor = () => new MockStreamrChannel(apiKey, joinPartStreamName)
+        server.getChannelFor = () => new MockStreamrChannel(wallet.privateKey, joinPartStreamName)
         await server.start()
     })
 
@@ -86,6 +85,6 @@ describe("CommunityProductServer", () => {
 
         const clist = Object.keys(server.communities)
         assert.strictEqual(1, clist.length)
-        assert.strictEqual(apiKey, server.communities[contractAddress].apiKey)
+        assert(server.communities[contractAddress])
     })
 })

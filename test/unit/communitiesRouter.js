@@ -54,9 +54,8 @@ describe("Community product server /communities router", () => {
         const contractAddress = await deployContract(wallet, wallet.address, joinPartStreamId, tokenAddress, 1000)
 
         log("Starting CommunityProductServer...")
-        const apiKey = "NIwHuJtMQ9WRXeU5P54f6A6kcv29A4SNe4FDb06SEPyg"
         const storeDir = path.join(os.tmpdir(), `communitiesRouter-test-${+new Date()}`)
-        const server = new CommunityProductServer(wallet, apiKey, storeDir, {
+        const server = new CommunityProductServer(wallet, storeDir, {
             tokenAddress,
             defaultReceiverAddress: wallet.address,
             operatorAddress: wallet.address,

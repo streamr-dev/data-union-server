@@ -90,7 +90,6 @@ async function start() {
 
     await throwIfSetButNotContract(wallet, TOKEN_ADDRESS, "Environment variable TOKEN_ADDRESS")
     await throwIfSetButNotContract(wallet, CONTRACT_ADDRESS, "Environment variable CONTRACT_ADDRESS")
-    //throwIfNotSet(STREAMR_API_KEY, "Environment variable STREAMR_API_KEY")
 
     // ignore the saved config / saved state if not using a fresh ganache instance
     const config = RESET || ganache ? {} : await fileStore.loadState()

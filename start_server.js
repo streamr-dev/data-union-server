@@ -31,7 +31,6 @@ const {
     ETHEREUM_SERVER,            // explicitly specify server address
     ETHEREUM_NETWORK,           // use ethers.js default servers
     ETHEREUM_PRIVATE_KEY,
-    STREAMR_API_KEY,
     TOKEN_ADDRESS,
     STREAMR_WS_URL,
     STREAMR_HTTP_URL,
@@ -74,7 +73,6 @@ const error = (e, ...args) => {
 }
 
 const storeDir = fs.existsSync(STORE_DIR) ? STORE_DIR : __dirname + "/store"
-const apiKey = STREAMR_API_KEY || "NIwHuJtMQ9WRXeU5P54f6A6kcv29A4SNe4FDb06SEPyg"
 
 let ganache = null
 function stopGanache() {
@@ -132,7 +130,7 @@ async function start() {
         streamrWsUrl: STREAMR_WS_URL,
         streamrHttpUrl: STREAMR_HTTP_URL,
     }
-    const server = new CommunityProductServer(wallet, apiKey, storeDir, config, log, error)
+    const server = new CommunityProductServer(wallet, storeDir, config, log, error)
     await server.start()
 
     log("Starting web server...")
@@ -149,12 +147,12 @@ async function start() {
     log("[DONE]")
 
     if (DEVELOPER_MODE) {
-        const { communityAddress, channel } = await createCommunity(wallet, tokenAddress, apiKey)
+        const { communityAddress, channel } = await createCommunity(wallet, tokenAddress)
         log(`Deployed community at ${communityAddress}, waiting for server to notice...`)
         await server.communityIsRunning(communityAddress)
 
         app.use("/admin/addRevenue", (req, res) => transfer(wallet, communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
-        app.use("/admin/deploy", (req, res) => createCommunity(wallet, tokenAddress, apiKey).then(({ communityAddress }) => res.send({ communityAddress })).catch(error => res.status(500).send({error})))
+        app.use("/admin/deploy", (req, res) => createCommunity(wallet, tokenAddress).then(({ communityAddress }) => res.send({ communityAddress })).catch(error => res.status(500).send({error})))
         app.use("/admin/addTo/:communityAddress", (req, res) => transfer(wallet, req.params.communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
 
         await sleep(500)
