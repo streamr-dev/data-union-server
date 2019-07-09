@@ -74,6 +74,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         const playbackStartingTimestamp = this.state.lastMessageTimestamp || 0
         const playbackStartingBlock = this.state.blockNumber || 0
 
+        // TODO: move the transferEvents getLogs to playbackUntil
         this.log(`Retrieving events starting from block ${playbackStartingBlock}...`)
         const blockCreateFilter = this.contract.filters.BlockCreated()
         const tokenTransferFilter = this.token.filters.Transfer(null, this.contract.address)
@@ -141,7 +142,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
 
     /**
      * Advance the "committed" or "final" state which reflects the blocks committed by the operator
-     * @param {*} blockNumber from BlockCreated event
+     * @param {Number} blockNumber from BlockCreated event
      */
     async playbackUntilBlock(blockNumber) {
         if (blockNumber <= this.state.lastBlockNumber) {
