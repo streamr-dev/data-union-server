@@ -1,3 +1,5 @@
+const BN = require("bn.js")
+
 const {
     QUIET,
 } = process.env
@@ -17,9 +19,9 @@ async function replayEvent(plasma, event) {
     switch (type) {
         // event Transfer(address indexed from, address indexed to, uint256 value);
         case "Transfer": {
-            const { value } = event.args
-            log(`${value} tokens received @ block ${event.blockNumber}`)
-            plasma.addRevenue(value)
+            const revenueBN = new BN(event.args.value.toString(10))
+            log(`${revenueBN} tokens received @ block ${event.blockNumber}`)
+            plasma.addRevenue(revenueBN)
         } break
         // event BlockCreated(uint blockNumber, bytes32 rootHash, string ipfsHash);
         case "BlockCreated": {
