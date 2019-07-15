@@ -77,7 +77,7 @@ describe("Community product demo", () => {
         console.log("1) Create a new Community product")
 
         console.log("1.1) Create joinPartStream")
-        const channel = new StreamrChannel(STREAMR_API_KEY, `test-server-${+new Date()}`)
+        const channel = new StreamrChannel(adminPrivateKey, `test-server-${+new Date()}`)
         channel.startServer()
 
         console.log("1.2) Deploy CommunityProduct contract")
