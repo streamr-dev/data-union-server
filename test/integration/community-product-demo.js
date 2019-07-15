@@ -117,6 +117,7 @@ describe("Community product demo", () => {
         console.log(`     Stats after adding: ${JSON.stringify(res2b)}`)
         assert(from in members)
         */
+        await sleep(5000)
 
         console.log("3) Send revenue in")
         const token = new Contract(config.tokenAddress, ERC20Mintable.abi, wallet)
