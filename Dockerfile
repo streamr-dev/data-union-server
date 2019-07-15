@@ -6,9 +6,13 @@ COPY . /app
 # Install package.json dependencies (yes, clean up must be part of same RUN command because of layering)
 #RUN apk add --update python build-base && npm install && apk del python build-base && rm -rf /var/cache/apk/*
 RUN set -xe && \
+    apk add --update python build-base && \
     apk add --no-cache bash git openssh && \
     npm install && \
-    git --version && bash --version && ssh -V && npm -v && node -v
+    npm run build-contracts && \
+    apk del python build-base git && \
+    rm -rf /var/cache/apk/* && \
+    bash --version && ssh -V && npm -v && node -v
 
 EXPOSE 8085
 EXPOSE 8550
