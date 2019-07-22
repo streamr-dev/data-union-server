@@ -154,6 +154,7 @@ module.exports = class CommunityProductServer {
     async getStoreFor(communityAddress) {
         const address = ethers.utils.getAddress(communityAddress)
         const storeDir = `${this.storeDir}/${address}`
+        console.log(`Storing community ${communityAddress} data at ${storeDir}`)
         const fileStore = getFileStore(storeDir)
         return fileStore
     }

@@ -49,7 +49,7 @@ describe("Community product demo", () => {
                 RESET: "yesplease",
             }
         })
-        //operatorProcess.stdout.on("data", data => { console.log(`<server> ${data.toString().trim()}`) })
+        operatorProcess.stdout.on("data", data => { console.log(`<server> ${data.toString().trim()}`) })
         operatorProcess.stderr.on("data", data => { console.log(`server *** ERROR: ${data}`) })
         operatorProcess.on("close", code => { console.log(`start_server.js exited with code ${code}`) })
         operatorProcess.on("error", err => { console.log(`start_server.js ERROR: ${err}`) })
