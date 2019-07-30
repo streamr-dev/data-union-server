@@ -70,7 +70,7 @@ describe("CommunityProductServer", () => {
         const contractAddress = await deployContract(wallet, wallet.address, joinPartStreamName, tokenAddress, 1000)
         console.log(`Deployed contract at ${contractAddress}`)
 
-        server.stop()
+        await server.stop()
 
         await sleep(1000)
 

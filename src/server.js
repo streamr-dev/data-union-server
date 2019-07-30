@@ -9,6 +9,10 @@ const CommunityProductJson = require("../build/CommunityProduct.json")
 
 const { throwIfNotSet } = require("./utils/checkArguments")
 
+const operatorChangedEventTopic =  ethers.utils.id("OperatorChanged(address)")
+const operatorChangedAbi = ["event OperatorChanged(address indexed newOperator)"]
+const operatorChangedInterface = new ethers.utils.Interface(operatorChangedAbi)
+
 function addressEquals(a1, a2) {
     return ethers.utils.getAddress(a1) === ethers.utils.getAddress(a2)
 }
@@ -42,12 +46,12 @@ module.exports = class CommunityProductServer {
     }
 
     async start() {
-        // TODO: playback (e.g. after crash), resume operating existing communities
-        // TODO: check out https://github.com/ConsenSys/ethql for finding all OperatorChanged events
-        // When a new CommunityProduct is created, it will emit OperatorChanged with operator's address
-        this.eth.on({ topics: [ethers.utils.id("OperatorChanged(address)")] }, event => {
-            this.log(JSON.stringify(event))
-            const contractAddress = ethers.utils.getAddress(event.address)
+        await this.playbackPastOperatorChangedEvents()
+
+        this.eth.on({ topics: [operatorChangedEventTopic] }, log => {
+            let event = operatorChangedInterface.parseLog(log)
+            this.log("Seen OperatorChanged event: "+JSON.stringify(event))
+            const contractAddress = ethers.utils.getAddress(log.address)
             this.onOperatorChangedEventAt(contractAddress).catch(err => {
                 this.error(err.stack)
             })
@@ -57,6 +61,26 @@ module.exports = class CommunityProductServer {
     async stop() {
         this.eth.removeAllListeners()
         // TODO: hand over operators to another server?
+    }
+
+    async playbackPastOperatorChangedEvents(){
+        //playback events of OperatorChanged(this wallet)
+        const filter = {
+            fromBlock: 1,
+            toBlock: "latest",
+            topics: [operatorChangedEventTopic, ethers.utils.hexlify(ethers.utils.padZeros(this.wallet.address,32))]
+        }
+
+        await this.eth.getLogs(filter).then((logs) => {
+            logs.forEach(async (log) => {
+                let event = operatorChangedInterface.parseLog(log)
+                this.log("Playing back past OperatorChanged event: "+ JSON.stringify(event))
+                const contractAddress = ethers.utils.getAddress(log.address)
+                await this.onOperatorChangedEventAt(contractAddress).catch(err => {
+                    this.error(err.stack)
+                })                
+            })
+        })
     }
 
     /**
