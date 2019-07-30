@@ -91,23 +91,24 @@ describe("CommunityProductServer", () => {
         const server = new CommunityProductServer(wallet, storeDir, config, log, log)
         server.getStoreFor = () => mockStore(startState, initialBlock, log)
         server.getChannelFor = () => new MockStreamrChannel(wallet.privateKey, joinPartStreamName)
-        await server.start()
 
         sinon.spy(server, "onOperatorChangedEventAt")
         sinon.spy(server, "startOperating")
+        await server.start()
         const contractAddress = await deployContract(wallet, wallet.address, joinPartStreamName, tokenAddress, 1000)
 
         // give ethers.js time to poll and notice the block, also for server to react
         await sleep(ganacheBlockIntervalSeconds * 1000)
 
-        assert(server.onOperatorChangedEventAt.calledOnce)
-        assert.strictEqual(contractAddress, server.onOperatorChangedEventAt.getCall(0).args[0])
+        // 1 community start should be replayed from previous test, so 2 total communitites
+        assert(server.onOperatorChangedEventAt.calledTwice)
+        assert.strictEqual(contractAddress, server.onOperatorChangedEventAt.getCall(1).args[0])
 
-        assert(server.startOperating.calledOnce)
-        assert.strictEqual(contractAddress, server.startOperating.getCall(0).args[0])
+        assert(server.startOperating.calledTwice)
+        assert.strictEqual(contractAddress, server.startOperating.getCall(1).args[0])
 
         const clist = Object.keys(server.communities)
-        assert.strictEqual(1, clist.length)
+        assert.strictEqual(2, clist.length)
         assert(server.communities[contractAddress])
 
         await server.stop()
