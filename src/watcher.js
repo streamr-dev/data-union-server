@@ -136,7 +136,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
     }
 
     async stop() {
-        this.tokenFilter.unsubscribe()
+        //this.tokenFilter.unsubscribe()
         this.channel.close()
     }
 

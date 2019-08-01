@@ -59,7 +59,7 @@ module.exports = class CommunityProductServer {
     }
 
     async stop() {
-        this.eth.removeAllListeners()
+        this.eth.removeAllListeners({ topics: [operatorChangedEventTopic] })
         // TODO: hand over operators to another server?
     }
 
@@ -71,16 +71,16 @@ module.exports = class CommunityProductServer {
             topics: [operatorChangedEventTopic, ethers.utils.hexlify(ethers.utils.padZeros(this.wallet.address,32))]
         }
 
-        await this.eth.getLogs(filter).then((logs) => {
-            logs.forEach(async (log) => {
-                let event = operatorChangedInterface.parseLog(log)
-                this.log("Playing back past OperatorChanged event: "+ JSON.stringify(event))
-                const contractAddress = ethers.utils.getAddress(log.address)
-                await this.onOperatorChangedEventAt(contractAddress).catch(err => {
-                    this.error(err.stack)
-                })                
-            })
-        })
+        const logs = await this.eth.getLogs(filter)
+
+        for(let log of logs) {
+            let event = operatorChangedInterface.parseLog(log)
+            this.log("Playing back past OperatorChanged event: "+ JSON.stringify(event))
+            const contractAddress = ethers.utils.getAddress(log.address)
+            await this.onOperatorChangedEventAt(contractAddress).catch(err => {
+                this.error(err.stack)
+            })                
+        }
     }
 
     /**
@@ -89,16 +89,18 @@ module.exports = class CommunityProductServer {
      * @param {string} address
      */
     async onOperatorChangedEventAt(address) {
+        const contract = new ethers.Contract(address, CommunityProductJson.abi, this.eth)
+        const newOperatorAddress = await contract.operator()
+        const weOperate = addressEquals(newOperatorAddress, this.wallet.address)
         const community = this.communities[address]
         if (community) {
-            if (!community.contract) {
+            if (!community.operator || !community.operator.contract) {
                 // abuse mitigation: only serve one per event.address
                 //   normally CommunityProduct shouldn't send several requests (potential spam attack attempt)
                 this.error(`Too rapid OperatorChanged events from ${address}, community is still launching`)
                 return
             }
-            const newOperatorAddress = await community.contract.operator()
-            if (addressEquals(newOperatorAddress, this.wallet.address)) {
+            if (weOperate) {
                 this.error(`Repeated OperatorChanged("${newOperatorAddress}") events from ${address}`)
                 return
             } else {
@@ -106,7 +108,7 @@ module.exports = class CommunityProductServer {
                 await community.operator.shutdown()
                 delete this.communities[address]
             }
-        } else {
+        } else if (weOperate) {
             // rapid event spam stopper (from one contract)
             this.communities[address] = {
                 state: "launching",

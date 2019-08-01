@@ -34,6 +34,11 @@ module.exports = class MonoplasmaOperator {
         this.watcher.on("tokensReceived", async event => self.onTokensReceived(event).catch(self.error))
     }
 
+    async shutdown(){
+        this.log("Shutting down operator for contract: "+this.watcher.state.contractAddress)
+        this.watcher.stop()
+    }
+
     // TODO: block publishing should be based on value-at-risk, that is, publish after so-and-so many tokens received
     async onTokensReceived(event) {
         const blockNumber = event.blockNumber
