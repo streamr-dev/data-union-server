@@ -9,6 +9,10 @@ const CommunityProductJson = require("../build/CommunityProduct.json")
 
 const { throwIfNotSet } = require("./utils/checkArguments")
 
+const operatorChangedEventTopic =  ethers.utils.id("OperatorChanged(address)")
+const operatorChangedAbi = ["event OperatorChanged(address indexed newOperator)"]
+const operatorChangedInterface = new ethers.utils.Interface(operatorChangedAbi)
+
 function addressEquals(a1, a2) {
     return ethers.utils.getAddress(a1) === ethers.utils.getAddress(a2)
 }
@@ -42,12 +46,12 @@ module.exports = class CommunityProductServer {
     }
 
     async start() {
-        // TODO: playback (e.g. after crash), resume operating existing communities
-        // TODO: check out https://github.com/ConsenSys/ethql for finding all OperatorChanged events
-        // When a new CommunityProduct is created, it will emit OperatorChanged with operator's address
-        this.eth.on({ topics: [ethers.utils.id("OperatorChanged(address)")] }, event => {
-            this.log(JSON.stringify(event))
-            const contractAddress = ethers.utils.getAddress(event.address)
+        await this.playbackPastOperatorChangedEvents()
+
+        this.eth.on({ topics: [operatorChangedEventTopic] }, log => {
+            let event = operatorChangedInterface.parseLog(log)
+            this.log("Seen OperatorChanged event: " + JSON.stringify(event))
+            const contractAddress = ethers.utils.getAddress(log.address)
             this.onOperatorChangedEventAt(contractAddress).catch(err => {
                 this.error(err.stack)
             })
@@ -55,8 +59,28 @@ module.exports = class CommunityProductServer {
     }
 
     async stop() {
-        this.eth.removeAllListeners()
+        this.eth.removeAllListeners({ topics: [operatorChangedEventTopic] })
         // TODO: hand over operators to another server?
+    }
+
+    async playbackPastOperatorChangedEvents(){
+        //playback events of OperatorChanged(this wallet)
+        const filter = {
+            fromBlock: 1,
+            toBlock: "latest",
+            topics: [operatorChangedEventTopic, ethers.utils.hexlify(ethers.utils.padZeros(this.wallet.address,32))]
+        }
+
+        const logs = await this.eth.getLogs(filter)
+
+        for (let log of logs) {
+            let event = operatorChangedInterface.parseLog(log)
+            this.log("Playing back past OperatorChanged event: " + JSON.stringify(event))
+            const contractAddress = ethers.utils.getAddress(log.address)
+            await this.onOperatorChangedEventAt(contractAddress).catch(err => {
+                this.error(err.stack)
+            })                
+        }
     }
 
     /**
@@ -65,16 +89,18 @@ module.exports = class CommunityProductServer {
      * @param {string} address
      */
     async onOperatorChangedEventAt(address) {
+        const contract = new ethers.Contract(address, CommunityProductJson.abi, this.eth)
+        const newOperatorAddress = await contract.operator()
+        const weOperate = addressEquals(newOperatorAddress, this.wallet.address)
         const community = this.communities[address]
         if (community) {
-            if (!community.contract) {
+            if (!community.operator || !community.operator.contract) {
                 // abuse mitigation: only serve one per event.address
                 //   normally CommunityProduct shouldn't send several requests (potential spam attack attempt)
                 this.error(`Too rapid OperatorChanged events from ${address}, community is still launching`)
                 return
             }
-            const newOperatorAddress = await community.contract.operator()
-            if (addressEquals(newOperatorAddress, this.wallet.address)) {
+            if (weOperate) {
                 this.error(`Repeated OperatorChanged("${newOperatorAddress}") events from ${address}`)
                 return
             } else {
@@ -82,7 +108,7 @@ module.exports = class CommunityProductServer {
                 await community.operator.shutdown()
                 delete this.communities[address]
             }
-        } else {
+        } else if (weOperate) {
             // rapid event spam stopper (from one contract)
             this.communities[address] = {
                 state: "launching",
@@ -154,6 +180,7 @@ module.exports = class CommunityProductServer {
     async getStoreFor(communityAddress) {
         const address = ethers.utils.getAddress(communityAddress)
         const storeDir = `${this.storeDir}/${address}`
+        console.log(`Storing community ${communityAddress} data at ${storeDir}`)
         const fileStore = getFileStore(storeDir)
         return fileStore
     }
