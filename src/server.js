@@ -50,7 +50,7 @@ module.exports = class CommunityProductServer {
 
         this.eth.on({ topics: [operatorChangedEventTopic] }, log => {
             let event = operatorChangedInterface.parseLog(log)
-            this.log("Seen OperatorChanged event: "+JSON.stringify(event))
+            this.log("Seen OperatorChanged event: " + JSON.stringify(event))
             const contractAddress = ethers.utils.getAddress(log.address)
             this.onOperatorChangedEventAt(contractAddress).catch(err => {
                 this.error(err.stack)
@@ -73,9 +73,9 @@ module.exports = class CommunityProductServer {
 
         const logs = await this.eth.getLogs(filter)
 
-        for(let log of logs) {
+        for (let log of logs) {
             let event = operatorChangedInterface.parseLog(log)
-            this.log("Playing back past OperatorChanged event: "+ JSON.stringify(event))
+            this.log("Playing back past OperatorChanged event: " + JSON.stringify(event))
             const contractAddress = ethers.utils.getAddress(log.address)
             await this.onOperatorChangedEventAt(contractAddress).catch(err => {
                 this.error(err.stack)

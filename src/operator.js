@@ -35,7 +35,7 @@ module.exports = class MonoplasmaOperator {
     }
 
     async shutdown(){
-        this.log("Shutting down operator for contract: "+this.watcher.state.contractAddress)
+        this.log("Shutting down operator for contract: " + this.watcher.state.contractAddress)
         this.watcher.stop()
     }
 
