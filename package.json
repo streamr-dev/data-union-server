@@ -8,9 +8,9 @@
     "lint": "./node_modules/.bin/eslint *.js src test",
     "build-contracts": "./node_modules/.bin/etherlime --solcVersion=0.4.24 compile",
     "unit-tests": "./node_modules/.bin/mocha test/unit --exit",
-    "integration-tests": "./node_modules/.bin/mocha test/integration/community-product-demo.js --exit",
+    "integration-tests": "./node_modules/.bin/mocha test/integration --exit",
     "contract-tests": "npm run build-contracts && ./node_modules/.bin/etherlime test --solcVersion=0.4.24 test/contracts",
-    "test": "npm run unit-tests && npm run integration-tests"
+    "test": "npm run unit-tests && npm run integration-tests && npm run contract-tests"
   },
   "author": "Streamr Network AG",
   "license": "AGPL-3.0",
