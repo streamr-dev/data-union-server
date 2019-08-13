@@ -1,6 +1,6 @@
 const ethers = require("ethers")
 
-const getFileStore = require("monoplasma/src/fileStore")
+const FileStore = require("monoplasma/src/fileStore")
 
 const MonoplasmaOperator = require("./operator")
 const StreamrChannel = require("./streamrChannel")
@@ -181,7 +181,7 @@ module.exports = class CommunityProductServer {
         const address = ethers.utils.getAddress(communityAddress)
         const storeDir = `${this.storeDir}/${address}`
         console.log(`Storing community ${communityAddress} data at ${storeDir}`)
-        const fileStore = getFileStore(storeDir)
+        const fileStore = new FileStore(storeDir)
         return fileStore
     }
 
