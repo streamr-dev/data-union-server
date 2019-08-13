@@ -9,7 +9,7 @@ const onProcessExit = require("exit-hook")
 
 const { Wallet, providers: { JsonRpcProvider } } = require("ethers")
 
-const getFileStore = require("monoplasma/src/fileStore")
+const FileStore = require("monoplasma/src/fileStore")
 const Operator = require("./src/operator")
 const { throwIfSetButNotContract /*, throwIfNotSet */ } = require("./src/utils/checkArguments")
 const defaultServers = require("./defaultServers.json")
@@ -54,7 +54,7 @@ const error = (e, ...args) => {
 }
 
 const storeDir = fs.existsSync(STORE_DIR) ? STORE_DIR : __dirname + "/demo/public/data"
-const fileStore = getFileStore(storeDir)
+const fileStore = new FileStore(storeDir)
 
 let ganache = null
 function stopGanache() {
