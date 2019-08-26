@@ -10,7 +10,8 @@
             "name": "Start server (ganache)",
             "program": "${workspaceFolder}/start_server.js",
             "env": {
-                "DEVELOPER_MODE": "1"
+                "DEVELOPER_MODE": "1",
+                "SENTRY_TOKEN": "9569b0e79cab41a9b30dfaf83ed346ad",
             }
         }, {
             "type": "node",
@@ -18,6 +19,7 @@
             "name": "Start server (rinkeby)",
             "program": "${workspaceFolder}/start_server.js",
             "env": {
+                "SENTRY_TOKEN": "9569b0e79cab41a9b30dfaf83ed346ad",
                 "ETHEREUM_NETWORK": "rinkeby",
                 "ETHEREUM_PRIVATE_KEY": "6E340F41A1C6E03E6E0A4E9805D1CEA342F6A299E7C931D6F3DA6DD34CB6E17D",
                 "TOKEN_ADDRESS": "0x0c89795f75eEA923Cd1faEea50777c1B87787A06",

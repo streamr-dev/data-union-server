@@ -17,17 +17,6 @@ jobs:
       script:
         - "npm run lint"
         - "npm run unit-tests"
-    - stage: "End to end tests"
-      script:
-        - "sudo /etc/init.d/mysql stop"
-        - "git clone https://github.com/streamr-dev/streamr-docker-dev.git"
-        - "sudo ifconfig docker0 10.200.10.1/24"
-        - "$TRAVIS_BUILD_DIR/streamr-docker-dev/streamr-docker-dev/bin.sh start 1"
-        - "sleep 1m"
-        - "$TRAVIS_BUILD_DIR/streamr-docker-dev/streamr-docker-dev/bin.sh start engine-and-editor"
-        - "sleep 2m"
-        - "$TRAVIS_BUILD_DIR/streamr-docker-dev/streamr-docker-dev/bin.sh start ethereum-watcher"
-        - "npm run integration-tests"
     - stage: Build docker (dev)
       if: tag IS blank
       install: true

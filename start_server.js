@@ -53,17 +53,20 @@ const {
     SENTRY_TOKEN,
 } = process.env
 
-const Sentry = require("@sentry/node")
-Sentry.init({
-    dsn: `https://${SENTRY_TOKEN}@sentry.io/1482184`,
-    debug: true,
-})
+let Sentry
+if (SENTRY_TOKEN) {
+    Sentry = require("@sentry/node")
+    Sentry.init({
+        dsn: `https://${SENTRY_TOKEN}@sentry.io/1482184`,
+        debug: true,
+    })
+}
 
 // TODO: log Sentry Context/scope:
 //   Sentry.configureScope(scope => scope.setUser({id: community.address}))
 const log = QUIET ? () => {} : (...args) => {
     console.log(...args)
-    Sentry.addBreadcrumb({
+    Sentry && Sentry.addBreadcrumb({
         category: "log",
         message: args.join("; "),
         level: Sentry.Severity.Log
@@ -71,7 +74,7 @@ const log = QUIET ? () => {} : (...args) => {
 }
 const error = (e, ...args) => {
     console.error(e.stack, ...args)
-    Sentry.captureException(e)
+    Sentry && Sentry.captureException(e)
     // TODO: it seems Sentry won't have time to send the exception out
     //   is it better to wait? How to check if Sentry received it?
     //   program should be halted at any rate. Put reporting into separate process?
@@ -186,7 +189,7 @@ async function transfer(wallet, targetAddress, tokenAddress, amount) {
     // TODO: null token address => attempt ether transfer?
     throwIfNotContract(tokenAddress, "token address")
     const token = new Contract(tokenAddress, ERC20Mintable.abi, wallet)
-    const tx = await token.transfer(targetAddress, amount || utils.parseEther("1"))
+    const tx = await token.transfer(targetAddress, amount || parseEther("1"))
     const tr = await tx.wait(1)
     return tr
 }
