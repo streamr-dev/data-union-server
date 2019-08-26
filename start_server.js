@@ -3,12 +3,7 @@ const express = require("express")
 const cors = require("cors")
 const bodyParser = require("body-parser")
 const onProcessExit = require("exit-hook")
-
-const Sentry = require("@sentry/node")
-Sentry.init({
-    dsn: "https://cbb1e7aab0d541d3bf2f311a10adccee@sentry.io/1482184",
-    debug: true,
-})
+const { utils: { parseEther } } = require("ethers")
 
 const {
     Contract,
@@ -54,7 +49,15 @@ const {
 
     // HTTP API for /config and /communities endpoints
     WEBSERVER_PORT,
+
+    SENTRY_TOKEN,
 } = process.env
+
+const Sentry = require("@sentry/node")
+Sentry.init({
+    dsn: `https://${SENTRY_TOKEN}@sentry.io/1482184`,
+    debug: true,
+})
 
 // TODO: log Sentry Context/scope:
 //   Sentry.configureScope(scope => scope.setUser({id: community.address}))
@@ -69,7 +72,10 @@ const log = QUIET ? () => {} : (...args) => {
 const error = (e, ...args) => {
     console.error(e.stack, ...args)
     Sentry.captureException(e)
-    process.exit(1)   // TODO test: will Sentry have time to send the exception out?
+    // TODO: it seems Sentry won't have time to send the exception out
+    //   is it better to wait? How to check if Sentry received it?
+    //   program should be halted at any rate. Put reporting into separate process?
+    process.exit(1)
 }
 
 const storeDir = fs.existsSync(STORE_DIR) ? STORE_DIR : __dirname + "/store"
