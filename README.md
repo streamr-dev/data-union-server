@@ -24,6 +24,7 @@ Web server answers to following HTTP endpoints, read-only, for inspection purpos
 All "writing" happens either through Ethereum contracts or the joinPartStream (see [streamrChannel.js](src/streamrChannel.js))
 
 Start server script can be modified using the following environment variables:
+
 | Variable | Notes |
 | --- | --- |
 |  ETHEREUM_SERVER | explicitly specify server address |
