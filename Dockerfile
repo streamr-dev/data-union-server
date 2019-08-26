@@ -9,6 +9,7 @@ RUN set -xe && \
     apk add --update python build-base && \
     apk add --no-cache bash git openssh && \
     npm install && \
+    (./node_modules/.bin/etherlime opt-out || true) && \
     npm run build-contracts && \
     apk del python build-base git && \
     rm -rf /var/cache/apk/* && \
