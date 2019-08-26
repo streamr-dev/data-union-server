@@ -24,36 +24,24 @@ Web server answers to following HTTP endpoints, read-only, for inspection purpos
 All "writing" happens either through Ethereum contracts or the joinPartStream (see [streamrChannel.js](src/streamrChannel.js))
 
 Start server script can be modified using the following environment variables:
-```
-    ETHEREUM_SERVER,            // explicitly specify server address
-    ETHEREUM_NETWORK,           // use ethers.js default servers
-    ETHEREUM_PRIVATE_KEY,
-    TOKEN_ADDRESS,
-    STREAMR_WS_URL,
-    STREAMR_HTTP_URL,
-
-    BLOCK_FREEZE_SECONDS,
-    FINALITY_WAIT_SECONDS,
-    GAS_PRICE_GWEI,
-    //RESET,
-
-    STORE_DIR,
-    QUIET,
-
-    DEVELOPER_MODE,
-
-    // these will be used  1) for demo token  2) if TOKEN_ADDRESS doesn't support name() and symbol()
-    TOKEN_SYMBOL,
-    TOKEN_NAME,
-
-    // if ETHEREUM_SERVER isn't specified, start a local Ethereum simulator (Ganache) in given port
-    GANACHE_PORT,
-
-    // HTTP API for /config and /communities endpoints
-    WEBSERVER_PORT,
-
-    SENTRY_TOKEN,
-```
+| Variable | Notes |
+| --- | --- |
+|  ETHEREUM_SERVER | explicitly specify server address |
+|  ETHEREUM_NETWORK | use ethers.js default servers |
+|  ETHEREUM_PRIVATE_KEY | private key of the operators, used for identifying which contracts we should be serving |
+|  TOKEN_ADDRESS | $DATA token address |
+|  STREAMR_WS_URL | Default: wss://www.streamr.com/api/v1/ws |
+|  STREAMR_HTTP_URL | Default: https://www.streamr.com/api/v1 |
+|  BLOCK_FREEZE_SECONDS |  |
+|  FINALITY_WAIT_SECONDS |  |
+|  GAS_PRICE_GWEI |  |
+|  STORE_DIR |  |
+|  QUIET | Don't print to console.log |
+|  TOKEN_SYMBOL | Will be used 1) for demo token 2) if TOKEN_ADDRESS doesn't support name() and symbol() |
+|  TOKEN_NAME |  |
+|  GANACHE_PORT | if ETHEREUM_SERVER isn't specified, start a local Ethereum simulator (Ganache) in given port |
+|  WEBSERVER_PORT | HTTP API for /config and /communities endpoints |
+|  SENTRY_TOKEN | DSN for sending Sentry messages |
 
 # Debugging and developing
 
