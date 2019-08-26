@@ -84,5 +84,5 @@ describe("streamrChannel", () => {
 
         assert.deepStrictEqual(recvQueue, sendQueue)
 
-    }).timeout(5000)
+    }).timeout(10000)
 })
