@@ -5,6 +5,7 @@
   "main": "start_server.js",
   "scripts": {
     "start": "node start_server.js",
+    "postinstall": "./node_modules/.bin/etherlime opt-out || true",
     "lint": "./node_modules/.bin/eslint *.js src test",
     "build-contracts": "./node_modules/.bin/etherlime --solcVersion=0.4.24 compile",
     "unit-tests": "./node_modules/.bin/mocha test/unit --exit",
@@ -21,7 +22,7 @@
     "ethers": "^4.0.27",
     "exit-hook": "^2.2.0",
     "ganache-cli": "^6.4.3",
-    "monoplasma": "0.1.6",
+    "monoplasma": "0.1.7",
     "streamr-client": "2.1.0"
   },
   "devDependencies": {
