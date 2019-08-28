@@ -156,20 +156,21 @@ async function start() {
     log("[DONE]")
 
     if (DEVELOPER_MODE) {
-        const { communityAddress, channel } = await createCommunity(wallet, tokenAddress)
-        log(`Deployed community at ${communityAddress}, waiting for server to notice...`)
-        await server.communityIsRunning(communityAddress)
-
+        log("DEVELOPER MODE: /admin endpoints available: addRevenue, deploy, addTo/{address}")
         app.use("/admin/addRevenue", (req, res) => transfer(wallet, communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
         app.use("/admin/deploy", (req, res) => createCommunity(wallet, tokenAddress).then(({ communityAddress }) => res.send({ communityAddress })).catch(error => res.status(500).send({error})))
         app.use("/admin/addTo/:communityAddress", (req, res) => transfer(wallet, req.params.communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
 
+        const { communityAddress, channel } = await createCommunity(wallet, tokenAddress)
+        log(`Deployed community at ${communityAddress}, waiting for server to notice...`)
+        await server.communityIsRunning(communityAddress)
         await sleep(500)
         await channel.publish("join", [
             wallet.address,
             "0xdc353aa3d81fc3d67eb49f443df258029b01d8ab",
             "0x4178babe9e5148c6d5fd431cd72884b07ad855a0",
         ])
+        log("Waiting for server to notice joins...")
         while (server.communities[communityAddress].operator.watcher.messageQueue.length > 0) {
             await sleep(1000)
         }
