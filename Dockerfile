@@ -35,5 +35,5 @@ ENV STREAMR_HTTP_URL "http://localhost:8081/streamr-core/api/v1"
 ENV DEVELOPER_MODE "x"
 #ENV TOKEN_SYMBOL "TEST"
 #ENV TOKEN_NAME "TestToken"
-
+ENTRYPOINT ["sh", "docker-entrypoint.sh"]
 CMD node start_server.js
