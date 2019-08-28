@@ -40,7 +40,7 @@ describe("streamrChannel", () => {
 
         await sendChannel.close()
         await recvChannel.close()
-    }).timeout(5000)
+    }).timeout(15000)
 
     it("can't double-start server", async () => {
         const channel = new Channel(privateKey, "streamrChannel-test1", urls.ws, urls.http)
