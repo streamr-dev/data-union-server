@@ -79,7 +79,7 @@ module.exports = class CommunityProductServer {
             const contractAddress = ethers.utils.getAddress(log.address)
             await this.onOperatorChangedEventAt(contractAddress).catch(err => {
                 this.error(err.stack)
-            })                
+            })
         }
     }
 
@@ -115,15 +115,12 @@ module.exports = class CommunityProductServer {
                 eventDetectedAt: Date.now(),
             }
 
+            this.communityIsRunning(address) // create the promise to prevent later creation
             try {
                 const result = await this.startOperating(address)
-                if (address in this.communityIsRunningPromises) {
-                    this.communityIsRunningPromises[address].setRunning(result)
-                }
+                this.communityIsRunningPromises[address].setRunning(result)
             } catch (err) {
-                if (address in this.communityIsRunningPromises) {
-                    this.communityIsRunningPromises[address].setFailed(err)
-                }
+                this.communityIsRunningPromises[address].setFailed(err)
             }
         }
     }
