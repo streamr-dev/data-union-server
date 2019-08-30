@@ -79,7 +79,7 @@ module.exports = class CommunityProductServer {
             const contractAddress = ethers.utils.getAddress(log.address)
             await this.onOperatorChangedEventAt(contractAddress).catch(err => {
                 this.error(err.stack)
-            })                
+            })
         }
     }
 

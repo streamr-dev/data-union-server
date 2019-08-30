@@ -4,6 +4,7 @@ const sleep = require("./utils/sleep-promise")
 const { throwIfBadAddress } = require("./utils/checkArguments")
 
 const MonoplasmaWatcher = require("./watcher")
+const MonoplasmaState = require("monoplasma/src/state")
 
 const MonoplasmaJson = require("../build/Monoplasma.json")
 
@@ -14,6 +15,7 @@ module.exports = class MonoplasmaOperator {
         this.log = logFunc || (() => {})
         this.error = errorFunc || console.error
         this.watcher = new MonoplasmaWatcher(wallet.provider, joinPartChannel, store, logFunc, errorFunc)
+        this.lastSavedBlock = null
     }
 
     async start(config) {
@@ -22,19 +24,25 @@ module.exports = class MonoplasmaOperator {
         this.finalityWaitPeriodSeconds = config.finalityWaitPeriodSeconds || 1 // TODO: in production || 3600
         this.address = config.operatorAddress
         this.gasPrice = config.gasPrice || 4000000000  // 4 gwei
+        this.contract = new Contract(config.contractAddress, MonoplasmaJson.abi, this.wallet)
 
         // TODO: replace minIntervalBlocks with tokensNotCommitted (value-at-risk)
         this.minIntervalBlocks = config.minIntervalBlocks || 1
         //this.tokensNotCommitted = 0    // TODO: bignumber
 
         await this.watcher.start(config)
-        this.contract = new Contract(this.watcher.state.contractAddress, MonoplasmaJson.abi, this.wallet)
+
+        this.finalPlasma = new MonoplasmaState(0, [], {
+            saveBlock: async block => {
+                this.lastSavedBlock = block
+            }
+        }, this.watcher.plasma.adminAddress, this.watcher.plasma.adminFee, this.watcher.plasma.currentBlock, this.watcher.plasma.currentTimestamp)
 
         const self = this
         this.watcher.on("tokensReceived", async event => self.onTokensReceived(event).catch(self.error))
     }
 
-    async shutdown(){
+    async shutdown() {
         this.log("Shutting down operator for contract: " + this.watcher.state.contractAddress)
         this.watcher.stop()
     }
@@ -70,7 +78,9 @@ module.exports = class MonoplasmaOperator {
         this.log(`Waiting ${this.finalityWaitPeriodSeconds} sec before publishing block ${blockNumber}`)
         await sleep(this.finalityWaitPeriodSeconds * 1000)
 
-        await this.watcher.playbackUntilBlock(blockNumber)
+        await this.watcher.playbackUntilBlock(this.finalPlasma, blockNumber)
+        this.watcher.channelPruneCache(this.watcher.plasma.currentTimestamp)
+
         const hash = this.watcher.plasma.getRootHash()
         const ipfsHash = ""     // TODO: upload this.watcher.plasma to IPFS while waiting for finality
 

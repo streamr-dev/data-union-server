@@ -157,9 +157,15 @@ async function start() {
         log(`Deployed community at ${communityAddress}, waiting for server to notice...`)
         await server.communityIsRunning(communityAddress)
 
+        // manipulate "default" community
         app.use("/admin/addRevenue", (req, res) => transfer(wallet, communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
+        app.use("/admin/setAdminFee", (req, res) => setFee(wallet, communityAddress, "0.3").then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
+        app.use("/admin/resetAdminFee", (req, res) => setFee(wallet, communityAddress, 0).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
+
+        // deploy new ones
         app.use("/admin/deploy", (req, res) => createCommunity(wallet, tokenAddress).then(({ communityAddress }) => res.send({ communityAddress })).catch(error => res.status(500).send({error})))
-        app.use("/admin/addTo/:communityAddress", (req, res) => transfer(wallet, req.params.communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
+        app.use("/admin/:communityAddress/add", (req, res) => transfer(wallet, req.params.communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
+        app.use("/admin/:communityAddress/fee/:fee", (req, res) => setFee(wallet, req.params.communityAddress, req.params.fee).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
 
         await sleep(500)
         await channel.publish("join", [
@@ -187,6 +193,17 @@ async function transfer(wallet, targetAddress, tokenAddress, amount) {
     throwIfNotContract(tokenAddress, "token address")
     const token = new Contract(tokenAddress, ERC20Mintable.abi, wallet)
     const tx = await token.transfer(targetAddress, amount || utils.parseEther("1"))
+    const tr = await tx.wait(1)
+    return tr
+}
+
+const CommunityProduct = require("./build/CommunityProduct")
+async function setFee(wallet, targetAddress, fee) {
+    throwIfNotContract(targetAddress, "Monoplasma contract address")
+    if (!(fee >= 0 && fee <= 1)) { throw new Error(`Admin fee must be a number between 0...1, got: ${fee}`) }
+    const community = new Contract(targetAddress, CommunityProduct.abi, wallet)
+    const feeBN = parseEther(fee.toString())
+    const tx = await community.setAdminFee(feeBN)
     const tr = await tx.wait(1)
     return tr
 }

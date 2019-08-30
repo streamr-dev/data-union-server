@@ -13,16 +13,19 @@ module.exports = class MonoplasmaValidator {
 
         this.eventQueue = []
         this.lastSavedBlock = null
+    }
+
+    async start(config) {
+        await this.watcher.start()
+        this.contract = new Contract(this.watcher.state.contractAddress, MonoplasmaJson.abi, this.wallet)
+
+        await this.watcher.start(config)
+
         this.validatedPlasma = new MonoplasmaState(0, [], {
             saveBlock: async block => {
                 this.lastSavedBlock = block
             }
-        })
-    }
-
-    async start() {
-        await this.watcher.start()
-        this.contract = new Contract(this.watcher.state.contractAddress, MonoplasmaJson.abi, this.wallet)
+        }, this.watcher.plasma.adminAddress, this.watcher.plasma.adminFee, this.watcher.plasma.currentBlock, this.watcher.plasma.currentTimestamp)
 
         const self = this
         this.log("Starting validator's BlockCreated listener")
@@ -36,7 +39,8 @@ module.exports = class MonoplasmaValidator {
         this.plasma.storeBlock(blockNumber)
 
         // update the "validated" version to the block number whose hash was published
-        await super.playbackOn(this.validatedPlasma, this.lastCheckedBlock + 1, blockNumber)
+        await this.watcher.playbackUntilBlock(this.validatedPlasma, blockNumber)
+        this.watcher.channelPruneCache(this.watcher.plasma.currentTimestamp)
         this.lastCheckedBlock = blockNumber
 
         // check that the hash at that point in history matches
@@ -71,15 +75,5 @@ module.exports = class MonoplasmaValidator {
             const tr = await tx.wait(2)
             this.log(`"Prove" transaction: ${JSON.stringify(tr)}`)
         }
-    }
-
-    // TODO: validate also during playback? That would happen automagically if replayEvents would be hooked somehow
-    async playback(from, to) {
-        await super.playback(from, to)
-        //await super.playbackOn(this.validatedPlasma, from, to)
-        this.lastCheckedBlock = to
-        this.validatedPlasma = new MonoplasmaState(0, this.plasma.getMembers(), this.validatedPlasma.store)
-        this.lastValidatedBlock = to
-        this.lastValidatedMembers = this.watchedAccounts.map(address => this.validatedPlasma.getMember(address))
     }
 }
