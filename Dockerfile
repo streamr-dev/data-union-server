@@ -31,7 +31,7 @@ ENV GANACHE_PORT 8550
 ENV STREAMR_WS_URL "ws://localhost:8890/api/v1/ws"
 ENV STREAMR_HTTP_URL "http://localhost:8081/streamr-core/api/v1"
 
-ENV DEVELOPER_MODE "x"
+#ENV DEVELOPER_MODE "x"
 #ENV TOKEN_SYMBOL "TEST"
 #ENV TOKEN_NAME "TestToken"
 
