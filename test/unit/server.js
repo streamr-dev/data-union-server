@@ -4,16 +4,14 @@ const sinon = require("sinon")
 const os = require("os")
 const path = require("path")
 const { Wallet, providers: { Web3Provider } } = require("ethers")
-const ethers = require("ethers")
 
 const ganache = require("ganache-core")
 
 const mockStore = require("monoplasma/test/utils/mockStore")
 const MockStreamrChannel = require("../utils/mockStreamrChannel")
 const deployTestToken = require("../utils/deployTestToken")
-const deployContract = require("../utils/deployCommunity")
-const CommunityJson = require("../../build/CommunityProduct")
-const joinPartStreamName = "joinpart-server-test"
+const deployTestCommunity = require("../utils/deployTestCommunity")
+const joinPartStreamId = "joinpart-server-test"
 const ganacheBlockIntervalSeconds = 4
 const members = [
     { address: "0x2F428050ea2448ed2e4409bE47e1A50eBac0B2d2", earnings: "50" },
@@ -52,7 +50,7 @@ describe("CommunityProductServer", () => {
         console.log("Deploying test token...")
         tokenAddress = await deployTestToken(wallet)
     })
-    
+
     it("notices creation of a new CommunityProduct and starts Operator", async function () {
         this.timeout(100000)
 
@@ -65,12 +63,13 @@ describe("CommunityProductServer", () => {
         }
         const server = new CommunityProductServer(wallet, storeDir, config, log, log)
         server.getStoreFor = () => mockStore(startState, initialBlock, log)
-        server.getChannelFor = () => new MockStreamrChannel(wallet.privateKey, joinPartStreamName)
+        server.getChannelFor = () => new MockStreamrChannel(wallet.privateKey, joinPartStreamId)
 
         sinon.spy(server, "onOperatorChangedEventAt")
         sinon.spy(server, "startOperating")
         await server.start()
-        const contractAddress = await deployContract(wallet, wallet.address, joinPartStreamName, tokenAddress, 1000)
+        const contract = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000)
+        const contractAddress = contract.address
 
         // give ethers.js time to poll and notice the block, also for server to react
         await sleep(ganacheBlockIntervalSeconds * 1000)
@@ -87,7 +86,7 @@ describe("CommunityProductServer", () => {
 
         await server.stop()
     })
-    
+
     it("resumed operating communities it's operated before (e.g. a crash)", async function () {
         this.timeout(0)
 
@@ -100,26 +99,23 @@ describe("CommunityProductServer", () => {
         }
         const server = new CommunityProductServer(wallet, storeDir, config, log, log)
         server.getStoreFor = () => mockStore(startState, initialBlock, log)
-        server.getChannelFor = () => new MockStreamrChannel(wallet.privateKey, joinPartStreamName)
+        server.getChannelFor = () => new MockStreamrChannel(wallet.privateKey, joinPartStreamId)
         await server.start()
-        
-        const contractAddress = await deployContract(wallet, wallet.address, joinPartStreamName, tokenAddress, 1000)
-        console.log(`Deployed contract at ${contractAddress}`)
 
-        const contractAddressNewOp = await deployContract(wallet, wallet.address, joinPartStreamName, tokenAddress, 1000)
-        console.log(`Deployed contract at ${contractAddressNewOp}`)
-      
-        const contractNewOp = new ethers.Contract(contractAddressNewOp,CommunityJson.abi,wallet)
-        await contractNewOp.setOperator("0x0000000000000000000000000000000000000001")
+        const contract = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000)
+        console.log(`Deployed contract at ${contract.address}`)
+
+        const contract2 = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000)
+        console.log(`Deployed contract at ${contract2.address}`)
+
+        await contract2.setOperator("0x0000000000000000000000000000000000000001")
 
         await server.stop()
 
         await sleep(ganacheBlockIntervalSeconds * 1000)
 
         await server.start()
-        assert(server.communities[contractAddress])
-        assert(!server.communities[contractAddressNewOp])
+        assert(server.communities[contract.address])
+        assert(!server.communities[contract2.address])
     })
-
-
 })

@@ -13,7 +13,7 @@ const StreamrChannel = require("../../src/streamrChannel")
 
 const sleep = require("../../src/utils/sleep-promise")
 const { untilStreamContains, untilStreamMatches, capture } = require("../utils/await-until")
-const deployContract = require("../utils/deployCommunity")
+const deployContract = require("../../src/deployCommunity")
 
 const ERC20Mintable = require("../../build/ERC20Mintable.json")
 const CommunityProduct = require("../../build/CommunityProduct.json")
@@ -82,7 +82,7 @@ describe("Community product demo", () => {
 
         console.log("1.2) Deploy CommunityProduct contract")
         const wallet = new Wallet(privateKey, ganacheProvider)
-        const communityAddress = await deployContract(wallet, config.operatorAddress, channel.joinPartStreamName, config.tokenAddress, BLOCK_FREEZE_SECONDS, console.log)
+        const communityAddress = await deployContract(wallet, config.operatorAddress, channel.joinPartStreamName, config.tokenAddress, BLOCK_FREEZE_SECONDS, console.log, config.streamrWsUrl, config.streamrHttpUrl)
 
         console.log("1.3) Wait until Operator starts")
         let stats = { error: true }

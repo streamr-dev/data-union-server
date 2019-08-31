@@ -152,20 +152,9 @@ module.exports = class CommunityProductServer {
     async getChannelFor(communityAddress) {
         const address = ethers.utils.getAddress(communityAddress)
         const contract = new ethers.Contract(address, CommunityProductJson.abi, this.eth)
-        const operatorAddress = await contract.operator()
-
-        if (!addressEquals(operatorAddress, this.wallet.address)) {
-            throw new Error(`Observed CommunityProduct requesting operator ${operatorAddress}, not a job for me (${this.wallet.address})`)
-        }
-
-        const joinPartStreamName = await contract.joinPartStream()
-
-        // TODO: check streams actually exist AND permissions are correct
-        if (!joinPartStreamName) {
-            throw new Error(`Bad stream: ${joinPartStreamName}`)
-        }
-
-        const channel = new StreamrChannel(this.wallet.privateKey, joinPartStreamName)
+        const joinPartStreamId = await contract.joinPartStream()
+        const channel = new StreamrChannel(this.wallet.privateKey, joinPartStreamId, this.operatorConfig.streamrWsUrl, this.operatorConfig.streamrHttpUrl)
+        await channel.listen()      // will throw if joinPartStreamId is bad
         return channel
     }
 
@@ -184,6 +173,13 @@ module.exports = class CommunityProductServer {
 
     async startOperating(communityAddress) {
         const address = ethers.utils.getAddress(communityAddress)
+        const contract = new ethers.Contract(address, CommunityProductJson.abi, this.eth)
+
+        const operatorAddress = await contract.operator()
+        if (!addressEquals(operatorAddress, this.wallet.address)) {
+            throw new Error(`Observed CommunityProduct requesting operator ${operatorAddress}, not a job for me (${this.wallet.address})`)
+        }
+
         const operatorChannel = await this.getChannelFor(address)
         const operatorStore = await this.getStoreFor(address)
         const log = (...args) => { this.log(`${address}> `, ...args) }
@@ -196,7 +192,7 @@ module.exports = class CommunityProductServer {
             state: "running",
             address,
             operator,
-            joinPartStreamName: operatorChannel.joinPartStreamName,
+            joinPartStreamId: operatorChannel.stream.id,
         }
         this.communities[address] = community
         return community

@@ -51,3 +51,5 @@ Run tests with one of the following:
 * `npm run unit-tests` for just locally run unit tests of JS source files
 * `npm run contract-tests` for smart contract tests
 * `npm run integration-tests` for end-to-end tests that talk to internet
+
+Note: STREAMR_WS_URL and STREAMR_HTTP_URL should be set for integration-tests, otherwise they'll contact production instances
