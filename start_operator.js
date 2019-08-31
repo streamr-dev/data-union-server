@@ -7,14 +7,17 @@ const cors = require("cors")
 const bodyParser = require("body-parser")
 const onProcessExit = require("exit-hook")
 
-const { Wallet, providers: { JsonRpcProvider } } = require("ethers")
+const { Wallet, Contract, providers: { JsonRpcProvider } } = require("ethers")
+
+const CommunityProductJson = require("../build/CommunityProduct.json")
 
 const FileStore = require("monoplasma/src/fileStore")
 const Operator = require("./src/operator")
 const { throwIfSetButNotContract /*, throwIfNotSet */ } = require("./src/utils/checkArguments")
 const defaultServers = require("./defaultServers.json")
+const deployContract = require("./src/utils/deployCommunity")
+
 const deployTestToken = require("./test/utils/deployTestToken")
-const deployContract = require("./test/utils/deployCommunity")
 
 const operatorRouter = require("monoplasma/src/routers/member")
 const adminRouter = require("monoplasma/src/routers/admin")
@@ -24,7 +27,10 @@ const {
     ETHEREUM_SERVER,
     ETHEREUM_NETWORK_ID,
     ETHEREUM_PRIVATE_KEY,
-    JOIN_PART_STREAM_NAME,
+
+    STREAMR_WS_URL,
+    STREAMR_HTTP_URL,
+
     TOKEN_ADDRESS,
     CONTRACT_ADDRESS,
     BLOCK_FREEZE_SECONDS,
@@ -96,8 +102,9 @@ async function start() {
     config.tokenAddress = TOKEN_ADDRESS || config.tokenAddress || await deployTestToken(wallet, TOKEN_NAME, TOKEN_SYMBOL, log)
     config.operatorAddress = wallet.address
     config.blockFreezeSeconds = +BLOCK_FREEZE_SECONDS || config.blockFreezeSeconds || 20
-    config.joinPartStreamName = JOIN_PART_STREAM_NAME || `test-joinPartStream-${+new Date()}`
-    config.contractAddress = CONTRACT_ADDRESS || config.contractAddress || await deployContract(wallet, config.operatorAddress, config.joinPartStreamName, config.tokenAddress, config.blockFreezeSeconds, log)
+    config.streamrWsUrl = STREAMR_WS_URL || config.streamrWsUrl
+    config.streamrHttpUrl = STREAMR_HTTP_URL || config.streamrHttpUrl
+    config.contractAddress = CONTRACT_ADDRESS || config.contractAddress || (await deployContract(wallet, config.operatorAddress, config.tokenAddress, config.blockFreezeSeconds, log, config.streamrWsUrl, config.streamrHttpUrl)).address
     config.defaultReceiverAddress = wallet.address
 
     // augment the config / saved state with variables that may be useful for the validators
@@ -106,9 +113,12 @@ async function start() {
     config.ethereumNetworkId = ETHEREUM_NETWORK_ID
 
     log("Starting the joinPartChannel and Operator")
-    const adminChannel = new Channel(privateKey, config.joinPartStreamName)
+
+    const contract = new Contract(config.contractAddress, CommunityProductJson.abi, this.eth)
+    const joinPartStreamId = await contract.joinPartStream()
+    const adminChannel = new Channel(privateKey, joinPartStreamId, config.streamrWsUrl, config.streamrHttpUrl)
     await adminChannel.startServer()
-    const operatorChannel = new Channel(privateKey, config.joinPartStreamName)
+    const operatorChannel = new Channel(privateKey, config.joinPartStreamId, config.streamrWsUrl, config.streamrHttpUrl)
     const operator = new Operator(wallet, operatorChannel, fileStore, log, error)
     await operator.start(config)
 

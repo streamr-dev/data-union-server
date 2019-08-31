@@ -15,9 +15,10 @@ const {
 
 const Channel = require("./src/streamrChannel")
 const { throwIfNotContract, throwIfBadAddress } = require("./src/utils/checkArguments")
-const deployTestToken = require("./test/utils/deployTestToken")
-const deployContract = require("./test/utils/deployCommunity")
+const deployContract = require("./src/utils/deployCommunity")
 const sleep = require("./src/utils/sleep-promise")
+
+const deployTestToken = require("./test/utils/deployTestToken")
 
 const CommunityProductServer = require("./src/server")
 const getCommunitiesRouter = require("./src/routers/communities")
@@ -157,14 +158,19 @@ async function start() {
 
     if (DEVELOPER_MODE) {
         log("DEVELOPER MODE: /admin endpoints available: addRevenue, deploy, addTo/{address}")
+        const contract = await deployContract(wallet, wallet.address, tokenAddress, 1000, config.streamrWsUrl, config.streamrHttpUrl)
+        const communityAddress = contract.address
         app.use("/admin/addRevenue", (req, res) => transfer(wallet, communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
-        app.use("/admin/deploy", (req, res) => createCommunity(wallet, tokenAddress).then(({ communityAddress }) => res.send({ communityAddress })).catch(error => res.status(500).send({error})))
+        app.use("/admin/deploy", (req, res) => deployContract(wallet, wallet.address, tokenAddress, 1000, log, config.streamrWsUrl, config.streamrHttpUrl).then(({contract: { address }}) => res.send({ address })).catch(error => res.status(500).send({error})))
         app.use("/admin/addTo/:communityAddress", (req, res) => transfer(wallet, req.params.communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
 
-        const { communityAddress, channel } = await createCommunity(wallet, tokenAddress)
         log(`Deployed community at ${communityAddress}, waiting for server to notice...`)
         await server.communityIsRunning(communityAddress)
         await sleep(500)
+
+        log("Adding members...")
+        const streamId = await contract.joinPartStream()
+        const channel = new Channel(wallet.privateKey, streamId, config.streamrWsUrl, config.streamrHttpUrl)
         await channel.publish("join", [
             wallet.address,
             "0xdc353aa3d81fc3d67eb49f443df258029b01d8ab",
@@ -193,14 +199,6 @@ async function transfer(wallet, targetAddress, tokenAddress, amount) {
     const tx = await token.transfer(targetAddress, amount || parseEther("1"))
     const tr = await tx.wait(1)
     return tr
-}
-
-async function createCommunity(wallet, tokenAddress) {
-    log("Creating a community")
-    const channel = new Channel(wallet.privateKey)
-    await channel.startServer()
-    const communityAddress = await deployContract(wallet, wallet.address, channel.joinPartStreamName, tokenAddress, 1000)
-    return { communityAddress, channel }
 }
 
 start().catch(error)

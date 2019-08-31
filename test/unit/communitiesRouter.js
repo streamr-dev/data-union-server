@@ -5,14 +5,14 @@ const bodyParser = require("body-parser")
 const assert = require("assert")
 const http = require("http")
 const fetch = require("node-fetch")
-const { Wallet, providers: { Web3Provider } } = require("ethers")
+const { Wallet, ContractFactory, providers: { Web3Provider } } = require("ethers")
+
+const CommunityJson = require("../../build/CommunityProduct")
 
 const deployTestToken = require("../utils/deployTestToken")
-const deployContract = require("../utils/deployCommunity")
 const ganache = require("ganache-core")
 
-const MockChannel = require("monoplasma/test/utils/mockChannel")
-const mockChannel = new MockChannel()
+const MockStreamrChannel = require("../utils/mockStreamrChannel")
 const mockStore = require("monoplasma/test/utils/mockStore")
 const log = console.log  // () => {}
 const members = [
@@ -28,7 +28,6 @@ const startState = {
     lastBlockNumber: 5,
     lastPublishedBlock: 3,
 }
-const joinPartStreamId = "joinpart"
 
 const CommunityProductServer = require("../../src/server")
 const getCommunitiesRouter = require("../../src/routers/communities")
@@ -41,6 +40,7 @@ describe("Community product server /communities router", () => {
     let tokenAddress
     let community
     before(async function() {
+        this.timeout(0)
         const secretKey = "0x1234567812345678123456781234567812345678123456781234567812345678"
         const provider = new Web3Provider(ganache.provider({
             accounts: [{ secretKey, balance: "0xffffffffffffffffffffffffff" }],
@@ -51,7 +51,10 @@ describe("Community product server /communities router", () => {
 
         log("Deploying test token and Community contract...")
         tokenAddress = await deployTestToken(wallet)
-        const contractAddress = await deployContract(wallet, wallet.address, joinPartStreamId, tokenAddress, 1000)
+        const deployer = new ContractFactory(CommunityJson.abi, CommunityJson.bytecode, wallet)
+        const contract = await deployer.deploy(wallet.address, "dummy-stream-id", tokenAddress, 1000)
+        await contract.deployed()
+        const contractAddress = contract.address
 
         log("Starting CommunityProductServer...")
         const storeDir = path.join(os.tmpdir(), `communitiesRouter-test-${+new Date()}`)
@@ -60,6 +63,7 @@ describe("Community product server /communities router", () => {
             defaultReceiverAddress: wallet.address,
             operatorAddress: wallet.address,
         })
+        const mockChannel = new MockStreamrChannel(secretKey, "dummy-stream-for-router-test")
         server.getStoreFor = () => mockStore(startState, initialBlock, log)
         server.getChannelFor = () => mockChannel
         const router = getCommunitiesRouter(server)

@@ -4,9 +4,14 @@ const sleep = require("../../src/utils/sleep-promise")
 
 const privateKey = "0x1234567812345678123456781234567812354678123456781234567812345678"
 
+const urls = {
+    ws: process.env.STREAMR_WS_URL,
+    http: process.env.STREAMR_HTTP_URL,
+}
+
 async function start() {
     console.log("Starting server...")
-    const channel = new Channel(privateKey, "Channel-integration-test1")
+    const channel = new Channel(privateKey, null, urls.ws, urls.http)
     await channel.startServer()
 
     await sleep(200)
