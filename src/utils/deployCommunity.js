@@ -1,5 +1,6 @@
 const { ContractFactory } = require("ethers")
 const StreamrClient = require("streamr-client")
+const fetch = require("node-fetch")
 
 const CommunityJson = require("../../build/CommunityProduct")
 
@@ -26,6 +27,21 @@ async function deployCommunity(wallet, operatorAddress, tokenAddress, blockFreez
         name: joinPartStreamName,
         public: true,
     })
+
+    // grant permission for streamrNode to write into joinPartStream
+    // TODO: add feature to streamr-client
+    const res1 = await fetch(`${streamrHttpUrl}/api/v1/node`).then(resp => resp.json())
+    const streamrNodeAddress = res1.ethereumAddress
+    const res2 = await fetch(`${streamrHttpUrl}/api/v1/streams/${stream.id}/permissions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            id: stream.id,
+            user: streamrNodeAddress,
+            operation: "write",
+        }),
+    }).then(resp => resp.json())
+    log && log("Response from write permission add", JSON.stringify(res2))
 
     log && log(`Deploying root chain contract (token @ ${tokenAddress}, blockFreezePeriodSeconds = ${blockFreezePeriodSeconds}, joinPartStream = ${stream.id})...`)
     const deployer = new ContractFactory(CommunityJson.abi, CommunityJson.bytecode, wallet)
