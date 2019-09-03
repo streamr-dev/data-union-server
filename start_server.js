@@ -75,7 +75,7 @@ const log = QUIET ? () => {} : (...args) => {
     })
 }
 const error = (e, ...args) => {
-    console.error(e.stack, ...args)
+    console.error(e.stack || e, ...args)
     Sentry && Sentry.captureException(e)
     // TODO: it seems Sentry won't have time to send the exception out
     //   is it better to wait? How to check if Sentry received it?

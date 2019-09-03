@@ -101,7 +101,7 @@ module.exports = class CommunityProductServer {
                 return
             }
             if (weOperate) {
-                this.error(`Repeated OperatorChanged("${newOperatorAddress}") events from ${address}`)
+                this.log(`Repeated OperatorChanged("${newOperatorAddress}") event from ${address}`)
                 return
             } else {
                 // operator was changed, we can stop running the operator process
