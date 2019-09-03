@@ -16,6 +16,10 @@
   },
   "author": "Streamr Network AG",
   "license": "AGPL-3.0",
+  "engines": {
+    "node": ">= 10.14.0",
+    "npm": ">= 6.4.1"
+  },
   "dependencies": {
     "@sentry/node": "^5.4.0",
     "bn.js": "4.11.8",
