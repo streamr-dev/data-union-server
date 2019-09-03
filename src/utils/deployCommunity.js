@@ -1,6 +1,7 @@
 const { ContractFactory } = require("ethers")
 const StreamrClient = require("streamr-client")
-const fetch = require("node-fetch")
+
+const { throwIfBadAddress, throwIfNotContract } = require("./checkArguments")
 
 const CommunityJson = require("../../build/CommunityProduct")
 
@@ -14,7 +15,11 @@ const CommunityJson = require("../../build/CommunityProduct")
  * @param {Number} blockFreezePeriodSeconds
  * @param {Function} log
  */
-async function deployCommunity(wallet, operatorAddress, tokenAddress, blockFreezePeriodSeconds, log, streamrWsUrl, streamrHttpUrl) {
+async function deployCommunity(wallet, operatorAddress, tokenAddress, streamrNodeAddress, blockFreezePeriodSeconds, log, streamrWsUrl, streamrHttpUrl) {
+    throwIfBadAddress(operatorAddress, "deployCommunity function argument operatorAddress")
+    throwIfBadAddress(streamrNodeAddress, "deployCommunity function argument streamrNodeAddress")
+    throwIfNotContract(tokenAddress, "deployCommunity function argument tokenAddress")
+
     const joinPartStreamName = `Join-Part-${wallet.address.slice(0, 10)}-${Date.now()}`
 
     log && log(`Creating joinPartStream (name = ${joinPartStreamName})...`)
@@ -28,20 +33,8 @@ async function deployCommunity(wallet, operatorAddress, tokenAddress, blockFreez
         public: true,
     })
 
-    // grant permission for streamrNode to write into joinPartStream
-    // TODO: add feature to streamr-client
-    const res1 = await fetch(`${streamrHttpUrl}/api/v1/node`).then(resp => resp.json())
-    const streamrNodeAddress = res1.ethereumAddress
-    const res2 = await fetch(`${streamrHttpUrl}/api/v1/streams/${stream.id}/permissions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            id: stream.id,
-            user: streamrNodeAddress,
-            operation: "write",
-        }),
-    }).then(resp => resp.json())
-    log && log("Response from write permission add", JSON.stringify(res2))
+    // streamrNode must be able to handle accepted JoinRequests
+    stream.grantPermission("write", streamrNodeAddress)
 
     log && log(`Deploying root chain contract (token @ ${tokenAddress}, blockFreezePeriodSeconds = ${blockFreezePeriodSeconds}, joinPartStream = ${stream.id})...`)
     const deployer = new ContractFactory(CommunityJson.abi, CommunityJson.bytecode, wallet)

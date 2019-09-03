@@ -30,6 +30,7 @@ const {
 
     STREAMR_WS_URL,
     STREAMR_HTTP_URL,
+    STREAMR_NODE_ADDRESS,
 
     TOKEN_ADDRESS,
     CONTRACT_ADDRESS,
@@ -104,7 +105,8 @@ async function start() {
     config.blockFreezeSeconds = +BLOCK_FREEZE_SECONDS || config.blockFreezeSeconds || 20
     config.streamrWsUrl = STREAMR_WS_URL || config.streamrWsUrl
     config.streamrHttpUrl = STREAMR_HTTP_URL || config.streamrHttpUrl
-    config.contractAddress = CONTRACT_ADDRESS || config.contractAddress || (await deployContract(wallet, config.operatorAddress, config.tokenAddress, config.blockFreezeSeconds, log, config.streamrWsUrl, config.streamrHttpUrl)).address
+    config.streamrNodeAddress = STREAMR_NODE_ADDRESS || config.streamrNodeAddress
+    config.contractAddress = CONTRACT_ADDRESS || config.contractAddress || (await deployContract(wallet, config.operatorAddress, config.tokenAddress, config.streamrNodeAddress, config.blockFreezeSeconds, log, config.streamrWsUrl, config.streamrHttpUrl)).address
     config.defaultReceiverAddress = wallet.address
 
     // augment the config / saved state with variables that may be useful for the validators
