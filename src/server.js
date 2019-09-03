@@ -152,9 +152,12 @@ module.exports = class CommunityProductServer {
     async getChannelFor(communityAddress) {
         const address = ethers.utils.getAddress(communityAddress)
         const contract = new ethers.Contract(address, CommunityProductJson.abi, this.eth)
+
+        // check if joinPartStream is valid (TODO: move to Channel?)
         const joinPartStreamId = await contract.joinPartStream()
         const channel = new StreamrChannel(this.wallet.privateKey, joinPartStreamId, this.operatorConfig.streamrWsUrl, this.operatorConfig.streamrHttpUrl)
-        await channel.listen()      // will throw if joinPartStreamId is bad
+        await channel.client.getStream(joinPartStreamId).catch(e => { throw new Error(`joinPartStream ${joinPartStreamId} in CommunityProduct contract at ${communityAddress} is not found in Streamr (error: ${e.stack.toString()})`) })
+
         return channel
     }
 
@@ -166,7 +169,7 @@ module.exports = class CommunityProductServer {
     async getStoreFor(communityAddress) {
         const address = ethers.utils.getAddress(communityAddress)
         const storeDir = `${this.storeDir}/${address}`
-        console.log(`Storing community ${communityAddress} data at ${storeDir}`)
+        this.log(`Storing community ${communityAddress} data at ${storeDir}`)
         const fileStore = new FileStore(storeDir)
         return fileStore
     }

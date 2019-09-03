@@ -158,7 +158,7 @@ async function start() {
 
     if (DEVELOPER_MODE) {
         log("DEVELOPER MODE: /admin endpoints available: addRevenue, deploy, addTo/{address}")
-        const contract = await deployContract(wallet, wallet.address, tokenAddress, 1000, config.streamrWsUrl, config.streamrHttpUrl)
+        const contract = await deployContract(wallet, wallet.address, tokenAddress, 1000, log, config.streamrWsUrl, config.streamrHttpUrl)
         const communityAddress = contract.address
         app.use("/admin/addRevenue", (req, res) => transfer(wallet, communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
         app.use("/admin/deploy", (req, res) => deployContract(wallet, wallet.address, tokenAddress, 1000, log, config.streamrWsUrl, config.streamrHttpUrl).then(({contract: { address }}) => res.send({ address })).catch(error => res.status(500).send({error})))

@@ -83,12 +83,12 @@ module.exports = class StreamrChannel extends EventEmitter {
     async listen(syncStartTimestamp) {
         if (this.mode) { return Promise.reject(new Error(`Already started as ${this.mode}`))}
 
-        const stream = await this.client.getStream(this.joinPartStreamId)   // will throw if joinPartStreamId is bad
+        this.stream = await this.client.getStream(this.joinPartStreamId)   // will throw if joinPartStreamId is bad
 
         this.handlers = {}
         this.queue = []
         const sub = this.client.subscribe({
-            stream: stream.id,
+            stream: this.stream.id,
             resend: {
                 from: {
                     timestamp: syncStartTimestamp || 0,
