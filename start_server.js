@@ -197,7 +197,7 @@ const ERC20Mintable = require("./build/ERC20Mintable.json")
 async function transfer(wallet, targetAddress, tokenAddress, amount) {
     throwIfBadAddress(targetAddress, "token transfer target address")
     // TODO: null token address => attempt ether transfer?
-    await throwIfNotContract(wallet, tokenAddress, "token address")
+    await throwIfNotContract(wallet.provider, tokenAddress, "token address")
     const token = new Contract(tokenAddress, ERC20Mintable.abi, wallet)
     const tx = await token.transfer(targetAddress, amount || parseEther("1"))
     const tr = await tx.wait(1)
