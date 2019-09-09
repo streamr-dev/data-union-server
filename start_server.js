@@ -158,7 +158,7 @@ async function start() {
     log("[DONE]")
 
     if (DEVELOPER_MODE) {
-        const streamrNodeAddress = process.env.STREAMR_NODE_ADDRESS || "0xFCAd0B19bB29D4674531d6f115237E16AfCE377c"
+        const streamrNodeAddress = process.env.STREAMR_NODE_ADDRESS || "0xFCAd0B19bB29D4674531d6f115237E16AfCE377c" // node address in docker dev environment
         log("DEVELOPER MODE: /admin endpoints available: addRevenue, deploy, addTo/{address}")
         const contract = await deployCommunity(wallet, wallet.address, tokenAddress, streamrNodeAddress, 1000, log, config.streamrWsUrl, config.streamrHttpUrl)
         const communityAddress = contract.address
@@ -197,7 +197,7 @@ const ERC20Mintable = require("./build/ERC20Mintable.json")
 async function transfer(wallet, targetAddress, tokenAddress, amount) {
     throwIfBadAddress(targetAddress, "token transfer target address")
     // TODO: null token address => attempt ether transfer?
-    throwIfNotContract(tokenAddress, "token address")
+    await throwIfNotContract(wallet, tokenAddress, "token address")
     const token = new Contract(tokenAddress, ERC20Mintable.abi, wallet)
     const tx = await token.transfer(targetAddress, amount || parseEther("1"))
     const tr = await tx.wait(1)
