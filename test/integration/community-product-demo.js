@@ -27,14 +27,16 @@ const STREAMR_NODE_ADDRESS = process.env.STREAMR_NODE_ADDRESS || "0xc0aa4dC07635
 describe("Community product demo", () => {
     let operatorProcess
 
-    before(() => {
+    before(async () => {
         console.log(`Creating store directory ${STORE_DIR}`)
         spawn("mkdir", ["-p", STORE_DIR])
+        await sleep(100)
     })
 
-    after(() => {
+    after(async () => {
         console.log(`Cleaning up store directory ${STORE_DIR}`)
         spawn("rm", ["-rf", STORE_DIR])
+        await sleep(100)
     })
 
     async function startServer() {
@@ -72,12 +74,12 @@ describe("Community product demo", () => {
         }
     }
 
-    // for pre-started server
-    async function connectToLocalGanache() {
+    // for pre-started server, so to be able to debug also the server while running tests
+    async function connectToLocalGanache() {    //eslint-disable-line no-unused-vars
         return {
             ganacheProvider: new JsonRpcProvider(`http://localhost:${GANACHE_PORT}`),
-            adminPrivateKey: "0x5e98cce00cff5dea6b454889f359a4ec06b9fa6b88e9d69b86de8e1c81887da0",
-            privateKey: "0xe5af7834455b7239881b85be89d905d6881dcb4751063897f12be1b0dd546bdb",
+            adminPrivateKey: "0x5e98cce00cff5dea6b454889f359a4ec06b9fa6b88e9d69b86de8e1c81887da0",  // ganache 0
+            privateKey: "0xe5af7834455b7239881b85be89d905d6881dcb4751063897f12be1b0dd546bdb", // ganache 1
             address: "0x4178babe9e5148c6d5fd431cd72884b07ad855a0",
         }
     }
@@ -90,7 +92,7 @@ describe("Community product demo", () => {
             adminPrivateKey,
             privateKey,
             address,
-        } = await startServer() // startServer()
+        } = await startServer() // connectToLocalGanache()
 
         console.log("--- Server started, getting the operator config ---")
         const config = await fetch(`http://localhost:${WEBSERVER_PORT}/config`).then(resp => resp.json())
