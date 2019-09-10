@@ -28,7 +28,7 @@
     "exit-hook": "^2.2.0",
     "ganache-cli": "^6.4.3",
     "monoplasma": "0.1.7",
-    "streamr-client": "2.1.0"
+    "streamr-client": "^2.2.1"
   },
   "devDependencies": {
     "eslint": "^5.16.0",

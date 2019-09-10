@@ -30,6 +30,7 @@ module.exports = class StreamrChannel extends EventEmitter {
      * @param {string} streamrHttpUrl default is "https://www.streamr.com/api/v1"
      */
     constructor(privateKey, joinPartStreamId, streamrWsUrl, streamrHttpUrl) {
+        if (!privateKey) { throw new Error("Must supply a private key to new StreamrChannel") }
         super()
         const opts = {
             auth: { privateKey },

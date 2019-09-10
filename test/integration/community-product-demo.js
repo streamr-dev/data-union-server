@@ -4,7 +4,7 @@ const assert = require("assert")
 
 const {
     Contract,
-    utils: { parseEther, formatEther },
+    utils: { parseEther, formatEther, getAddress },
     Wallet,
     providers: { JsonRpcProvider }
 } = require("ethers")
@@ -13,15 +13,16 @@ const StreamrChannel = require("../../src/streamrChannel")
 
 const sleep = require("../../src/utils/sleep-promise")
 const { untilStreamContains, untilStreamMatches, capture } = require("../utils/await-until")
-const deployContract = require("../../src/deployCommunity")
+const deployCommunity = require("../../src/utils/deployCommunity")
 
 const ERC20Mintable = require("../../build/ERC20Mintable.json")
 const CommunityProduct = require("../../build/CommunityProduct.json")
 
 const STORE_DIR = __dirname + `/test-store-${+new Date()}`
-const GANACHE_PORT = 8546
+const GANACHE_PORT = 8548
 const WEBSERVER_PORT = 8080
 const BLOCK_FREEZE_SECONDS = 1
+const STREAMR_NODE_ADDRESS = process.env.STREAMR_NODE_ADDRESS || "0xc0aa4dC0763550161a6B59fa430361b5a26df28C" // node address in production
 
 describe("Community product demo", () => {
     let operatorProcess
@@ -36,9 +37,7 @@ describe("Community product demo", () => {
         spawn("rm", ["-rf", STORE_DIR])
     })
 
-    it("should get through the happy path", async function () {
-        this.timeout(5 * 60 * 1000)
-
+    async function startServer() {
         console.log("--- Running start_server.js ---")
         operatorProcess = spawn(process.execPath, ["start_server.js"], {
             env: {
@@ -58,31 +57,64 @@ describe("Community product demo", () => {
         const privateKeyMatch = capture(operatorProcess.stdout, /<Ganache> \(.\) (0x[a-f0-9]{64})/, 3)
         const ganacheUrlMatch = untilStreamMatches(operatorProcess.stdout, /Listening on (.*)/)
         await untilStreamContains(operatorProcess.stdout, "[DONE]")
-        const from = (await addressMatch)[1]
+        const address = (await addressMatch)[1]
         const privateKey = (await privateKeyMatch)[1]
         const ganacheUrl = "http://" + (await ganacheUrlMatch)[1]
+
+        const ganacheProvider = new JsonRpcProvider(ganacheUrl)
+        const adminPrivateKey = (await privateKeyMatch)[0]
+
+        return {
+            ganacheProvider,
+            adminPrivateKey,
+            privateKey,
+            address,
+        }
+    }
+
+    // for pre-started server
+    async function connectToLocalGanache() {
+        return {
+            ganacheProvider: new JsonRpcProvider(`http://localhost:${GANACHE_PORT}`),
+            adminPrivateKey: "0x5e98cce00cff5dea6b454889f359a4ec06b9fa6b88e9d69b86de8e1c81887da0",
+            privateKey: "0xe5af7834455b7239881b85be89d905d6881dcb4751063897f12be1b0dd546bdb",
+            address: "0x4178babe9e5148c6d5fd431cd72884b07ad855a0",
+        }
+    }
+
+    it("should get through the happy path", async function () {
+        this.timeout(5 * 60 * 1000)
+
+        const {
+            ganacheProvider,
+            adminPrivateKey,
+            privateKey,
+            address,
+        } = await startServer() // startServer()
 
         console.log("--- Server started, getting the operator config ---")
         const config = await fetch(`http://localhost:${WEBSERVER_PORT}/config`).then(resp => resp.json())
         console.log(config)
 
-        console.log(`Moving 50 tokens to ${from} for testing...`)
-        const ganacheProvider = new JsonRpcProvider(ganacheUrl)
-        const adminPrivateKey = (await privateKeyMatch)[0]
+        console.log(`Moving 50 tokens to ${address} for testing...`)
         const adminWallet = new Wallet(adminPrivateKey, ganacheProvider)
         const adminToken = new Contract(config.tokenAddress, ERC20Mintable.abi, adminWallet)
-        const adminTransferTx = await adminToken.transfer(from, parseEther("50"))
+        const adminTransferTx = await adminToken.transfer(address, parseEther("50"))
         await adminTransferTx.wait(2)
 
         console.log("1) Create a new Community product")
 
         console.log("1.1) Create joinPartStream")
+        /* done in deployCommunity below
         const channel = new StreamrChannel(adminPrivateKey, `test-server-${+new Date()}`)
-        channel.startServer()
+        await channel.startServer()
+        */
 
         console.log("1.2) Deploy CommunityProduct contract")
         const wallet = new Wallet(privateKey, ganacheProvider)
-        const communityAddress = await deployContract(wallet, config.operatorAddress, channel.joinPartStreamName, config.tokenAddress, BLOCK_FREEZE_SECONDS, console.log, config.streamrWsUrl, config.streamrHttpUrl)
+        const streamrNodeAddress = getAddress(STREAMR_NODE_ADDRESS)
+        const communityContract = await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, streamrNodeAddress, BLOCK_FREEZE_SECONDS, console.log, config.streamrWsUrl, config.streamrHttpUrl)
+        const communityAddress = communityContract.address
 
         console.log("1.3) Wait until Operator starts")
         let stats = { error: true }
@@ -93,7 +125,7 @@ describe("Community product demo", () => {
         console.log(`     Stats before adding: ${JSON.stringify(stats)}`)
 
         console.log("2) Add members")
-        const userList = [from,
+        const userList = [address,
             "0xeabe498c90fb31f6932ab9da9c4997a6d9f18639",
             "0x4f623c9ef67b1d9a067a8043344fb80ae990c734",
             "0xbb0965a38fcd97b6f34b4428c4bb32875323e012",
@@ -104,6 +136,9 @@ describe("Community product demo", () => {
             "0x3ea97ad9b624acd8784011c3ebd0e07557804e45",
             "0x4d4bb0980c214b8f4e24d7d58ccf5f8a92f70d76",
         ]
+        const joinPartStreamId = await communityContract.joinPartStream()
+        const channel = new StreamrChannel(privateKey, joinPartStreamId, config.streamrWsUrl, config.streamrHttpUrl)
+        await channel.startServer()
         channel.publish("join", userList)
 
         /* TODO: enable the members check after "realtime" state is implemented in watcher. Right now the members update only after block is created.
@@ -115,14 +150,13 @@ describe("Community product demo", () => {
         console.log(`     Members after adding: ${members}`)
         const res2b = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/stats`).then(resp => resp.json())
         console.log(`     Stats after adding: ${JSON.stringify(res2b)}`)
-        assert(from in members)
+        assert(address in members)
         */
-        await sleep(5000)
 
         console.log("3) Send revenue in")
         const token = new Contract(config.tokenAddress, ERC20Mintable.abi, wallet)
         for (let i = 0; i < 5; i++) {
-            const balance = await token.balanceOf(from)
+            const balance = await token.balanceOf(address)
             console.log(`   Sending 10 tokens (out of ${formatEther(balance)}) to CommunityProduct contract...`)
 
             const transferTx = await token.transfer(communityAddress, parseEther("10"))
@@ -139,20 +173,20 @@ describe("Community product demo", () => {
         await sleep(10000)
 
         console.log("4) Check tokens were distributed & withdraw")
-        const res4 = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/members/${from}`).then(resp => resp.json())
+        const res4 = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/members/${address}`).then(resp => resp.json())
         console.log(JSON.stringify(res4))
 
-        const balanceBefore = await token.balanceOf(from)
+        const balanceBefore = await token.balanceOf(address)
         console.log(`   Token balance before: ${formatEther(balanceBefore)}`)
 
         const contract = new Contract(communityAddress, CommunityProduct.abi, wallet)
         const withdrawTx = await contract.withdrawAll(res4.withdrawableBlockNumber, res4.withdrawableEarnings, res4.proof)
         await withdrawTx.wait(2)
 
-        const res4b = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/members/${from}`).then(resp => resp.json())
+        const res4b = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/members/${address}`).then(resp => resp.json())
         console.log(JSON.stringify(res4b))
 
-        const balanceAfter = await token.balanceOf(from)
+        const balanceAfter = await token.balanceOf(address)
         console.log(`   Token balance after: ${formatEther(balanceAfter)}`)
 
         const difference = balanceAfter.sub(balanceBefore)
