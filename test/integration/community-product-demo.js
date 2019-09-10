@@ -24,6 +24,8 @@ const WEBSERVER_PORT = 8080
 const BLOCK_FREEZE_SECONDS = 1
 const STREAMR_NODE_ADDRESS = process.env.STREAMR_NODE_ADDRESS || "0xc0aa4dC0763550161a6B59fa430361b5a26df28C" // node address in production
 
+const { urls } = require("./CONFIG")
+
 describe("Community product demo", () => {
     let operatorProcess
 
@@ -43,6 +45,8 @@ describe("Community product demo", () => {
         console.log("--- Running start_server.js ---")
         operatorProcess = spawn(process.execPath, ["start_server.js"], {
             env: {
+                STREAMR_WS_URL: urls.ws,
+                STREAMR_HTTP_URL: urls.http,
                 STORE_DIR,
                 GANACHE_PORT,
                 WEBSERVER_PORT,
@@ -154,6 +158,7 @@ describe("Community product demo", () => {
         console.log(`     Stats after adding: ${JSON.stringify(res2b)}`)
         assert(address in members)
         */
+        await sleep(2000)
 
         console.log("3) Send revenue in")
         const token = new Contract(config.tokenAddress, ERC20Mintable.abi, wallet)

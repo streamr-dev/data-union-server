@@ -66,7 +66,7 @@ if (SENTRY_TOKEN) {
 
 // TODO: log Sentry Context/scope:
 //   Sentry.configureScope(scope => scope.setUser({id: community.address}))
-const log = QUIET ? () => {} : (...args) => {
+const log = QUIET ? (() => {}) : (...args) => {
     console.log(...args)
     Sentry && Sentry.addBreadcrumb({
         category: "log",

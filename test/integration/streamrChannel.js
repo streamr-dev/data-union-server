@@ -7,12 +7,9 @@ const sleep = require("../../src/utils/sleep-promise")
 const { until } = require("../utils/await-until")
 const assertFails = require("../utils/assert-promise-fails")
 
-const privateKey = "0x6e340f41a1c6e03e6e0a4e9805d1cea342f6a299e7c931d6f3da6dd34cb6e17d"
+const privateKey = "0x5e98cce00cff5dea6b454889f359a4ec06b9fa6b88e9d69b86de8e1c81887da0"  // ganache 0
 
-const urls = {
-    ws: process.env.STREAMR_WS_URL,
-    http: process.env.STREAMR_HTTP_URL,
-}
+const { urls } = require("./CONFIG")
 
 describe("streamrChannel", () => {
     let sendChannel
