@@ -92,6 +92,7 @@ module.exports = class StreamrChannel extends EventEmitter {
             resend: {
                 from: {
                     timestamp: syncStartTimestamp || 0,
+                    sequenceNumber: 0,
                 },
             },
         }, (msg, meta) => {
