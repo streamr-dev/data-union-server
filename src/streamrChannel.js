@@ -55,7 +55,10 @@ module.exports = class StreamrChannel extends EventEmitter {
             this.stream = await this.client.getStream(this.joinPartStreamId)
         } else {
             const name = `Join-Part-${this.ethereumAddress.slice(0, 10)}-${Date.now()}`
-            this.stream = await this.client.getOrCreateStream({ name, public: true })
+            this.stream = await this.client.createStream({ name })
+
+            // every watcher should be able to read joins and parts in order to sync the state
+            await this.stream.grantPermission("read", null)
         }
 
         this.mode = State.SERVER
