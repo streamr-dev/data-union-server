@@ -158,7 +158,7 @@ describe("Community product demo", () => {
         console.log(`     Stats after adding: ${JSON.stringify(res2b)}`)
         assert(address in members)
         */
-        await sleep(2000)
+        await sleep(10000)  // Travis needs time to get the joins through...
 
         console.log("3) Send revenue in")
         const token = new Contract(config.tokenAddress, ERC20Mintable.abi, wallet)
