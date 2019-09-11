@@ -4,10 +4,15 @@ const sleep = require("../../src/utils/sleep-promise")
 
 const privateKey = "0x1234567812345678123456781234567812354678123456781234567812345678"
 
+const { urls } = require("./CONFIG")
+
+const streamId = process.env.__JOINPART_STREAM_ID
+
 async function start() {
     console.log("Starting listener...")
-    const channel = new Channel(privateKey, "Channel-integration-test1")
+    const channel = new Channel(privateKey, streamId, urls.ws, urls.http)
     await channel.listen()
+    console.log("Stream ID", channel.stream.id)
 
     let joinOk = false
     channel.on("join", addressList => {
@@ -21,11 +26,16 @@ async function start() {
         console.log(`Got ${addressList.length} parting addresses, data was ${partOk ? "OK" : "NOT OK"}`)
     })
 
-    await sleep(2000)
+    await sleep(6000)
 
     if (joinOk && partOk) {
         console.log("[OK]")
+    } else {
+        console.log("TIMEOUT")
     }
     channel.close()
 }
-start()
+
+if (streamId) {
+    start()
+}

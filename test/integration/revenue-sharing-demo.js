@@ -36,7 +36,7 @@ describe("Revenue sharing demo", () => {
         spawn("rm", ["-rf", STORE_DIR])
     })
 
-    // TODO: fix start_operator.js, then fix this test
+    // TODO: fix start_operator.js, then fix this test (copy relevant improvements from community-product-demo first)
     it.skip("should get through the happy path", async function () {
         this.timeout(30000)
         console.log("--- Running start_operator.js ---")

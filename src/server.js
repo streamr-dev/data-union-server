@@ -101,7 +101,7 @@ module.exports = class CommunityProductServer {
                 return
             }
             if (weOperate) {
-                this.error(`Repeated OperatorChanged("${newOperatorAddress}") events from ${address}`)
+                this.log(`Repeated OperatorChanged("${newOperatorAddress}") event from ${address}`)
                 return
             } else {
                 // operator was changed, we can stop running the operator process
@@ -115,15 +115,12 @@ module.exports = class CommunityProductServer {
                 eventDetectedAt: Date.now(),
             }
 
+            this.communityIsRunning(address) // create the promise to prevent later creation
             try {
                 const result = await this.startOperating(address)
-                if (address in this.communityIsRunningPromises) {
-                    this.communityIsRunningPromises[address].setRunning(result)
-                }
+                this.communityIsRunningPromises[address].setRunning(result)
             } catch (err) {
-                if (address in this.communityIsRunningPromises) {
-                    this.communityIsRunningPromises[address].setFailed(err)
-                }
+                this.communityIsRunningPromises[address].setFailed(err)
             }
         }
     }
@@ -155,20 +152,12 @@ module.exports = class CommunityProductServer {
     async getChannelFor(communityAddress) {
         const address = ethers.utils.getAddress(communityAddress)
         const contract = new ethers.Contract(address, CommunityProductJson.abi, this.eth)
-        const operatorAddress = await contract.operator()
 
-        if (!addressEquals(operatorAddress, this.wallet.address)) {
-            throw new Error(`Observed CommunityProduct requesting operator ${operatorAddress}, not a job for me (${this.wallet.address})`)
-        }
+        // check if joinPartStream is valid (TODO: move to Channel?)
+        const joinPartStreamId = await contract.joinPartStream()
+        const channel = new StreamrChannel(this.wallet.privateKey, joinPartStreamId, this.operatorConfig.streamrWsUrl, this.operatorConfig.streamrHttpUrl)
+        await channel.client.getStream(joinPartStreamId).catch(e => { throw new Error(`joinPartStream ${joinPartStreamId} in CommunityProduct contract at ${communityAddress} is not found in Streamr (error: ${e.stack.toString()})`) })
 
-        const joinPartStreamName = await contract.joinPartStream()
-
-        // TODO: check streams actually exist AND permissions are correct
-        if (!joinPartStreamName) {
-            throw new Error(`Bad stream: ${joinPartStreamName}`)
-        }
-
-        const channel = new StreamrChannel(this.wallet.privateKey, joinPartStreamName)
         return channel
     }
 
@@ -180,13 +169,20 @@ module.exports = class CommunityProductServer {
     async getStoreFor(communityAddress) {
         const address = ethers.utils.getAddress(communityAddress)
         const storeDir = `${this.storeDir}/${address}`
-        console.log(`Storing community ${communityAddress} data at ${storeDir}`)
+        this.log(`Storing community ${communityAddress} data at ${storeDir}`)
         const fileStore = new FileStore(storeDir)
         return fileStore
     }
 
     async startOperating(communityAddress) {
         const address = ethers.utils.getAddress(communityAddress)
+        const contract = new ethers.Contract(address, CommunityProductJson.abi, this.eth)
+
+        const operatorAddress = await contract.operator()
+        if (!addressEquals(operatorAddress, this.wallet.address)) {
+            throw new Error(`Observed CommunityProduct requesting operator ${operatorAddress}, not a job for me (${this.wallet.address})`)
+        }
+
         const operatorChannel = await this.getChannelFor(address)
         const operatorStore = await this.getStoreFor(address)
         const log = (...args) => { this.log(`${address}> `, ...args) }
@@ -199,7 +195,7 @@ module.exports = class CommunityProductServer {
             state: "running",
             address,
             operator,
-            joinPartStreamName: operatorChannel.joinPartStreamName,
+            joinPartStreamId: operatorChannel.stream.id,
         }
         this.communities[address] = community
         return community

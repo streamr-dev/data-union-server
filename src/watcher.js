@@ -103,7 +103,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         this.contract.on(this.blockCreateFilter, async (to, from, amount, event) => {
             //event.timestamp = await this.getBlockTimestamp(event.blockNumber)
             this.log(`Observed creation of block ${+event.args.blockNumber} at block ${event.blockNumber}`)
-            this.lastCreatedBlock = event.args
+            this.state.lastPublishedBlock = event.args
             this.emit("blockCreated", event)
         })
 
@@ -122,6 +122,9 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         })
         this.tokenFilter.on("error", this.error)
         */
+
+        // TODO: maybe state saving function should create the state object instead of continuously mutating "state" member
+        await this.store.saveState(this.state)
     }
 
     async stop() {
@@ -175,7 +178,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         await replayOn(plasma, events, messages)
         this.plasma.currentBlock = toBlock
         this.plasma.currentTimestamp = toTimestamp
-        this.lastCreatedBlock = blockCreateEvents && blockCreateEvents.length > 0 ?
+        this.state.lastPublishedBlock = blockCreateEvents && blockCreateEvents.length > 0 ?
             blockCreateEvents.slice(-1)[0].args : { blockNumber: 0 }
     }
 

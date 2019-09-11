@@ -1,6 +1,12 @@
+const { utils } = require("ethers")
+
 module.exports = class MockStreamrChannel {
-    constructor(key, joinPartStreamName) {
-        this.joinPartStreamName = joinPartStreamName || `Join-Part-Mock-${key.slice(0, 2)}-${Date.now()}`
+    constructor(privateKey, joinPartStreamId/*, streamrWsUrl, streamrHttpUrl*/) {
+        this.stream = {
+            id: joinPartStreamId,
+            name: "Join-Part-Stream-Mock",
+        }
+        this.ethereumAddress = utils.computeAddress(privateKey)
         this.mode = ""
         this.listeners = {
             join: [],

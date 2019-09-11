@@ -1,5 +1,7 @@
 node_modules
 .idea/workspace.xml
-demo
-store
 .vscode
+build
+demo
+.etherlime-store
+store

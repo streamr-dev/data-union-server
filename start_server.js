@@ -10,14 +10,16 @@ const {
     utils,
     getDefaultProvider,
     Wallet,
+    utils: { getAddress },
     providers: { JsonRpcProvider }
 } = require("ethers")
 
 const Channel = require("./src/streamrChannel")
 const { throwIfNotContract, throwIfBadAddress } = require("./src/utils/checkArguments")
-const deployTestToken = require("./test/utils/deployTestToken")
-const deployContract = require("./test/utils/deployCommunity")
+const deployCommunity = require("./src/utils/deployCommunity")
 const sleep = require("./src/utils/sleep-promise")
+
+const deployTestToken = require("./test/utils/deployTestToken")
 
 const CommunityProductServer = require("./src/server")
 const getCommunitiesRouter = require("./src/routers/communities")
@@ -53,25 +55,28 @@ const {
     SENTRY_TOKEN,
 } = process.env
 
-const Sentry = require("@sentry/node")
-Sentry.init({
-    dsn: `https://${SENTRY_TOKEN}@sentry.io/1482184`,
-    debug: true,
-})
+let Sentry
+if (SENTRY_TOKEN) {
+    Sentry = require("@sentry/node")
+    Sentry.init({
+        dsn: `https://${SENTRY_TOKEN}@sentry.io/1482184`,
+        debug: true,
+    })
+}
 
 // TODO: log Sentry Context/scope:
 //   Sentry.configureScope(scope => scope.setUser({id: community.address}))
-const log = QUIET ? () => {} : (...args) => {
+const log = QUIET ? (() => {}) : (...args) => {
     console.log(...args)
-    Sentry.addBreadcrumb({
+    Sentry && Sentry.addBreadcrumb({
         category: "log",
         message: args.join("; "),
         level: Sentry.Severity.Log
     })
 }
 const error = (e, ...args) => {
-    console.error(e.stack, ...args)
-    Sentry.captureException(e)
+    console.error(e.stack || e, ...args)
+    Sentry && Sentry.captureException(e)
     // TODO: it seems Sentry won't have time to send the exception out
     //   is it better to wait? How to check if Sentry received it?
     //   program should be halted at any rate. Put reporting into separate process?
@@ -115,8 +120,8 @@ async function start() {
     }
 
     if (TOKEN_ADDRESS) {
-        await throwIfNotContract(wallet.provider, TOKEN_ADDRESS, "Environment variable TOKEN_ADDRESS")
-        tokenAddress = TOKEN_ADDRESS
+        tokenAddress = getAddress(TOKEN_ADDRESS)
+        await throwIfNotContract(wallet.provider, tokenAddress, "Environment variable TOKEN_ADDRESS")
     } else {
         tokenAddress = await deployTestToken(wallet, TOKEN_NAME, TOKEN_SYMBOL, log)
     }
@@ -153,30 +158,39 @@ async function start() {
     log("[DONE]")
 
     if (DEVELOPER_MODE) {
-        const { communityAddress, channel } = await createCommunity(wallet, tokenAddress)
-        log(`Deployed community at ${communityAddress}, waiting for server to notice...`)
-        await server.communityIsRunning(communityAddress)
+        log("DEVELOPER MODE: /admin endpoints available: addRevenue, deploy, addTo/{address}")
+        const streamrNodeAddress = process.env.STREAMR_NODE_ADDRESS || "0xFCAd0B19bB29D4674531d6f115237E16AfCE377c" // node address in docker dev environment
 
-        // manipulate "default" community
+        // deploy new communities
+        app.use("/admin/deploy", (req, res) => deployCommunity(wallet, wallet.address, tokenAddress, streamrNodeAddress, 1000, log, config.streamrWsUrl, config.streamrHttpUrl).then(({contract: { address }}) => res.send({ address })).catch(error => res.status(500).send({error})))
+        app.use("/admin/addTo/:communityAddress", (req, res) => transfer(wallet, req.params.communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
+
+        // deploy a test community and provide direct manipulation endpoints for it (useful for seeing if anything is happening)
+        const contract = await deployCommunity(wallet, wallet.address, tokenAddress, streamrNodeAddress, 1000, log, config.streamrWsUrl, config.streamrHttpUrl)
+        const communityAddress = contract.address
         app.use("/admin/addRevenue", (req, res) => transfer(wallet, communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
         app.use("/admin/setAdminFee", (req, res) => setFee(wallet, communityAddress, "0.3").then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
         app.use("/admin/resetAdminFee", (req, res) => setFee(wallet, communityAddress, 0).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
 
-        // deploy new ones
-        app.use("/admin/deploy", (req, res) => createCommunity(wallet, tokenAddress).then(({ communityAddress }) => res.send({ communityAddress })).catch(error => res.status(500).send({error})))
-        app.use("/admin/:communityAddress/add", (req, res) => transfer(wallet, req.params.communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
-        app.use("/admin/:communityAddress/fee/:fee", (req, res) => setFee(wallet, req.params.communityAddress, req.params.fee).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
-
+        log(`Deployed community at ${communityAddress}, waiting for server to notice...`)
+        await server.communityIsRunning(communityAddress)
         await sleep(500)
+
+        log("Adding members...")
+        const streamId = await contract.joinPartStream()
+        const channel = new Channel(wallet.privateKey, streamId, config.streamrWsUrl, config.streamrHttpUrl)
+        await channel.startServer()
         await channel.publish("join", [
             wallet.address,
             "0xdc353aa3d81fc3d67eb49f443df258029b01d8ab",
             "0x4178babe9e5148c6d5fd431cd72884b07ad855a0",
         ])
-        while (server.communities[communityAddress].operator.watcher.messageQueue.length > 0) {
+        log("Waiting for server to notice joins...")
+        while (server.communities[communityAddress].operator.watcher.plasma.members.length > 1) {
             await sleep(1000)
         }
 
+        log("Transferring tokens to the contract...")
         await transfer(wallet, communityAddress, tokenAddress)
 
         // this is here just so it's easy to add a breakpoint and inspect this scope
@@ -190,9 +204,9 @@ const ERC20Mintable = require("./build/ERC20Mintable.json")
 async function transfer(wallet, targetAddress, tokenAddress, amount) {
     throwIfBadAddress(targetAddress, "token transfer target address")
     // TODO: null token address => attempt ether transfer?
-    throwIfNotContract(tokenAddress, "token address")
+    await throwIfNotContract(wallet.provider, tokenAddress, "token address")
     const token = new Contract(tokenAddress, ERC20Mintable.abi, wallet)
-    const tx = await token.transfer(targetAddress, amount || utils.parseEther("1"))
+    const tx = await token.transfer(targetAddress, amount || parseEther("1"))
     const tr = await tx.wait(1)
     return tr
 }
@@ -206,14 +220,6 @@ async function setFee(wallet, targetAddress, fee) {
     const tx = await community.setAdminFee(feeBN)
     const tr = await tx.wait(1)
     return tr
-}
-
-async function createCommunity(wallet, tokenAddress) {
-    log("Creating a community")
-    const channel = new Channel(wallet.privateKey)
-    await channel.startServer()
-    const communityAddress = await deployContract(wallet, wallet.address, channel.joinPartStreamName, tokenAddress, 1000)
-    return { communityAddress, channel }
 }
 
 start().catch(error)

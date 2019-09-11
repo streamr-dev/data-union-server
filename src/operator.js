@@ -31,6 +31,7 @@ module.exports = class MonoplasmaOperator {
         //this.tokensNotCommitted = 0    // TODO: bignumber
 
         await this.watcher.start(config)
+        this.lastPublishedBlock = this.watcher.state.lastPublishedBlock ? this.watcher.state.lastPublishedBlock.blockNumber || 0 : 0
 
         this.finalPlasma = new MonoplasmaState(0, [], {
             saveBlock: async block => {
@@ -50,11 +51,10 @@ module.exports = class MonoplasmaOperator {
     // TODO: block publishing should be based on value-at-risk, that is, publish after so-and-so many tokens received
     async onTokensReceived(event) {
         const blockNumber = event.blockNumber
-        const lastBlock = this.lastPublishedBlock || this.watcher.lastCreatedBlock.blockNumber
-        if (blockNumber >= lastBlock + this.minIntervalBlocks) {
+        if (blockNumber >= this.lastPublishedBlock + this.minIntervalBlocks) {
             await this.publishBlock(blockNumber)
         } else {
-            this.log(`Skipped publishing at ${blockNumber}, last publish at ${lastBlock}`)
+            this.log(`Skipped publishing at ${blockNumber}, last publish at ${this.lastPublishedBlock}`)
         }
     }
 
@@ -67,11 +67,10 @@ module.exports = class MonoplasmaOperator {
         // TODO: would mutex for publishing blocks make sense? Consider (finality wait period + delay) vs block publishing interval
         //if (this.publishBlockInProgress) { throw new Error(`Currently publishing block ${this.publishBlockInProgress}, please wait that it completes before attempting another`) }
         //this.publishBlockInProgress = blockNumber
+
         await sleep(0)          // ensure lastObservedBlockNumber is updated since this likely happens as a response to event
         const blockNumber = rootchainBlockNumber || this.watcher.state.lastObservedBlockNumber
-        if (blockNumber <= this.watcher.lastCreatedBlock.blockNumber) {
-            throw new Error(`Block #${this.watcher.lastCreatedBlock.blockNumber} has already been published, can't publish #${blockNumber}`)
-        }
+        if (blockNumber <= this.lastPublishedBlock) { throw new Error(`Block #${this.lastPublishedBlock} has already been published, can't publish #${blockNumber}`) }
         this.lastPublishedBlock = blockNumber
 
         // MVP re-org resilience is accomplished by assuming finality magically happens after finalityWaitPeriodSeconds
