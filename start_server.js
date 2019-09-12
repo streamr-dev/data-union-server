@@ -77,10 +77,14 @@ const log = QUIET ? (() => {}) : (...args) => {
 const error = (e, ...args) => {
     console.error(e.stack || e, ...args)
     Sentry && Sentry.captureException(e)
-    // TODO: it seems Sentry won't have time to send the exception out
-    //   is it better to wait? How to check if Sentry received it?
-    //   program should be halted at any rate. Put reporting into separate process?
-    process.exit(1)
+
+    // from https://docs.sentry.io/error-reporting/configuration/draining/?platform=browsernpm
+    const sentryClient = Sentry && Sentry.getCurrentHub().getClient()
+    if (sentryClient) {
+        sentryClient.close(2000).then(() => process.exit(1))
+    } else {
+        process.exit(1)
+    }
 }
 
 const storeDir = fs.existsSync(STORE_DIR) ? STORE_DIR : __dirname + "/store"
