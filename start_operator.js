@@ -9,11 +9,8 @@ const onProcessExit = require("exit-hook")
 
 const { Wallet, Contract, providers: { JsonRpcProvider } } = require("ethers")
 
-<<<<<<< HEAD
-=======
 const CommunityProductJson = require("../build/CommunityProduct.json")
 
->>>>>>> master
 const FileStore = require("monoplasma/src/fileStore")
 const Operator = require("./src/operator")
 const { throwIfSetButNotContract /*, throwIfNotSet */ } = require("./src/utils/checkArguments")
