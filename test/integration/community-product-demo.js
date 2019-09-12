@@ -63,7 +63,7 @@ describe("Community product demo", () => {
         const privateKeyMatch = capture(operatorProcess.stdout, /<Ganache> \(.\) (0x[a-f0-9]{64})/, 3)
         const ganacheUrlMatch = untilStreamMatches(operatorProcess.stdout, /Listening on (.*)/)
         await untilStreamContains(operatorProcess.stdout, "[DONE]")
-        const address = (await addressMatch)[1]
+        const address = getAddress((await addressMatch)[1])
         const privateKey = (await privateKeyMatch)[1]
         const ganacheUrl = "http://" + (await ganacheUrlMatch)[1]
 
@@ -84,7 +84,7 @@ describe("Community product demo", () => {
             ganacheProvider: new JsonRpcProvider(`http://localhost:${GANACHE_PORT}`),
             adminPrivateKey: "0x5e98cce00cff5dea6b454889f359a4ec06b9fa6b88e9d69b86de8e1c81887da0",  // ganache 0
             privateKey: "0xe5af7834455b7239881b85be89d905d6881dcb4751063897f12be1b0dd546bdb", // ganache 1
-            address: "0x4178babe9e5148c6d5fd431cd72884b07ad855a0",
+            address: "0x4178baBE9E5148c6D5fd431cD72884B07Ad855a0",
         }
     }
 
@@ -110,12 +110,7 @@ describe("Community product demo", () => {
 
         console.log("1) Create a new Community product")
 
-        console.log("1.1) Create joinPartStream")
-        /* done in deployCommunity below
-        const channel = new StreamrChannel(adminPrivateKey, `test-server-${+new Date()}`)
-        await channel.startServer()
-        */
-
+        console.log("1.1) Create joinPartStream")  // done in deployCommunity function below
         console.log("1.2) Deploy CommunityProduct contract")
         const wallet = new Wallet(privateKey, ganacheProvider)
         const streamrNodeAddress = getAddress(STREAMR_NODE_ADDRESS)
@@ -147,18 +142,16 @@ describe("Community product demo", () => {
         await channel.startServer()
         channel.publish("join", userList)
 
-        /* TODO: enable the members check after "realtime" state is implemented in watcher. Right now the members update only after block is created.
         let members = []
         while (members.length < 1) {
             await sleep(1000)
             members = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/members`).then(resp => resp.json())
         }
-        console.log(`     Members after adding: ${members}`)
+        const memberAddresses = members.map(m => m.address)
+        console.log(`     Members after adding: ${memberAddresses}`)
         const res2b = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/stats`).then(resp => resp.json())
         console.log(`     Stats after adding: ${JSON.stringify(res2b)}`)
-        assert(address in members)
-        */
-        await sleep(10000)  // Travis needs time to get the joins through...
+        assert(memberAddresses.includes(address))
 
         console.log("3) Send revenue in")
         const token = new Contract(config.tokenAddress, ERC20Mintable.abi, wallet)
@@ -177,7 +170,7 @@ describe("Community product demo", () => {
         console.log("   Waiting for blocks to unfreeze...") //... and also that state updates.
         // TODO: this really should work with much lower sleep time
         //   I think there's a mismatch in the router between which withdrawableBlock is reported and what the proof from state is
-        await sleep(10000)
+        await sleep(3000)
 
         console.log("4) Check tokens were distributed & withdraw")
         const res4 = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/members/${address}`).then(resp => resp.json())
@@ -199,7 +192,7 @@ describe("Community product demo", () => {
         const difference = balanceAfter.sub(balanceBefore)
         console.log(`   Withdraw effect: ${formatEther(difference)}`)
 
-        assert(difference.eq(parseEther("5")))
+        assert.strictEqual(difference.toString(), parseEther("5").toString())
     })
 
     afterEach(() => {

@@ -27,7 +27,7 @@ async function until(condition, timeOutMs = 10000, pollingIntervalMs = 100) {
 async function untilStreamContains(stream, target) {
     return new Promise(done => {
         function handler(data) {
-            if (data.indexOf(target) > -1) {
+            if (data.includes(target)) {
                 stream.off("data", handler)
                 done(data.toString())
             }
