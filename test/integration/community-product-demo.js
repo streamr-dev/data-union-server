@@ -170,7 +170,7 @@ describe("Community product demo", () => {
         console.log("   Waiting for blocks to unfreeze...") //... and also that state updates.
         // TODO: this really should work with much lower sleep time
         //   I think there's a mismatch in the router between which withdrawableBlock is reported and what the proof from state is
-        await sleep(3000)
+        await sleep(10000)
 
         console.log("4) Check tokens were distributed & withdraw")
         const res4 = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/members/${address}`).then(resp => resp.json())
