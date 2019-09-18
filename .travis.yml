@@ -13,11 +13,10 @@ env:
   - secure: RPyQPPpqRa6irtrMTAeSnaL05I+34vHBAxZuoi+Fro7zbOXqFZOf4wy3vzNFtcfyBavvrVyAIsfDqY2woTZBCHwXhqAIUfxadcvYYU1eRvV6QJwPQtDI5cXo2p43JbJNn4uB2wqE4Q2mbOegzSXBAd8ykNKkdmYyTdvOMpkn3AH5pQ59KMQ8+DA0Z6uDxZcORBiUq29LQY7jmO3EeSGXsdazDP66ETu/VKf1oArm+FWhQB0ylK3ZlfTUKwXyCKMeGl+7DMSIbp1iGPjkO8H4T6u9pdV1q5oxIwInzjCRLYFglhBrS66fePojp/jtDZvG3ISSr2BKq73qBk7s2RO/8ZrWVDbjdIUePpOzi/UZqobqvfod4nsb97ejUJgzm0kCIRvgO0ZukaZtNx+DSCsrFzqzQ+H6cWD98kCIHWjnOG0LIjK5g59vDtyyEsjVdTMTOSD3/H0txNSKRHjAoR0bc53yirZrefK4GBiSgwiSSfylk4AamCQLis2ZhkJEcaK2MTM+K5b8rHS7zAV8PFb0YO50DNvDkjgKNpRPWyT3Nyt+2UoIsjJe9jr5S/IlNL2Ic7+VB8U3zT7taeQKBxZXPrcyYB2AvAJZCXiTFXXmDuEZLAbOkhYDektdsyp3+3XahgmLycfgh6WJAZ6gdj9j2YFzX65x+gss7rS89x1lVPo=
 jobs:
   include:
-    - stage: "lint & unit & integration tests"
+    - stage: "lint & unit tests"
       script:
         - "npm run lint"
         - "npm run unit-tests"
-        - "npm run integration-tests"
     - stage: Build docker (dev)
       if: tag IS blank
       install: true
