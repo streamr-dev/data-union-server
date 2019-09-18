@@ -6,8 +6,8 @@ contract CommunityProduct is Monoplasma {
 
     string public joinPartStream;
 
-    constructor(address operator, string joinPartStreamId, address tokenAddress, uint blockFreezePeriodSeconds)
-    Monoplasma(tokenAddress, blockFreezePeriodSeconds) public {
+    constructor(address operator, string joinPartStreamId, address tokenAddress, uint blockFreezePeriodSeconds, uint adminFeeFraction)
+    Monoplasma(tokenAddress, blockFreezePeriodSeconds, adminFeeFraction) public {
         setOperator(operator);
         joinPartStream = joinPartStreamId;
     }
