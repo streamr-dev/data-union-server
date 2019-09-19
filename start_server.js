@@ -105,7 +105,7 @@ async function start() {
         ETHEREUM_SERVER ? new JsonRpcProvider(ETHEREUM_SERVER) :
         ETHEREUM_NETWORK ? getDefaultProvider(ETHEREUM_NETWORK) : null
 
-    let wallet, tokenAddress
+    let wallet
     if (provider) {
         try {
             log(`Connecting to ${provider._network.name} network, ${provider.providers[0].connection.url}`)
@@ -123,6 +123,7 @@ async function start() {
         wallet = new Wallet(ganache.privateKeys[0], ganacheProvider)   // use account 0: 0xa3d1f77acff0060f7213d7bf3c7fec78df847de1
     }
 
+    let tokenAddress
     if (TOKEN_ADDRESS) {
         tokenAddress = getAddress(TOKEN_ADDRESS)
         await throwIfNotContract(wallet.provider, tokenAddress, "Environment variable TOKEN_ADDRESS")

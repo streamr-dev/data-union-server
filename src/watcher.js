@@ -83,6 +83,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             // convert incoming addresses to checksum addresses
             const addressList = addresses.map(utils.getAddress)
             const event = { topic, addressList, timestamp: meta.messageId.timestamp }
+            this.emit(topic, addresses)
             await replayOn(this.plasma, [event])
             this.messageCache.push(event)   // TODO: cache only starting from given block (that operator/validator have loaded state from store)
         })

@@ -62,7 +62,7 @@ module.exports = class CommunityProductServer {
         // TODO: hand over operators to another server?
     }
 
-    async playbackPastOperatorChangedEvents(){
+    async playbackPastOperatorChangedEvents() {
         //playback events of OperatorChanged(this wallet)
         const filter = {
             fromBlock: 1,
@@ -71,6 +71,9 @@ module.exports = class CommunityProductServer {
         }
 
         const logs = await this.eth.getLogs(filter)
+
+        // TODO: we should also catch all OperatorChanged from communities that we we've operated
+        //    so that we can detect if we've been swapped out
 
         for (let log of logs) {
             let event = operatorChangedInterface.parseLog(log)

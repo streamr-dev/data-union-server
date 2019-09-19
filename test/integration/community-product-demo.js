@@ -22,9 +22,8 @@ const STORE_DIR = __dirname + `/test-store-${+new Date()}`
 const GANACHE_PORT = 8548
 const WEBSERVER_PORT = 8080
 const BLOCK_FREEZE_SECONDS = 1
-const STREAMR_NODE_ADDRESS = process.env.STREAMR_NODE_ADDRESS || "0xc0aa4dC0763550161a6B59fa430361b5a26df28C" // node address in production
 
-const { urls } = require("./CONFIG")
+const { streamrWs, streamrHttp, streamrNodeAddress } = require("./CONFIG")
 
 describe("Community product demo", () => {
     let operatorProcess
@@ -45,8 +44,8 @@ describe("Community product demo", () => {
         console.log("--- Running start_server.js ---")
         operatorProcess = spawn(process.execPath, ["start_server.js"], {
             env: {
-                STREAMR_WS_URL: urls.ws,
-                STREAMR_HTTP_URL: urls.http,
+                STREAMR_WS_URL: streamrWs,
+                STREAMR_HTTP_URL: streamrHttp,
                 STORE_DIR,
                 GANACHE_PORT,
                 WEBSERVER_PORT,
@@ -113,8 +112,8 @@ describe("Community product demo", () => {
         console.log("1.1) Create joinPartStream")  // done in deployCommunity function below
         console.log("1.2) Deploy CommunityProduct contract")
         const wallet = new Wallet(privateKey, ganacheProvider)
-        const streamrNodeAddress = getAddress(STREAMR_NODE_ADDRESS)
-        const communityContract = await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, streamrNodeAddress, BLOCK_FREEZE_SECONDS, console.log, config.streamrWsUrl, config.streamrHttpUrl)
+        const nodeAddress = getAddress(streamrNodeAddress)
+        const communityContract = await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, console.log, config.streamrWsUrl, config.streamrHttpUrl)
         const communityAddress = communityContract.address
 
         console.log("1.3) Wait until Operator starts")

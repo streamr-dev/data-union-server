@@ -23,6 +23,9 @@ module.exports = class MockStreamrChannel {
         for (const func of this.listeners[topic]) {
             func(...args)
         }
+        for (const func of this.listeners.message) {
+            func(topic, ...args, { messageId: { timestamp: Date.now() }})
+        }
     }
     on(topic, cb) {
         this.listeners[topic].push(cb)
