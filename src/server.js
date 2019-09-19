@@ -67,7 +67,7 @@ module.exports = class CommunityProductServer {
         const filter = {
             fromBlock: 1,
             toBlock: "latest",
-            topics: [operatorChangedEventTopic, hexZeroPad(this.wallet.address, 32)]
+            topics: [operatorChangedEventTopic, hexZeroPad(this.wallet.address, 32).toLowerCase()]
         }
 
         const logs = await this.eth.getLogs(filter)
@@ -185,7 +185,7 @@ module.exports = class CommunityProductServer {
         const contract = new Contract(address, CommunityProductJson.abi, this.eth)
 
         const operatorAddress = getAddress(await contract.operator())
-        if (operatorAddress === this.wallet.address) {
+        if (operatorAddress !== this.wallet.address) {
             throw new Error(`startOperating: Community requesting operator ${operatorAddress}, not a job for me (${this.wallet.address})`)
         }
 
