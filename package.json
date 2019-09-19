@@ -27,6 +27,7 @@
     "ethers": "^4.0.27",
     "exit-hook": "^2.2.0",
     "ganache-cli": "^6.4.3",
+    "husky": "^3.0.5",
     "monoplasma": "0.1.7",
     "streamr-client": "^2.2.1"
   },
