@@ -80,7 +80,17 @@ module.exports = class CommunityProductServer {
             this.log("Playing back past OperatorChanged event: " + JSON.stringify(event))
             const contractAddress = getAddress(log.address)
             await this.onOperatorChangedEventAt(contractAddress).catch(err => {
+                // TODO: while developing, 404 for joinPartStream could just mean
+                //   mysql has been emptied by streamr-ganache docker not,
+                //   so some old joinPartStreams are in ganache but not in mysql
+                //   Solution is to `streamr-docker-dev restart ganache`
+                // For production on the other hand... 404 could be bad.
+                //   Streamr might have lost joinPartStreams, and they should be re-created from
+                //   the last valid monoplasma members lists if such are available (IPFS sharing anyone?)
                 this.error(err.stack)
+
+                // at any rate, we should not just catch it and keep chugging
+                throw err
             })
         }
     }
