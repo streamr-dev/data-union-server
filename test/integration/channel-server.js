@@ -15,8 +15,6 @@ async function start() {
     console.log("Stream ID", channel.stream.id)
 
     await sleep(200)
-
-    //for (let i = 0; i < 2; i++) {
     console.log("Sending joins")
     channel.publish("join", [
         "0xdc353aa3d81fc3d67eb49f443df258029b01d8ab",
@@ -31,7 +29,7 @@ async function start() {
     ])
     await sleep(300)
     console.log("[OK]")
-    //}
+
     channel.close()
 }
 

@@ -24,7 +24,7 @@ describe("Channel", () => {
     it("gets messages through", async function () {
         this.timeout(20000)
         const startTime = Date.now()
-        const time = () => Date.now() - startTime
+        const time = () => "[" + (Date.now() - startTime).toString().padStart(5, " ") + "ms]"
 
         console.log("Stream ID", streamId, "\n")
 
