@@ -20,12 +20,17 @@ const CommunityProduct = require("../../build/CommunityProduct.json")
 
 const STORE_DIR = __dirname + `/test-store-${+new Date()}`
 const GANACHE_PORT = 8548
-const WEBSERVER_PORT = 8080
+const WEBSERVER_PORT = 8880
 const BLOCK_FREEZE_SECONDS = 1
 const ADMIN_FEE = 0.2
 
 const { streamrWs, streamrHttp, streamrNodeAddress } = require("./CONFIG")
 
+/**
+ * This test is an "integration test" but the setup should still be such that it could be independently run
+ *   against production simply by not providing STREAMR_WS_URL and STREAMR_HTTP_URL (that will point to dev
+ *   docker in Travis test), hence spin up an "internal" ganache for the test
+ */
 describe("Community product demo", () => {
     let operatorProcess
 
@@ -157,7 +162,7 @@ describe("Community product demo", () => {
         const token = new Contract(config.tokenAddress, ERC20Mintable.abi, wallet)
         for (let i = 0; i < 5; i++) {
             const balance = await token.balanceOf(address)
-            console.log(`   Sending 10 tokens (out of ${formatEther(balance)}) to CommunityProduct contract...`)
+            console.log(`   Sending 10 tokens (out of remaining ${formatEther(balance)}) to CommunityProduct contract...`)
 
             const transferTx = await token.transfer(communityAddress, parseEther("10"))
             await transferTx.wait(2)

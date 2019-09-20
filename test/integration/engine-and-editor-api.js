@@ -24,10 +24,15 @@ const ADMIN_FEE = 0.2
 const WEBSERVER_PORT = 8085
 const ETHEREUM_SERVER = "http://localhost:8545"
 const ETHEREUM_PRIVATE_KEY = "0x5e98cce00cff5dea6b454889f359a4ec06b9fa6b88e9d69b86de8e1c81887da0"    // ganache 0, TODO: try another?
+
 const { streamrWs, streamrHttp, streamrNodeAddress } = require("./CONFIG")
 
-// same as community-product-demo.js except only through E&E APIs
-// "more end-to-end" because it won't poke the stream and server directly, only talks to E&E
+/**
+ * Same as community-product-demo.js except only through E&E APIs,
+ *   "more end-to-end" because it won't poke the stream and server directly, only talks to E&E
+ * Only needs to run against dev docker, hence run againt streamr-ganache docker,
+ *   notice the hard-coded ETHEREUM_SERVER (TODO: why not support stand-alone too though)
+ */
 describe("Community product demo but through a running E&E instance", () => {
     let operatorProcess
 
