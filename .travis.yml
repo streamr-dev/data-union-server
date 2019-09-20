@@ -28,8 +28,11 @@ jobs:
         - sudo ifconfig docker0 10.200.10.1/24
         - "$TRAVIS_BUILD_DIR/streamr-docker-dev/streamr-docker-dev/bin.sh start 1"
         - sleep 1m
+        - docker ps
         - "$TRAVIS_BUILD_DIR/streamr-docker-dev/streamr-docker-dev/bin.sh start engine-and-editor"
-        - sleep 5m
+        - "$TRAVIS_BUILD_DIR/streamr-docker-dev/streamr-docker-dev/bin.sh start ganache"
+        - sleep 10m
+        - docker ps
         - "npm run integration-tests"
     - stage: "Build docker (dev)"
       if: tag IS blank
