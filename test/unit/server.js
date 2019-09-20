@@ -67,7 +67,7 @@ describe("CommunityProductServer", () => {
         sinon.spy(server, "onOperatorChangedEventAt")
         sinon.spy(server, "startOperating")
         await server.start()
-        const contract = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000)
+        const contract = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
         const contractAddress = contract.address
 
         // give ethers.js time to poll and notice the block, also for server to react
@@ -101,10 +101,10 @@ describe("CommunityProductServer", () => {
         server.getChannelFor = () => new MockStreamrChannel(wallet.privateKey, "dummy-stream-id")
         await server.start()
 
-        const contract = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000)
+        const contract = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
         console.log(`Deployed contract at ${contract.address}`)
 
-        const contract2 = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000)
+        const contract2 = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
         console.log(`Deployed contract at ${contract2.address}`)
 
         await contract2.setOperator("0x0000000000000000000000000000000000000001")

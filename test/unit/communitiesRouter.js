@@ -58,7 +58,7 @@ describe("Community product server /communities router", () => {
         log("Deploying test token and Community contract...")
         tokenAddress = await deployTestToken(wallet)
         const deployer = new ContractFactory(CommunityJson.abi, CommunityJson.bytecode, wallet)
-        const contract = await deployer.deploy(wallet.address, "dummy-stream-id", tokenAddress, 1000)
+        const contract = await deployer.deploy(wallet.address, "dummy-stream-id", tokenAddress, 1000, 0)
         await contract.deployed()
         const contractAddress = contract.address
 

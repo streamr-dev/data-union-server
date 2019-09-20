@@ -10,12 +10,13 @@ const CommunityJson = require("../../build/CommunityProduct")
  * @param {EthereumAddress} operatorAddress community-product-server that should operate the contract
  * @param {EthereumAddress} tokenAddress
  * @param {Number} blockFreezePeriodSeconds
+ * @param {Number} adminFeeFraction
  * @param {Function} log
  */
-async function deployTestCommunity(wallet, operatorAddress, tokenAddress, blockFreezePeriodSeconds, log) {
+async function deployTestCommunity(wallet, operatorAddress, tokenAddress, blockFreezePeriodSeconds, adminFeeFraction, log) {
     log && log(`Deploying DUMMY root chain contract (token @ ${tokenAddress}, blockFreezePeriodSeconds = ${blockFreezePeriodSeconds}, no joinPartStream...`)
     const deployer = new ContractFactory(CommunityJson.abi, CommunityJson.bytecode, wallet)
-    const result = await deployer.deploy(operatorAddress, "dummy-stream-id", tokenAddress, blockFreezePeriodSeconds)
+    const result = await deployer.deploy(operatorAddress, "dummy-stream-id", tokenAddress, blockFreezePeriodSeconds, adminFeeFraction)
     await result.deployed()
     return result
 }
