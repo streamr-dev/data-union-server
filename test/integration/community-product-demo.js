@@ -22,6 +22,7 @@ const STORE_DIR = __dirname + `/test-store-${+new Date()}`
 const GANACHE_PORT = 8548
 const WEBSERVER_PORT = 8080
 const BLOCK_FREEZE_SECONDS = 1
+const ADMIN_FEE = 0.2
 
 const { streamrWs, streamrHttp, streamrNodeAddress } = require("./CONFIG")
 
@@ -113,7 +114,7 @@ describe("Community product demo", () => {
         console.log("1.2) Deploy CommunityProduct contract")
         const wallet = new Wallet(privateKey, ganacheProvider)
         const nodeAddress = getAddress(streamrNodeAddress)
-        const communityContract = await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, console.log, config.streamrWsUrl, config.streamrHttpUrl)
+        const communityContract = await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, ADMIN_FEE, console.log, config.streamrWsUrl, config.streamrHttpUrl)
         const communityAddress = communityContract.address
 
         console.log("1.3) Wait until Operator starts")
@@ -191,7 +192,7 @@ describe("Community product demo", () => {
         const difference = balanceAfter.sub(balanceBefore)
         console.log(`   Withdraw effect: ${formatEther(difference)}`)
 
-        assert.strictEqual(difference.toString(), parseEther("5").toString())
+        assert.strictEqual(difference.toString(), parseEther("5").toString())   // incl admin fee?
     })
 
     afterEach(() => {

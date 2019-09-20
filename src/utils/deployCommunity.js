@@ -1,4 +1,7 @@
-const { ContractFactory } = require("ethers")
+const {
+    ContractFactory,
+    utils: { BigNumber }
+} = require("ethers")
 const StreamrClient = require("streamr-client")
 
 const { throwIfBadAddress, throwIfNotContract } = require("./checkArguments")
@@ -12,13 +15,17 @@ const CommunityJson = require("../../build/CommunityProduct")
  * @param {Wallet} wallet to do the deployment from, also becomes owner or stream and contract
  * @param {EthereumAddress} operatorAddress community-product-server that should operate the contract
  * @param {EthereumAddress} tokenAddress
- * @param {Number} blockFreezePeriodSeconds
+ * @param {Number} blockFreezePeriodSeconds security parameter against operator failure (optional, default: 0)
+ * @param {Number} adminFee fraction of revenue that goes to product admin, 0...1 (optional, default: 0)
  * @param {Function} log
  */
-async function deployCommunity(wallet, operatorAddress, tokenAddress, streamrNodeAddress, blockFreezePeriodSeconds, log, streamrWsUrl, streamrHttpUrl) {
+async function deployCommunity(wallet, operatorAddress, tokenAddress, streamrNodeAddress, blockFreezePeriodSeconds = 0, adminFee = 0, log, streamrWsUrl, streamrHttpUrl) {
     throwIfBadAddress(operatorAddress, "deployCommunity function argument operatorAddress")
     throwIfBadAddress(streamrNodeAddress, "deployCommunity function argument streamrNodeAddress")
     await throwIfNotContract(wallet.provider, tokenAddress, "deployCommunity function argument tokenAddress")
+
+    if (adminFee < 0 || adminFee > 1) { throw new Error("Admin fee must be a number between 0...1, got: " + adminFee) }
+    const adminFeeBN = new BigNumber((adminFee * 1e18).toFixed())   // last 2...3 decimals are going to be gibberish
 
     const joinPartStreamName = `Join-Part-${wallet.address.slice(0, 10)}-${Date.now()}`
 
@@ -38,9 +45,9 @@ async function deployCommunity(wallet, operatorAddress, tokenAddress, streamrNod
     const res2 = await stream.grantPermission("write", streamrNodeAddress)
     log && log("Grant E&E write", JSON.stringify(res2))
 
-    log && log(`Deploying root chain contract (token @ ${tokenAddress}, blockFreezePeriodSeconds = ${blockFreezePeriodSeconds}, joinPartStream = ${stream.id})...`)
+    log && log(`Deploying root chain contract (token @ ${tokenAddress}, blockFreezePeriodSeconds = ${blockFreezePeriodSeconds}, joinPartStream = ${stream.id}, adminFee = ${adminFee})...`)
     const deployer = new ContractFactory(CommunityJson.abi, CommunityJson.bytecode, wallet)
-    const result = await deployer.deploy(operatorAddress, stream.id, tokenAddress, blockFreezePeriodSeconds)
+    const result = await deployer.deploy(operatorAddress, stream.id, tokenAddress, blockFreezePeriodSeconds, adminFeeBN)
     await result.deployed()
     return result
 }

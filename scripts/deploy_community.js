@@ -20,6 +20,7 @@ const {
     //GAS_PRICE_GWEI,   // TODO: include?
     OPERATOR_ADDRESS,
     STREAMR_NODE_ADDRESS,
+    ADMIN_FEE,
     QUIET,
 } = process.env
 
@@ -42,6 +43,7 @@ async function start() {
     const tokenAddress = await throwIfNotContract(provider, TOKEN_ADDRESS, "env variable TOKEN_ADDRESS")
     const streamrNodeAddress = getAddress(STREAMR_NODE_ADDRESS) || "0xc0aa4dC0763550161a6B59fa430361b5a26df28C" // node address in production
     const blockFreezeSeconds = BLOCK_FREEZE_SECONDS ? +BLOCK_FREEZE_SECONDS : 3600
+    const adminFee = Number.parseFloat(ADMIN_FEE) || 0
 
     const privateKey = ETHEREUM_PRIVATE_KEY.startsWith("0x") ? ETHEREUM_PRIVATE_KEY : "0x" + ETHEREUM_PRIVATE_KEY
     if (privateKey.length !== 66) { throw new Error("Malformed private key, must be 64 hex digits long (optionally prefixed with '0x')") }
@@ -53,7 +55,7 @@ async function start() {
     log("  Token symbol: ", await token.symbol())
     log("  Token decimals: ", await token.decimals())
 
-    await deployCommunity(wallet, operatorAddress, tokenAddress, streamrNodeAddress, blockFreezeSeconds, log)
+    await deployCommunity(wallet, operatorAddress, tokenAddress, streamrNodeAddress, blockFreezeSeconds, adminFee, log)
 }
 
 start().catch(error)

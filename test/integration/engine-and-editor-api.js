@@ -18,6 +18,7 @@ const CommunityProduct = require("../../build/CommunityProduct.json")
 
 const STORE_DIR = __dirname + `/test-store-${+new Date()}`
 const BLOCK_FREEZE_SECONDS = 1
+const ADMIN_FEE = 0.2
 
 // settings compatible with streamr-docker-dev, TODO: read from env or add to CONFIG?
 const WEBSERVER_PORT = 8085
@@ -173,7 +174,7 @@ describe("Community product demo but through a running E&E instance", () => {
         console.log("1.5) Deploy CommunityProduct contract")
         const wallet = new Wallet(privateKey, ganacheProvider)
         const nodeAddress = getAddress(streamrNodeAddress)
-        const communityContract = await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, console.log, config.streamrWsUrl, config.streamrHttpUrl)
+        const communityContract = await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, ADMIN_FEE, console.log, config.streamrWsUrl, config.streamrHttpUrl)
         const communityAddress = communityContract.address
 
         console.log("1.6) Wait until Operator starts")
