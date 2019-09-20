@@ -38,7 +38,7 @@ async function replayEvent(plasma, event) {
             plasma.removeMembers(addressList)
         } break
         default: {
-            log(`WARNING: Unexpected event: ${JSON.stringify(event)}`)
+            log(`WARNING: Unexpected ${type} event: ${JSON.stringify(event)}`)
         }
     }
 }

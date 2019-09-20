@@ -14,6 +14,27 @@ const MonoplasmaJson = require("../build/Monoplasma.json")
 /** @typedef {number} BigNumber */
 
 /**
+ * Rewrote ethers.js parseLog mainly because of naming incompatibilities (also use of "this"... hrrr...)
+ * This one pulls an ugly one and mutates incoming logs (adds "event" and "args")
+ * It's here only until v5 is out: "if you use v5, you can use contract.queryFilter, which will include the parsed events" https://github.com/ethers-io/ethers.js/issues/37
+ *
+ * @see https://github.com/ethers-io/ethers.js/blob/master/utils/interface.js#L357
+ * @param {utils.Interface} interface from ethers Contract.interface
+ * @param {Array<utils.LogDescription>} logs from Provider.getLogs
+ */
+function parseLogs(interface, logs) {
+    for (const log of logs) {
+        for (const type in interface.events) {
+            const event = interface.events[type]
+            if (event.topic === log.topics[0]) {
+                log.event = event.name
+                log.args = event.decode(log.data, log.topics)
+            }
+        }
+    }
+}
+
+/**
  * MonoplasmaWatcher hooks to the Ethereum root chain contract and Streamr join/part stream
  * It syncs the state from Ethereum and Streamr into the store
  */
@@ -162,6 +183,11 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         const tokenTransferFilter = Object.assign({}, this.tokenTransferFilter,  { fromBlock, toBlock })
         const blockCreateEvents = await this.eth.getLogs(blockCreateFilter)
         const transferEvents = await this.eth.getLogs(tokenTransferFilter)
+
+        // "if you use v5, you can use contract.queryFilter, which will include the parsed events" https://github.com/ethers-io/ethers.js/issues/37
+        parseLogs(this.contract.interface, blockCreateEvents)
+        parseLogs(this.token.interface, transferEvents)
+
         const events = mergeEventLists(blockCreateEvents, transferEvents)
 
         // TODO: maybe harvest block timestamps from provider in the background after start-up, save to store?
