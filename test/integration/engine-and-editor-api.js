@@ -2,9 +2,11 @@ const { spawn } = require("child_process")
 const fetch = require("node-fetch")
 const assert = require("assert")
 
+const StreamrClient = require("streamr-client")
+
 const {
     Contract,
-    utils: { parseEther, formatEther, getAddress },
+    utils: { parseEther, formatEther, getAddress, computeAddress },
     Wallet,
     providers: { JsonRpcProvider }
 } = require("ethers")
@@ -24,6 +26,9 @@ const ADMIN_FEE = 0.2
 const WEBSERVER_PORT = 8085
 const ETHEREUM_SERVER = "http://localhost:8545"
 const ETHEREUM_PRIVATE_KEY = "0x5e98cce00cff5dea6b454889f359a4ec06b9fa6b88e9d69b86de8e1c81887da0"    // ganache 0, TODO: try another?
+//const ETHEREUM_PRIVATE_KEY = "0xe5af7834455b7239881b85be89d905d6881dcb4751063897f12be1b0dd546bdb"
+//const TOKEN_ADDRESS = "0xbAA81A0179015bE47Ad439566374F2Bae098686F"
+//const MARKETPLACE_ADDRESS = "0xEAA002f7Dc60178B6103f8617Be45a9D3df659B6"
 
 const { streamrWs, streamrHttp, streamrNodeAddress } = require("./CONFIG")
 
@@ -54,6 +59,7 @@ describe("Community product demo but through a running E&E instance", () => {
                 STREAMR_HTTP_URL: streamrHttp,
                 ETHEREUM_SERVER,
                 ETHEREUM_PRIVATE_KEY,
+                //TOKEN_ADDRESS,
                 STORE_DIR,
                 WEBSERVER_PORT,
                 BLOCK_FREEZE_SECONDS,
@@ -103,12 +109,14 @@ describe("Community product demo but through a running E&E instance", () => {
         console.log(`Moving 50 tokens to ${address} for testing...`)
         const adminWallet = new Wallet(adminPrivateKey, ganacheProvider)
         const adminToken = new Contract(config.tokenAddress, ERC20Mintable.abi, adminWallet)
-        const adminTransferTx = await adminToken.transfer(address, parseEther("50"))
+        //console.log(await adminToken.isMinter(adminWallet.address))
+        const adminTransferTx = await adminToken.mint(address, parseEther("50"))
         await adminTransferTx.wait(1)
 
         console.log("1) Create a new Community product")
 
         console.log("1.1) Get Streamr session token")
+        /*
         const apiKey = "tester1-api-key"
         const loginResponse = await fetch(`${streamrHttp}/login/apikey`, {
             method: "POST",
@@ -117,6 +125,14 @@ describe("Community product demo but through a running E&E instance", () => {
         }).then(resp => resp.json())
         console.log(`     Response: ${JSON.stringify(loginResponse)}`)
         const sessionToken = loginResponse.token
+        */
+        const client = new StreamrClient({
+            auth: { privateKey },
+            url: streamrWs,
+            restUrl: streamrHttp,
+        })
+        const sessionToken = await client.session.sessionTokenPromise
+        console.log("Session token: " + sessionToken)
         assert(sessionToken)
 
         // wrap fetch; with the Authorization header the noise is just too much...
@@ -168,7 +184,7 @@ describe("Community product demo but through a running E&E instance", () => {
             "pricePerSecond": 5,
             "priceCurrency": "DATA",
             "minimumSubscriptionInSeconds": 0,
-            type: "community",
+            "type": "COMMUNITY",
         }
         const productCreateResponse = await POST("/products", product)
         console.log(`     Response: ${JSON.stringify(productCreateResponse)}`)
@@ -185,60 +201,75 @@ describe("Community product demo but through a running E&E instance", () => {
         console.log("1.6) Wait until Operator starts")
         let stats = { code: true }
         const statsTimeout = setTimeout(() => { throw new Error("Response from E&E: " + JSON.stringify(stats)) }, 100000)
+        let sleepTime = 100
         while (stats.code) {
-            await sleep(100)
+            await sleep(sleepTime *= 2)
             stats = await GET(`/communities/${communityAddress}/stats`)
         }
         clearTimeout(statsTimeout)
         console.log(`     Stats before adding: ${JSON.stringify(stats)}`)
 
         console.log("1.7) Set beneficiary in Product DB entry")
+        product.beneficiaryAddress = communityAddress
         const putResponse = await fetch(`${streamrHttp}/products/${productId}`, {
             method: "PUT",
             headers: {
                 "Authorization": `Bearer ${sessionToken}`,
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({
-                beneficiaryAddress: communityAddress
-            }),
+            body: JSON.stringify(product),
         }).then(resp => resp.json())
         console.log(`     Response: ${JSON.stringify(putResponse)}`)
 
         console.log("2) Add members")
-        const memberAddressList = [address,
-            "0xeabe498c90fb31f6932ab9da9c4997a6d9f18639",
-            "0x4f623c9ef67b1d9a067a8043344fb80ae990c734",
-            "0xbb0965a38fcd97b6f34b4428c4bb32875323e012",
-            "0x6dde58bf01e320de32aa69f6daf9ba3c887b4db6",
-            "0xe04d3d361eb88a67a2bd3a4762f07010708b2811",
-            "0x47262e0936ec174b7813941ee57695e3cdcd2043",
-            "0xb5fe12f7437dbbc65c53bc9369db133480438f6f",
-            "0x3ea97ad9b624acd8784011c3ebd0e07557804e45",
-            "0x4d4bb0980c214b8f4e24d7d58ccf5f8a92f70d76",
+        const memberKeys = [privateKey,
+            "0x0000000000000000000000000000000000000000000000000000000000000001",
+            "0x0000000000000000000000000000000000000000000000000000000000000002",
+            "0x0000000000000000000000000000000000000000000000000000000000000003",
+            "0x0000000000000000000000000000000000000000000000000000000000000004",
+            "0x0000000000000000000000000000000000000000000000000000000000000005",
+            "0x0000000000000000000000000000000000000000000000000000000000000006",
+            "0x0000000000000000000000000000000000000000000000000000000000000007",
+            "0x0000000000000000000000000000000000000000000000000000000000000008",
+            "0x0000000000000000000000000000000000000000000000000000000000000009",
         ]
 
         console.log("2.1) Add community secret")
         const secretCreateResponse = await POST(`/communities/${communityAddress}/secrets`, {
-            name: "PLEASE DELETE ME, I'm a Community Product server test appSecret",
+            name: "PLEASE DELETE ME, I'm a Community Product server test secret",
             secret: "test",
         })
         console.log(`     Response: ${JSON.stringify(secretCreateResponse)}`)
 
         console.log("2.2) Send JoinRequests")
-        for (const memberAddress of memberAddressList) {
-            const joinResponse = await POST(`/communities/${communityAddress}/joinRequests`, {
-                memberAddress,
-                appSecret: "test",
-                metadata: { test: "PLEASE DELETE ME, I'm a Community Product server test joinRequest" },
+        for (const privateKey of memberKeys) {
+            const memberAddress = computeAddress(privateKey)
+            const tempClient = new StreamrClient({
+                auth: { privateKey },
+                url: streamrWs,
+                restUrl: streamrHttp,
             })
+            const memberSessionToken = await tempClient.session.sessionTokenPromise
+            const joinResponse = await fetch(`${streamrHttp}/communities/${communityAddress}/joinRequests`, {
+                method: "POST",
+                body: JSON.stringify({
+                    memberAddress,
+                    secret: "test",
+                    metadata: { test: "PLEASE DELETE ME, I'm a Community Product server test joinRequest" },
+                }),
+                headers: {
+                    "Authorization": `Bearer ${memberSessionToken}`,
+                    "Content-Type": "application/json",
+                }
+            }).then(resp => resp.json())
             console.log(`     Response: ${JSON.stringify(joinResponse)}`)
         }
 
         console.log("2.3) Wait until members have been added")
         let members = []
+        sleepTime = 100
         while (members.length < 1) {
-            await sleep(100)
+            await sleep(sleepTime *= 2)
             members = await GET(`/communities/${communityAddress}/members`)
         }
 
@@ -246,7 +277,7 @@ describe("Community product demo but through a running E&E instance", () => {
         const token = new Contract(config.tokenAddress, ERC20Mintable.abi, wallet)
         for (let i = 0; i < 5; i++) {
             const balance = await token.balanceOf(address)
-            console.log(`   Sending 10 tokens (out of ${formatEther(balance)}) to CommunityProduct contract...`)
+            console.log(`   Sending 10 tokens (out of remaining ${formatEther(balance)}) to CommunityProduct contract...`)
 
             const transferTx = await token.transfer(communityAddress, parseEther("10"))
             await transferTx.wait(2)
