@@ -22,7 +22,7 @@ describe("Channel", () => {
     })
 
     it("gets messages through", async function () {
-        this.timeout(20000)
+        this.timeout(60000)
         const startTime = Date.now()
         const time = () => "[" + (Date.now() - startTime).toString().padStart(5, " ") + "ms]"
 
