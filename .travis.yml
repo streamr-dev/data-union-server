@@ -31,7 +31,7 @@ jobs:
         - docker ps
         - "$TRAVIS_BUILD_DIR/streamr-docker-dev/streamr-docker-dev/bin.sh start engine-and-editor"
         - "$TRAVIS_BUILD_DIR/streamr-docker-dev/streamr-docker-dev/bin.sh start ganache"
-        - sleep 10m
+        - sleep 5m
         - docker ps
         - "npm run integration-tests"
     - stage: "Build docker (dev)"
