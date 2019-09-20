@@ -75,7 +75,7 @@ describe("MonoplasmaWatcher", () => {
         await token.deployed()
 
         const communityDeployer = new ContractFactory(CommunityJson.abi, CommunityJson.bytecode, wallet)
-        community = await communityDeployer.deploy(wallet.address, "dummy-stream-id", token.address, 1000)
+        community = await communityDeployer.deploy(wallet.address, "dummy-stream-id", token.address, 1000, 0)
         await community.deployed()
 
         log("Starting MonoplasmaWatcher...")
