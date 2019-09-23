@@ -15,7 +15,7 @@ const FileStore = require("monoplasma/src/fileStore")
 const Operator = require("./src/operator")
 const { throwIfSetButNotContract /*, throwIfNotSet */ } = require("./src/utils/checkArguments")
 const defaultServers = require("./defaultServers.json")
-const deployContract = require("./src/utils/deployCommunity")
+const deployCommunity = require("./src/utils/deployCommunity")
 
 const deployTestToken = require("./test/utils/deployTestToken")
 
@@ -35,6 +35,7 @@ const {
     TOKEN_ADDRESS,
     CONTRACT_ADDRESS,
     BLOCK_FREEZE_SECONDS,
+    ADMIN_FEE,
     //GAS_PRICE_GWEI,
     RESET,
     STORE_DIR,
@@ -106,7 +107,8 @@ async function start() {
     config.streamrWsUrl = STREAMR_WS_URL || config.streamrWsUrl
     config.streamrHttpUrl = STREAMR_HTTP_URL || config.streamrHttpUrl
     config.streamrNodeAddress = STREAMR_NODE_ADDRESS || config.streamrNodeAddress
-    config.contractAddress = CONTRACT_ADDRESS || config.contractAddress || (await deployContract(wallet, config.operatorAddress, config.tokenAddress, config.streamrNodeAddress, config.blockFreezeSeconds, log, config.streamrWsUrl, config.streamrHttpUrl)).address
+    config.adminFee = ADMIN_FEE || config.adminFee || 0
+    config.contractAddress = CONTRACT_ADDRESS || config.contractAddress || (await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, config.streamrNodeAddress, config.blockFreezeSeconds, config.adminFee, log, config.streamrWsUrl, config.streamrHttpUrl)).address
     config.defaultReceiverAddress = wallet.address
 
     // augment the config / saved state with variables that may be useful for the validators

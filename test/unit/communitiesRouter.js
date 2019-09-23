@@ -23,6 +23,7 @@ const initialBlock = {
     blockNumber: 3,
     members,
     totalEarnings: 70,
+    timestamp: Date.now(),
 }
 const startState = {
     lastBlockNumber: 5,
@@ -40,7 +41,7 @@ describe("Community product server /communities router", () => {
     let tokenAddress
     let community
     before(async function() {
-        this.timeout(0)
+        this.timeout(5000)
         const secretKey = "0x1234567812345678123456781234567812345678123456781234567812345678"
         const provider = new Web3Provider(ganache.provider({
             accounts: [{ secretKey, balance: "0xffffffffffffffffffffffffff" }],
@@ -48,6 +49,11 @@ describe("Community product server /communities router", () => {
         }))
         const wallet = new Wallet(secretKey, provider)
         await provider.getNetwork()     // wait until ganache is up and ethers.js ready
+
+        // "start from" block 10
+        for (let i = 0; i < 10; i++) {
+            await provider.send("evm_mine")
+        }
 
         log("Deploying test token and Community contract...")
         tokenAddress = await deployTestToken(wallet)
@@ -60,7 +66,7 @@ describe("Community product server /communities router", () => {
         const storeDir = path.join(os.tmpdir(), `communitiesRouter-test-${+new Date()}`)
         const server = new CommunityProductServer(wallet, storeDir, {
             tokenAddress,
-            defaultReceiverAddress: wallet.address,
+            adminAddress: wallet.address,
             operatorAddress: wallet.address,
         })
         const mockChannel = new MockStreamrChannel(secretKey, "dummy-stream-for-router-test")

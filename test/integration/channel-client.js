@@ -4,13 +4,13 @@ const sleep = require("../../src/utils/sleep-promise")
 
 const privateKey = "0x1234567812345678123456781234567812354678123456781234567812345678"
 
-const { urls } = require("./CONFIG")
+const { streamrWs, streamrHttp } = require("./CONFIG")
 
 const streamId = process.env.__JOINPART_STREAM_ID
 
 async function start() {
     console.log("Starting listener...")
-    const channel = new Channel(privateKey, streamId, urls.ws, urls.http)
+    const channel = new Channel(privateKey, streamId, streamrWs, streamrHttp)
     await channel.listen()
     console.log("Stream ID", channel.stream.id)
 

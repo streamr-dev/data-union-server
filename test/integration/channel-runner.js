@@ -1,7 +1,7 @@
 const path = require("path")
 const { spawn } = require("child_process")
 
-const { urls } = require("./CONFIG")
+const { streamrWs, streamrHttp } = require("./CONFIG")
 
 const { untilStreamContains } = require("../utils/await-until")
 const sleep = require("../../src/utils/sleep-promise")
@@ -15,16 +15,16 @@ describe("Channel", () => {
     let streamId
     before(async function () {
         this.timeout(5000)
-        const joinPartChannel = new Channel(privateKey, null, urls.ws, urls.http)
+        const joinPartChannel = new Channel(privateKey, null, streamrWs, streamrHttp)
         await joinPartChannel.startServer()
         streamId = joinPartChannel.stream.id
         joinPartChannel.close()
     })
 
     it("gets messages through", async function () {
-        this.timeout(20000)
+        this.timeout(60000)
         const startTime = Date.now()
-        const time = () => Date.now() - startTime
+        const time = () => "[" + (Date.now() - startTime).toString().padStart(5, " ") + "ms]"
 
         console.log("Stream ID", streamId, "\n")
 

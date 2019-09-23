@@ -20,12 +20,17 @@ const CommunityProduct = require("../../build/CommunityProduct.json")
 
 const STORE_DIR = __dirname + `/test-store-${+new Date()}`
 const GANACHE_PORT = 8548
-const WEBSERVER_PORT = 8080
+const WEBSERVER_PORT = 8880
 const BLOCK_FREEZE_SECONDS = 1
-const STREAMR_NODE_ADDRESS = process.env.STREAMR_NODE_ADDRESS || "0xc0aa4dC0763550161a6B59fa430361b5a26df28C" // node address in production
+const ADMIN_FEE = 0.2
 
-const { urls } = require("./CONFIG")
+const { streamrWs, streamrHttp, streamrNodeAddress } = require("./CONFIG")
 
+/**
+ * This test is an "integration test" but the setup should still be such that it could be independently run
+ *   against production simply by not providing STREAMR_WS_URL and STREAMR_HTTP_URL (that will point to dev
+ *   docker in Travis test), hence spin up an "internal" ganache for the test
+ */
 describe("Community product demo", () => {
     let operatorProcess
 
@@ -45,8 +50,8 @@ describe("Community product demo", () => {
         console.log("--- Running start_server.js ---")
         operatorProcess = spawn(process.execPath, ["start_server.js"], {
             env: {
-                STREAMR_WS_URL: urls.ws,
-                STREAMR_HTTP_URL: urls.http,
+                STREAMR_WS_URL: streamrWs,
+                STREAMR_HTTP_URL: streamrHttp,
                 STORE_DIR,
                 GANACHE_PORT,
                 WEBSERVER_PORT,
@@ -63,7 +68,7 @@ describe("Community product demo", () => {
         const privateKeyMatch = capture(operatorProcess.stdout, /<Ganache> \(.\) (0x[a-f0-9]{64})/, 3)
         const ganacheUrlMatch = untilStreamMatches(operatorProcess.stdout, /Listening on (.*)/)
         await untilStreamContains(operatorProcess.stdout, "[DONE]")
-        const address = (await addressMatch)[1]
+        const address = getAddress((await addressMatch)[1])
         const privateKey = (await privateKeyMatch)[1]
         const ganacheUrl = "http://" + (await ganacheUrlMatch)[1]
 
@@ -84,7 +89,7 @@ describe("Community product demo", () => {
             ganacheProvider: new JsonRpcProvider(`http://localhost:${GANACHE_PORT}`),
             adminPrivateKey: "0x5e98cce00cff5dea6b454889f359a4ec06b9fa6b88e9d69b86de8e1c81887da0",  // ganache 0
             privateKey: "0xe5af7834455b7239881b85be89d905d6881dcb4751063897f12be1b0dd546bdb", // ganache 1
-            address: "0x4178babe9e5148c6d5fd431cd72884b07ad855a0",
+            address: "0x4178baBE9E5148c6D5fd431cD72884B07Ad855a0",
         }
     }
 
@@ -110,16 +115,11 @@ describe("Community product demo", () => {
 
         console.log("1) Create a new Community product")
 
-        console.log("1.1) Create joinPartStream")
-        /* done in deployCommunity below
-        const channel = new StreamrChannel(adminPrivateKey, `test-server-${+new Date()}`)
-        await channel.startServer()
-        */
-
+        console.log("1.1) Create joinPartStream")  // done in deployCommunity function below
         console.log("1.2) Deploy CommunityProduct contract")
         const wallet = new Wallet(privateKey, ganacheProvider)
-        const streamrNodeAddress = getAddress(STREAMR_NODE_ADDRESS)
-        const communityContract = await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, streamrNodeAddress, BLOCK_FREEZE_SECONDS, console.log, config.streamrWsUrl, config.streamrHttpUrl)
+        const nodeAddress = getAddress(streamrNodeAddress)
+        const communityContract = await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, ADMIN_FEE, console.log, config.streamrWsUrl, config.streamrHttpUrl)
         const communityAddress = communityContract.address
 
         console.log("1.3) Wait until Operator starts")
@@ -147,24 +147,22 @@ describe("Community product demo", () => {
         await channel.startServer()
         channel.publish("join", userList)
 
-        /* TODO: enable the members check after "realtime" state is implemented in watcher. Right now the members update only after block is created.
         let members = []
         while (members.length < 1) {
             await sleep(1000)
             members = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/members`).then(resp => resp.json())
         }
-        console.log(`     Members after adding: ${members}`)
+        const memberAddresses = members.map(m => m.address)
+        console.log(`     Members after adding: ${memberAddresses}`)
         const res2b = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/stats`).then(resp => resp.json())
         console.log(`     Stats after adding: ${JSON.stringify(res2b)}`)
-        assert(address in members)
-        */
-        await sleep(10000)  // Travis needs time to get the joins through...
+        assert(memberAddresses.includes(address))
 
         console.log("3) Send revenue in")
         const token = new Contract(config.tokenAddress, ERC20Mintable.abi, wallet)
         for (let i = 0; i < 5; i++) {
             const balance = await token.balanceOf(address)
-            console.log(`   Sending 10 tokens (out of ${formatEther(balance)}) to CommunityProduct contract...`)
+            console.log(`   Sending 10 tokens (out of remaining ${formatEther(balance)}) to CommunityProduct contract...`)
 
             const transferTx = await token.transfer(communityAddress, parseEther("10"))
             await transferTx.wait(2)
@@ -199,7 +197,7 @@ describe("Community product demo", () => {
         const difference = balanceAfter.sub(balanceBefore)
         console.log(`   Withdraw effect: ${formatEther(difference)}`)
 
-        assert(difference.eq(parseEther("5")))
+        assert.strictEqual(difference.toString(), parseEther("5").toString())   // incl admin fee?
     })
 
     afterEach(() => {

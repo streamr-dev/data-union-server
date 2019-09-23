@@ -38,13 +38,13 @@ async function replayEvent(plasma, event) {
             plasma.removeMembers(addressList)
         } break
         default: {
-            log(`WARNING: Unexpected event: ${JSON.stringify(event)}`)
+            log(`WARNING: Unexpected ${type} event: ${JSON.stringify(event)}`)
         }
     }
 }
 
-/** "empty", for the purposes of event lists */
-function empty(x) {
+/** Tests from "emptiness", for the purposes of event lists. Non-arrays are empty. */
+function isEmpty(x) {
     return !Array.isArray(x) || x.length < 1
 }
 
@@ -55,8 +55,8 @@ function empty(x) {
  * @param {List<StreamrMessage>} messages from Streamr
  */
 function mergeEventsWithMessages(events, messages) {
-    if (empty(events)) { return empty(messages) ? [] : messages }
-    if (empty(messages)) { return empty(events) ? [] : events }
+    if (isEmpty(events)) { return isEmpty(messages) ? [] : messages }
+    if (isEmpty(messages)) { return isEmpty(events) ? [] : events }
     const ret = []
     let eventI = 0
     let msgI = 0
@@ -80,8 +80,8 @@ function mergeEventsWithMessages(events, messages) {
 }
 
 function mergeEventLists(events1, events2) {
-    if (empty(events1)) { return empty(events2) ? [] : events2 }
-    if (empty(events2)) { return empty(events1) ? [] : events1 }
+    if (isEmpty(events1)) { return isEmpty(events2) ? [] : events2 }
+    if (isEmpty(events2)) { return isEmpty(events1) ? [] : events1 }
     const ret = []
     let i1 = 0
     let i2 = 0

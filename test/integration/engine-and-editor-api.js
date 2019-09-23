@@ -2,28 +2,42 @@ const { spawn } = require("child_process")
 const fetch = require("node-fetch")
 const assert = require("assert")
 
+const StreamrClient = require("streamr-client")
+
 const {
     Contract,
-    utils: { parseEther, formatEther },
+    utils: { parseEther, formatEther, getAddress, computeAddress },
     Wallet,
     providers: { JsonRpcProvider }
 } = require("ethers")
 
 const sleep = require("../../src/utils/sleep-promise")
-const { untilStreamContains, untilStreamMatches, capture } = require("../utils/await-until")
+const { untilStreamContains } = require("../utils/await-until")
 const deployCommunity = require("../../src/utils/deployCommunity")
 
 const ERC20Mintable = require("../../build/ERC20Mintable.json")
 const CommunityProduct = require("../../build/CommunityProduct.json")
 
-const EE_URL = process.env.EE_URL || "http://localhost:8081/streamr-core"
 const STORE_DIR = __dirname + `/test-store-${+new Date()}`
-const GANACHE_PORT = 8546
-const WEBSERVER_PORT = 8080
 const BLOCK_FREEZE_SECONDS = 1
+const ADMIN_FEE = 0.2
 
-// more end-to-end than community-product-demo.js because it pokes the stream and server directly
-//   this test only talks to E&E
+// settings compatible with streamr-docker-dev, TODO: read from env or add to CONFIG?
+const WEBSERVER_PORT = 8085
+const ETHEREUM_SERVER = "http://localhost:8545"
+const ETHEREUM_PRIVATE_KEY = "0x5e98cce00cff5dea6b454889f359a4ec06b9fa6b88e9d69b86de8e1c81887da0"    // ganache 0, TODO: try another?
+//const ETHEREUM_PRIVATE_KEY = "0xe5af7834455b7239881b85be89d905d6881dcb4751063897f12be1b0dd546bdb"
+//const TOKEN_ADDRESS = "0xbAA81A0179015bE47Ad439566374F2Bae098686F"
+//const MARKETPLACE_ADDRESS = "0xEAA002f7Dc60178B6103f8617Be45a9D3df659B6"
+
+const { streamrWs, streamrHttp, streamrNodeAddress } = require("./CONFIG")
+
+/**
+ * Same as community-product-demo.js except only through E&E APIs,
+ *   "more end-to-end" because it won't poke the stream and server directly, only talks to E&E
+ * Only needs to run against dev docker, hence run againt streamr-ganache docker,
+ *   notice the hard-coded ETHEREUM_SERVER (TODO: why not support stand-alone too though)
+ */
 describe("Community product demo but through a running E&E instance", () => {
     let operatorProcess
 
@@ -37,15 +51,16 @@ describe("Community product demo but through a running E&E instance", () => {
         spawn("rm", ["-rf", STORE_DIR])
     })
 
-    // TODO: fix (copy relevant improvements from community-product-demo first)
-    it.skip("should get through the happy path", async function () {
-        this.timeout(5 * 60 * 1000)
-
+    async function startServer() {
         console.log("--- Running start_server.js ---")
         operatorProcess = spawn(process.execPath, ["start_server.js"], {
             env: {
+                STREAMR_WS_URL: streamrWs,
+                STREAMR_HTTP_URL: streamrHttp,
+                ETHEREUM_SERVER,
+                ETHEREUM_PRIVATE_KEY,
+                //TOKEN_ADDRESS,
                 STORE_DIR,
-                GANACHE_PORT,
                 WEBSERVER_PORT,
                 BLOCK_FREEZE_SECONDS,
                 RESET: "yesplease",
@@ -56,111 +71,245 @@ describe("Community product demo but through a running E&E instance", () => {
         operatorProcess.on("close", code => { console.log(`start_server.js exited with code ${code}`) })
         operatorProcess.on("error", err => { console.log(`start_server.js ERROR: ${err}`) })
 
-        const addressMatch = capture(operatorProcess.stdout, /<Ganache> \(.\) (0x[a-f0-9]{40}) \(~100 ETH\)/, 3)
-        const privateKeyMatch = capture(operatorProcess.stdout, /<Ganache> \(.\) (0x[a-f0-9]{64})/, 3)
-        const ganacheUrlMatch = untilStreamMatches(operatorProcess.stdout, /Listening on (.*)/)
         await untilStreamContains(operatorProcess.stdout, "[DONE]")
-        const from = (await addressMatch)[1]
-        const privateKey = (await privateKeyMatch)[1]
-        const ganacheUrl = "http://" + (await ganacheUrlMatch)[1]
+
+        return {
+            ganacheProvider: new JsonRpcProvider(ETHEREUM_SERVER),
+            adminPrivateKey: ETHEREUM_PRIVATE_KEY,
+            privateKey: "0xe5af7834455b7239881b85be89d905d6881dcb4751063897f12be1b0dd546bdb", // ganache 1
+            address: "0x4178baBE9E5148c6D5fd431cD72884B07Ad855a0",
+        }
+    }
+
+    // for pre-started start_server.js, so to be able to debug also the server in IDE while running tests
+    async function connectToLocalGanache() {    //eslint-disable-line no-unused-vars
+        return {
+            ganacheProvider: new JsonRpcProvider("http://localhost:8545"),
+            adminPrivateKey: "0x5e98cce00cff5dea6b454889f359a4ec06b9fa6b88e9d69b86de8e1c81887da0",  // ganache 0
+            privateKey: "0xe5af7834455b7239881b85be89d905d6881dcb4751063897f12be1b0dd546bdb", // ganache 1
+            address: "0x4178baBE9E5148c6D5fd431cD72884B07Ad855a0",
+        }
+    }
+
+    it("should get through the happy path", async function () {
+        this.timeout(5 * 60 * 1000)
+
+        const {
+            ganacheProvider,
+            adminPrivateKey,
+            privateKey,
+            address,
+        } = await startServer() // connectToLocalGanache()
 
         console.log("--- Server started, getting the operator config ---")
         // TODO: eliminate direct server communication (use /stats? Change EE?)
         const config = await fetch(`http://localhost:${WEBSERVER_PORT}/config`).then(resp => resp.json())
         console.log(config)
 
-        console.log(`Moving 50 tokens to ${from} for testing...`)
-        const ganacheProvider = new JsonRpcProvider(ganacheUrl)
-        const adminPrivateKey = (await privateKeyMatch)[0]
+        console.log(`Moving 50 tokens to ${address} for testing...`)
         const adminWallet = new Wallet(adminPrivateKey, ganacheProvider)
         const adminToken = new Contract(config.tokenAddress, ERC20Mintable.abi, adminWallet)
-        const adminTransferTx = await adminToken.transfer(from, parseEther("50"))
-        await adminTransferTx.wait(2)
-
-        // TODO: create a stream that's going to go into the product
-        const streamId = ""
+        //console.log(await adminToken.isMinter(adminWallet.address))
+        const adminTransferTx = await adminToken.mint(address, parseEther("50"))
+        await adminTransferTx.wait(1)
 
         console.log("1) Create a new Community product")
 
-        console.log("1.1) Create joinPartStream")
-        const joinPartStreamName = "community-product-e2e-test-" + Date.now()
-        const joinPartStream = await this.client.getOrCreateStream({
-            name: joinPartStreamName,
-            public: true,
+        console.log("1.1) Get Streamr session token")
+        /*
+        const apiKey = "tester1-api-key"
+        const loginResponse = await fetch(`${streamrHttp}/login/apikey`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ apiKey }),
+        }).then(resp => resp.json())
+        console.log(`     Response: ${JSON.stringify(loginResponse)}`)
+        const sessionToken = loginResponse.token
+        */
+        const client = new StreamrClient({
+            auth: { privateKey },
+            url: streamrWs,
+            restUrl: streamrHttp,
         })
+        const sessionToken = await client.session.sessionTokenPromise
+        console.log("Session token: " + sessionToken)
+        assert(sessionToken)
 
-        console.log("1.2) Create the product on the marketplace")
+        // wrap fetch; with the Authorization header the noise is just too much...
+        async function GET(url) {
+            return fetch(streamrHttp + url, {
+                headers: {
+                    "Authorization": `Bearer ${sessionToken}`
+                }
+            }).then(resp => resp.json())
+        }
+        async function POST(url, bodyObject) {
+            return fetch(streamrHttp + url, {
+                method: "POST",
+                body: JSON.stringify(bodyObject),
+                headers: {
+                    "Authorization": `Bearer ${sessionToken}`,
+                    "Content-Type": "application/json",
+                }
+            }).then(resp => resp.json())
+        }
+
+        console.log("1.2) create a stream that's going to go into the product")
+        const stream = {
+            "name": "Community Product server test stream " + Date.now(),
+            "description": "PLEASE DELETE ME, I'm a Community Product server test stream",
+            "config": {
+                "fields": [{
+                    "name": "string",
+                    "type": "number",
+                }]
+            }
+        }
+        const streamCreateResponse = await POST("/streams", stream)
+        console.log(`     Response: ${JSON.stringify(streamCreateResponse)}`)
+        const streamId = streamCreateResponse.id
+        assert(streamId)
+
+        console.log("1.3) Create product in the database")
         const product = {
             "name": "Community Product server test product " + Date.now(),
             "description": "PLEASE DELETE ME, I'm a Community Product server test product",
             "imageUrl": "https://www.streamr.com/uploads/to-the-moon.png",
-            "category": "test-category-id",
+            "category": "other",        // TODO: curiously, test-category-id doesn't exist in docker mysql
             "streams": [ streamId ],
             "previewStream": streamId,
             "previewConfigJson": "string",
-            "ownerAddress": from,
-            "beneficiaryAddress": from,
+            "ownerAddress": address,
+            "beneficiaryAddress": address,
             "pricePerSecond": 5,
             "priceCurrency": "DATA",
             "minimumSubscriptionInSeconds": 0,
-            type: "community",
+            "type": "COMMUNITY",
         }
-        const productCreateResponse = await fetch(`${EE_URL}}/products`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(product),
-        }).then(resp => resp.json())
+        const productCreateResponse = await POST("/products", product)
         console.log(`     Response: ${JSON.stringify(productCreateResponse)}`)
+        const productId = productCreateResponse.id
+        assert(productId)
 
-        console.log("1.3) Deploy CommunityProduct contract")
+        console.log("1.4) Create joinPartStream")   // done inside deployCommunity below
+        console.log("1.5) Deploy CommunityProduct contract")
         const wallet = new Wallet(privateKey, ganacheProvider)
-        const communityAddress = await deployCommunity(wallet, config.operatorAddress, joinPartStream.id, config.tokenAddress, BLOCK_FREEZE_SECONDS, console.log, config.streamrWsUrl, config.streamrHttpUrl)
+        const nodeAddress = getAddress(streamrNodeAddress)
+        const communityContract = await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, ADMIN_FEE, console.log, config.streamrWsUrl, config.streamrHttpUrl)
+        const communityAddress = communityContract.address
 
-        console.log("1.4) Wait until Operator starts")
-        let stats = { error: true }
-        while (stats.error) {
-            await sleep(100)
-            stats = await fetch(`${EE_URL}}/communities/${communityAddress}/stats`).then(resp => resp.json())
+        console.log("1.6) Wait until Operator starts")
+        let stats = { code: true }
+        const statsTimeout = setTimeout(() => { throw new Error("Response from E&E: " + JSON.stringify(stats)) }, 100000)
+        let sleepTime = 100
+        while (stats.code) {
+            await sleep(sleepTime *= 2)
+            stats = await GET(`/communities/${communityAddress}/stats`)
         }
+        clearTimeout(statsTimeout)
         console.log(`     Stats before adding: ${JSON.stringify(stats)}`)
 
-        console.log("2) Add members")
-        // TODO: await fetch(`${EE_URL}/communities/${communityAddress}/members`).then(resp => resp.json())
+        console.log("1.7) Set beneficiary in Product DB entry")
+        product.beneficiaryAddress = communityAddress
+        const putResponse = await fetch(`${streamrHttp}/products/${productId}`, {
+            method: "PUT",
+            headers: {
+                "Authorization": `Bearer ${sessionToken}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(product),
+        }).then(resp => resp.json())
+        console.log(`     Response: ${JSON.stringify(putResponse)}`)
 
-        console.log("3) Send revenue in")
+        console.log("2) Add members")
+        const memberKeys = [privateKey,
+            "0x0000000000000000000000000000000000000000000000000000000000000001",
+            "0x0000000000000000000000000000000000000000000000000000000000000002",
+            "0x0000000000000000000000000000000000000000000000000000000000000003",
+            "0x0000000000000000000000000000000000000000000000000000000000000004",
+            "0x0000000000000000000000000000000000000000000000000000000000000005",
+            "0x0000000000000000000000000000000000000000000000000000000000000006",
+            "0x0000000000000000000000000000000000000000000000000000000000000007",
+            "0x0000000000000000000000000000000000000000000000000000000000000008",
+            "0x0000000000000000000000000000000000000000000000000000000000000009",
+        ]
+
+        console.log("2.1) Add community secret")
+        const secretCreateResponse = await POST(`/communities/${communityAddress}/secrets`, {
+            name: "PLEASE DELETE ME, I'm a Community Product server test secret",
+            secret: "test",
+        })
+        console.log(`     Response: ${JSON.stringify(secretCreateResponse)}`)
+
+        console.log("2.2) Send JoinRequests")
+        for (const privateKey of memberKeys) {
+            const memberAddress = computeAddress(privateKey)
+            const tempClient = new StreamrClient({
+                auth: { privateKey },
+                url: streamrWs,
+                restUrl: streamrHttp,
+            })
+            const memberSessionToken = await tempClient.session.sessionTokenPromise
+            const joinResponse = await fetch(`${streamrHttp}/communities/${communityAddress}/joinRequests`, {
+                method: "POST",
+                body: JSON.stringify({
+                    memberAddress,
+                    secret: "test",
+                    metadata: { test: "PLEASE DELETE ME, I'm a Community Product server test joinRequest" },
+                }),
+                headers: {
+                    "Authorization": `Bearer ${memberSessionToken}`,
+                    "Content-Type": "application/json",
+                }
+            }).then(resp => resp.json())
+            console.log(`     Response: ${JSON.stringify(joinResponse)}`)
+        }
+
+        console.log("2.3) Wait until members have been added")
+        let members = []
+        sleepTime = 100
+        while (members.length < 1) {
+            await sleep(sleepTime *= 2)
+            members = await GET(`/communities/${communityAddress}/members`)
+        }
+
+        console.log("3) Send revenue in and check tokens were distributed")
         const token = new Contract(config.tokenAddress, ERC20Mintable.abi, wallet)
         for (let i = 0; i < 5; i++) {
-            const balance = await token.balanceOf(from)
-            console.log(`   Sending 10 tokens (out of ${formatEther(balance)}) to CommunityProduct contract...`)
+            const balance = await token.balanceOf(address)
+            console.log(`   Sending 10 tokens (out of remaining ${formatEther(balance)}) to CommunityProduct contract...`)
 
             const transferTx = await token.transfer(communityAddress, parseEther("10"))
             await transferTx.wait(2)
 
             // check total revenue
-            const res3 = await fetch(`${EE_URL}/communities/${communityAddress}/stats`).then(resp => resp.json())
+            const res3 = await GET(`/communities/${communityAddress}/stats`)
             console.log(`   Total revenue: ${formatEther(res3.totalEarnings)}`)
         }
 
-        console.log("   Waiting for blocks to unfreeze...") //... and also that state updates.
-        // TODO: this really should work with much lower sleep time
-        //   I think there's a mismatch in the router between which withdrawableBlock is reported and what the proof from state is
-        await sleep(10000)
+        console.log("3.1) Wait for blocks to unfreeze...") //... and also that state updates.
+        const before = await GET(`/communities/${communityAddress}/members/${address}`)
+        let member = { withdrawableEarnings: 0 }
+        // TODO: what's the expected final withdrawableEarnings?
+        while (member.withdrawableEarnings < 1 + before.withdrawableEarnings) {
+            await sleep(1000)
+            member = await GET(`/communities/${communityAddress}/members/${address}`)
+            console.log(JSON.stringify(member))
+        }
 
-        console.log("4) Check tokens were distributed & withdraw")
-        const res4 = await fetch(`${EE_URL}/communities/${communityAddress}/members/${from}`).then(resp => resp.json())
-        console.log(JSON.stringify(res4))
+        console.log("4) Withdraw tokens")
 
-        const balanceBefore = await token.balanceOf(from)
+        const balanceBefore = await token.balanceOf(address)
         console.log(`   Token balance before: ${formatEther(balanceBefore)}`)
 
         const contract = new Contract(communityAddress, CommunityProduct.abi, wallet)
-        const withdrawTx = await contract.withdrawAll(res4.withdrawableBlockNumber, res4.withdrawableEarnings, res4.proof)
+        const withdrawTx = await contract.withdrawAll(member.withdrawableBlockNumber, member.withdrawableEarnings, member.proof)
         await withdrawTx.wait(2)
 
-        const res4b = await fetch(`${EE_URL}/communities/${communityAddress}/members/${from}`).then(resp => resp.json())
+        const res4b = await GET(`/communities/${communityAddress}/members/${address}`)
         console.log(JSON.stringify(res4b))
 
-        const balanceAfter = await token.balanceOf(from)
+        const balanceAfter = await token.balanceOf(address)
         console.log(`   Token balance after: ${formatEther(balanceAfter)}`)
 
         const difference = balanceAfter.sub(balanceBefore)

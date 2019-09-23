@@ -22,7 +22,6 @@ const JOIN_PART_CHANNEL_PORT = 5964
 const BLOCK_FREEZE_SECONDS = 1
 
 const FileStore = require("monoplasma/src/fileStore")
-const { loadState } = new FileStore(STORE_DIR)
 
 describe("Revenue sharing demo", () => {
     let operatorProcess
@@ -67,8 +66,10 @@ describe("Revenue sharing demo", () => {
         const ganacheProvider = new JsonRpcProvider(ganacheUrl)
         const wallet = new Wallet(privateKey, ganacheProvider)
 
+        // TODO: get config from somewhere else
         console.log("--- Operator started, getting the init state ---")
-        const state = await loadState()
+        const fileStore = new FileStore()
+        const state = await fileStore.loadState()
 
         console.log("state", state)
         const token = new Contract(state.tokenAddress, ERC20Mintable.abi, wallet)

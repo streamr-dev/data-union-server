@@ -11,7 +11,6 @@ const mockStore = require("monoplasma/test/utils/mockStore")
 const MockStreamrChannel = require("../utils/mockStreamrChannel")
 const deployTestToken = require("../utils/deployTestToken")
 const deployTestCommunity = require("../utils/deployTestCommunity")
-const joinPartStreamId = "joinpart-server-test"
 const ganacheBlockIntervalSeconds = 4
 const members = [
     { address: "0x2F428050ea2448ed2e4409bE47e1A50eBac0B2d2", earnings: "50" },
@@ -63,7 +62,7 @@ describe("CommunityProductServer", () => {
         }
         const server = new CommunityProductServer(wallet, storeDir, config, log, log)
         server.getStoreFor = () => mockStore(startState, initialBlock, log)
-        server.getChannelFor = () => new MockStreamrChannel(wallet.privateKey, joinPartStreamId)
+        server.getChannelFor = () => new MockStreamrChannel(wallet.privateKey, "dummy-stream-id")
 
         sinon.spy(server, "onOperatorChangedEventAt")
         sinon.spy(server, "startOperating")
@@ -99,7 +98,7 @@ describe("CommunityProductServer", () => {
         }
         const server = new CommunityProductServer(wallet, storeDir, config, log, log)
         server.getStoreFor = () => mockStore(startState, initialBlock, log)
-        server.getChannelFor = () => new MockStreamrChannel(wallet.privateKey, joinPartStreamId)
+        server.getChannelFor = () => new MockStreamrChannel(wallet.privateKey, "dummy-stream-id")
         await server.start()
 
         const contract = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)

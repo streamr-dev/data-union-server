@@ -77,10 +77,14 @@ const log = QUIET ? (() => {}) : (...args) => {
 const error = (e, ...args) => {
     console.error(e.stack || e, ...args)
     Sentry && Sentry.captureException(e)
-    // TODO: it seems Sentry won't have time to send the exception out
-    //   is it better to wait? How to check if Sentry received it?
-    //   program should be halted at any rate. Put reporting into separate process?
-    process.exit(1)
+
+    // from https://docs.sentry.io/error-reporting/configuration/draining/?platform=browsernpm
+    const sentryClient = Sentry && Sentry.getCurrentHub().getClient()
+    if (sentryClient) {
+        sentryClient.close(2000).then(() => process.exit(1))
+    } else {
+        process.exit(1)
+    }
 }
 
 const storeDir = fs.existsSync(STORE_DIR) ? STORE_DIR : __dirname + "/store"
@@ -101,7 +105,7 @@ async function start() {
         ETHEREUM_SERVER ? new JsonRpcProvider(ETHEREUM_SERVER) :
         ETHEREUM_NETWORK ? getDefaultProvider(ETHEREUM_NETWORK) : null
 
-    let wallet, tokenAddress
+    let wallet
     if (provider) {
         try {
             log(`Connecting to ${provider._network.name} network, ${provider.providers[0].connection.url}`)
@@ -119,6 +123,7 @@ async function start() {
         wallet = new Wallet(ganache.privateKeys[0], ganacheProvider)   // use account 0: 0xa3d1f77acff0060f7213d7bf3c7fec78df847de1
     }
 
+    let tokenAddress
     if (TOKEN_ADDRESS) {
         tokenAddress = getAddress(TOKEN_ADDRESS)
         await throwIfNotContract(wallet.provider, tokenAddress, "Environment variable TOKEN_ADDRESS")
@@ -158,13 +163,19 @@ async function start() {
     log("[DONE]")
 
     if (DEVELOPER_MODE) {
-        const streamrNodeAddress = process.env.STREAMR_NODE_ADDRESS || "0xFCAd0B19bB29D4674531d6f115237E16AfCE377c" // node address in docker dev environment
         log("DEVELOPER MODE: /admin endpoints available: addRevenue, deploy, addTo/{address}")
-        const contract = await deployCommunity(wallet, wallet.address, tokenAddress, streamrNodeAddress, 1000, log, config.streamrWsUrl, config.streamrHttpUrl)
+        const streamrNodeAddress = process.env.STREAMR_NODE_ADDRESS || "0xFCAd0B19bB29D4674531d6f115237E16AfCE377c" // node address in docker dev environment
+
+        // deploy new communities
+        app.use("/admin/deploy", (req, res) => deployCommunity(wallet, wallet.address, tokenAddress, streamrNodeAddress, 1000, 0, log, config.streamrWsUrl, config.streamrHttpUrl).then(({contract: { address }}) => res.send({ address })).catch(error => res.status(500).send({error})))
+        app.use("/admin/addTo/:communityAddress", (req, res) => transfer(wallet, req.params.communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
+
+        // deploy a test community and provide direct manipulation endpoints for it (useful for seeing if anything is happening)
+        const contract = await deployCommunity(wallet, wallet.address, tokenAddress, streamrNodeAddress, 1000, 0.3, log, config.streamrWsUrl, config.streamrHttpUrl)
         const communityAddress = contract.address
         app.use("/admin/addRevenue", (req, res) => transfer(wallet, communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
-        app.use("/admin/deploy", (req, res) => deployCommunity(wallet, wallet.address, tokenAddress, streamrNodeAddress, 1000, log, config.streamrWsUrl, config.streamrHttpUrl).then(({contract: { address }}) => res.send({ address })).catch(error => res.status(500).send({error})))
-        app.use("/admin/addTo/:communityAddress", (req, res) => transfer(wallet, req.params.communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
+        app.use("/admin/setAdminFee", (req, res) => setFee(wallet, communityAddress, "0.3").then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
+        app.use("/admin/resetAdminFee", (req, res) => setFee(wallet, communityAddress, 0).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
 
         log(`Deployed community at ${communityAddress}, waiting for server to notice...`)
         await server.communityIsRunning(communityAddress)
@@ -180,10 +191,11 @@ async function start() {
             "0x4178babe9e5148c6d5fd431cd72884b07ad855a0",
         ])
         log("Waiting for server to notice joins...")
-        while (server.communities[communityAddress].operator.watcher.messageQueue.length > 0) {
+        while (server.communities[communityAddress].operator.watcher.plasma.members.length > 1) {
             await sleep(1000)
         }
 
+        log("Transferring tokens to the contract...")
         await transfer(wallet, communityAddress, tokenAddress)
 
         // this is here just so it's easy to add a breakpoint and inspect this scope
@@ -200,6 +212,17 @@ async function transfer(wallet, targetAddress, tokenAddress, amount) {
     await throwIfNotContract(wallet.provider, tokenAddress, "token address")
     const token = new Contract(tokenAddress, ERC20Mintable.abi, wallet)
     const tx = await token.transfer(targetAddress, amount || parseEther("1"))
+    const tr = await tx.wait(1)
+    return tr
+}
+
+const CommunityProduct = require("./build/CommunityProduct")
+async function setFee(wallet, targetAddress, fee) {
+    throwIfNotContract(targetAddress, "Monoplasma contract address")
+    if (!(fee >= 0 && fee <= 1)) { throw new Error(`Admin fee must be a number between 0...1, got: ${fee}`) }
+    const community = new Contract(targetAddress, CommunityProduct.abi, wallet)
+    const feeBN = parseEther(fee.toString())
+    const tx = await community.setAdminFee(feeBN)
     const tr = await tx.wait(1)
     return tr
 }
