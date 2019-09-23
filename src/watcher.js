@@ -122,9 +122,9 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             this.emit("tokensReceived", event)
         })
 
-        this.contract.on(this.blockCreateFilter, async (to, from, amount, event) => {
+        this.contract.on(this.blockCreateFilter, async (blockNumber, rootHash, ipfsHash, event) => {
             //event.timestamp = await this.getBlockTimestamp(event.blockNumber)
-            this.log(`Observed creation of block ${+event.args.blockNumber} at block ${event.blockNumber}`)
+            this.log(`Observed creation of block ${+blockNumber} at block ${event.blockNumber} (root ${rootHash}, ipfs "${ipfsHash})"`)
             this.state.lastPublishedBlock = event.args
             this.emit("blockCreated", event)
         })
