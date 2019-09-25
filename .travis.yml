@@ -23,6 +23,7 @@ jobs:
         - STREAMR_HTTP_URL: http://localhost:8081/streamr-core/api/v1
         - STREAMR_NODE_ADDRESS: "0xc0dBcc4e7a0e0BEF78Da67AC2CD5Ca2Dd3c4C165"
       script:
+        - curl http://localhost:8081/streamr-core/api/v1/categories
         - sudo /etc/init.d/mysql stop
         - git clone https://github.com/streamr-dev/streamr-docker-dev.git
         - sudo ifconfig docker0 10.200.10.1/24
@@ -34,7 +35,8 @@ jobs:
         - sleep 5m
         - docker ps
         - docker logs streamr_nginx_reverse
-        - npm run integration-tests
+        - ./node_modules/.bin/mocha test/integration/streamrChannel.js
+        - ./node_modules/.bin/mocha test/integration/channel-runner.js
     - stage: "Build docker (dev)"
       if: tag IS blank
       install: true
