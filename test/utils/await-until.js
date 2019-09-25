@@ -28,7 +28,7 @@ async function untilStreamContains(stream, target) {
     return new Promise(done => {
         function handler(data) {
             if (data.includes(target)) {
-                stream.off("data", handler)
+                stream.off && stream.off("data", handler)
                 done(data.toString())
             }
         }
@@ -48,7 +48,7 @@ async function untilStreamMatches(stream, regex) {
             const data = buffer.toString()
             const match = data.match(regex)
             if (match) {
-                stream.off("data", check)
+                stream.off && stream.off("data", check)
                 done(match)
             }
         }
@@ -73,7 +73,7 @@ async function capture(stream, regex, count = 1) {
                 const newMatches = fullMatches.map(s => s.match(regex)[1])
                 matches = matches.concat(newMatches).slice(0, count)
                 if (matches.length >= count) {
-                    stream.off("data", check)
+                    stream.off && stream.off("data", check)
                     done(matches)
                 }
             }
