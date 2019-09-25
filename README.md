@@ -4,7 +4,7 @@
 
 # Running
 
-`node start_server.js`
+`node scripts/start_server.js`
 
 Starts a Ganache instance in port 8545, deploys a test token, and starts a web server in port 8080.
 

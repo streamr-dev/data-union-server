@@ -3,26 +3,25 @@ const express = require("express")
 const cors = require("cors")
 const bodyParser = require("body-parser")
 const onProcessExit = require("exit-hook")
-const { utils: { parseEther } } = require("ethers")
 
 const {
     Contract,
     utils,
     getDefaultProvider,
     Wallet,
-    utils: { getAddress },
+    utils: { getAddress, parseEther },
     providers: { JsonRpcProvider }
 } = require("ethers")
 
-const Channel = require("./src/streamrChannel")
-const { throwIfNotContract, throwIfBadAddress } = require("./src/utils/checkArguments")
-const deployCommunity = require("./src/utils/deployCommunity")
-const sleep = require("./src/utils/sleep-promise")
+const Channel = require("../src/streamrChannel")
+const { throwIfNotContract, throwIfBadAddress } = require("../src/utils/checkArguments")
+const deployCommunity = require("../src/utils/deployCommunity")
+const sleep = require("../src/utils/sleep-promise")
 
-const deployTestToken = require("./test/utils/deployTestToken")
+const deployTestToken = require("../test/utils/deployTestToken")
 
-const CommunityProductServer = require("./src/server")
-const getCommunitiesRouter = require("./src/routers/communities")
+const CommunityProductServer = require("../src/server")
+const getCommunitiesRouter = require("../src/routers/communities")
 
 const {
     ETHEREUM_SERVER,            // explicitly specify server address
@@ -205,7 +204,7 @@ async function start() {
     }
 }
 
-const ERC20Mintable = require("./build/ERC20Mintable.json")
+const ERC20Mintable = require("../build/ERC20Mintable.json")
 async function transfer(wallet, targetAddress, tokenAddress, amount) {
     throwIfBadAddress(targetAddress, "token transfer target address")
     // TODO: null token address => attempt ether transfer?
@@ -216,7 +215,7 @@ async function transfer(wallet, targetAddress, tokenAddress, amount) {
     return tr
 }
 
-const CommunityProduct = require("./build/CommunityProduct")
+const CommunityProduct = require("../build/CommunityProduct")
 async function setFee(wallet, targetAddress, fee) {
     throwIfNotContract(targetAddress, "Monoplasma contract address")
     if (!(fee >= 0 && fee <= 1)) { throw new Error(`Admin fee must be a number between 0...1, got: ${fee}`) }

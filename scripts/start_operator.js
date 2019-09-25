@@ -12,16 +12,16 @@ const { Wallet, Contract, providers: { JsonRpcProvider } } = require("ethers")
 const CommunityProductJson = require("../build/CommunityProduct.json")
 
 const FileStore = require("monoplasma/src/fileStore")
-const Operator = require("./src/operator")
-const { throwIfSetButNotContract /*, throwIfNotSet */ } = require("./src/utils/checkArguments")
+const Operator = require("../src/operator")
+const { throwIfSetButNotContract /*, throwIfNotSet */ } = require("../src/utils/checkArguments")
 const defaultServers = require("./defaultServers.json")
-const deployCommunity = require("./src/utils/deployCommunity")
+const deployCommunity = require("../src/utils/deployCommunity")
 
-const deployTestToken = require("./test/utils/deployTestToken")
+const deployTestToken = require("../test/utils/deployTestToken")
 
 const operatorRouter = require("monoplasma/src/routers/member")
 const adminRouter = require("monoplasma/src/routers/admin")
-const Channel = require("./src/streamrChannel")
+const Channel = require("../src/streamrChannel")
 
 const {
     ETHEREUM_SERVER,

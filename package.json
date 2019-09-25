@@ -4,7 +4,7 @@
   "description": "Backend node for servicing the Streamr Marketplace community products",
   "main": "start_server.js",
   "scripts": {
-    "start": "node start_server.js",
+    "start": "node ./scripts/start_server.js",
     "postinstall": "./node_modules/.bin/etherlime opt-out || true",
     "lint": "./node_modules/.bin/eslint *.js src test",
     "flatten": "./node_modules/.bin/etherlime --solcVersion=0.4.24 flatten CommunityProduct.sol",
