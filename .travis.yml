@@ -30,6 +30,7 @@ jobs:
         - STREAMR_HTTP_URL: http://localhost:8081/streamr-core/api/v1
         - STREAMR_NODE_ADDRESS: "0xc0dBcc4e7a0e0BEF78Da67AC2CD5Ca2Dd3c4C165"
       script:
+        - ./node_modules/.bin/etherlime opt-out
         - sudo /etc/init.d/mysql stop
         - git clone https://github.com/streamr-dev/streamr-docker-dev.git
         - sudo ifconfig docker0 10.200.10.1/24

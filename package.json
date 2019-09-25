@@ -5,7 +5,6 @@
   "main": "start_server.js",
   "scripts": {
     "start": "node start_server.js",
-    "postinstall": "./node_modules/.bin/etherlime opt-out || true",
     "lint": "./node_modules/.bin/eslint *.js src test",
     "flatten": "./node_modules/.bin/etherlime --solcVersion=0.4.24 flatten CommunityProduct.sol",
     "build-contracts": "./node_modules/.bin/etherlime --solcVersion=0.4.24 compile",
