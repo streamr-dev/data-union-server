@@ -20,7 +20,7 @@ const {
     STREAMR_WS_URL,
     STREAMR_HTTP_URL,
 
-    //GAS_PRICE_GWEI,   // TODO: include?
+    GAS_PRICE_GWEI,
     OPERATOR_ADDRESS,
     STREAMR_NODE_ADDRESS,
     ADMIN_FEE,
@@ -36,6 +36,7 @@ const error = (e, ...args) => {
 }
 
 async function start() {
+    // TODO: move process.env parsing logic to a separate file
     const provider =
         ETHEREUM_SERVER ? new JsonRpcProvider(ETHEREUM_SERVER) :
         ETHEREUM_NETWORK ? getDefaultProvider(ETHEREUM_NETWORK) : null
@@ -63,7 +64,7 @@ async function start() {
     log("  Token symbol: ", await token.symbol())
     log("  Token decimals: ", await token.decimals())
 
-    const contract = await deployCommunity(wallet, operatorAddress, tokenAddress, streamrNodeAddress, blockFreezeSeconds, adminFee, log, STREAMR_WS_URL, STREAMR_HTTP_URL)
+    const contract = await deployCommunity(wallet, operatorAddress, tokenAddress, streamrNodeAddress, blockFreezeSeconds, adminFee, log, STREAMR_WS_URL, STREAMR_HTTP_URL, GAS_PRICE_GWEI)
     const joinPartStreamId = await contract.joinPartStream()
 
     log(`Deployed community contract at ${contract.address}`)
