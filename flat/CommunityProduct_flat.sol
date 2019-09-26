@@ -293,10 +293,11 @@ contract Monoplasma is BalanceVerifier, Ownable {
     uint public totalWithdrawn;
     uint public totalProven;
 
-    constructor(address tokenAddress, uint blockFreezePeriodSeconds) public {
+    constructor(address tokenAddress, uint blockFreezePeriodSeconds, uint _adminFee) public {
         blockFreezeSeconds = blockFreezePeriodSeconds;
         token = IERC20(tokenAddress);
         operator = msg.sender;
+        setAdminFee(_adminFee);
     }
 
     function setOperator(address newOperator) public onlyOwner {
@@ -412,8 +413,8 @@ contract CommunityProduct is Monoplasma {
 
     string public joinPartStream;
 
-    constructor(address operator, string joinPartStreamId, address tokenAddress, uint blockFreezePeriodSeconds)
-    Monoplasma(tokenAddress, blockFreezePeriodSeconds) public {
+    constructor(address operator, string joinPartStreamId, address tokenAddress, uint blockFreezePeriodSeconds, uint adminFeeFraction)
+    Monoplasma(tokenAddress, blockFreezePeriodSeconds, adminFeeFraction) public {
         setOperator(operator);
         joinPartStream = joinPartStreamId;
     }
