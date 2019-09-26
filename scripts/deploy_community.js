@@ -17,6 +17,9 @@ const {
     ETHEREUM_PRIVATE_KEY,
     TOKEN_ADDRESS,
     BLOCK_FREEZE_SECONDS,
+    STREAMR_WS_URL,
+    STREAMR_HTTP_URL,
+
     //GAS_PRICE_GWEI,   // TODO: include?
     OPERATOR_ADDRESS,
     STREAMR_NODE_ADDRESS,
@@ -37,7 +40,12 @@ async function start() {
         ETHEREUM_SERVER ? new JsonRpcProvider(ETHEREUM_SERVER) :
         ETHEREUM_NETWORK ? getDefaultProvider(ETHEREUM_NETWORK) : null
     if (!provider) { throw new Error("Must supply either ETHEREUM_SERVER or ETHEREUM_NETWORK") }
-    try { log(`Connecting to ${provider._network.name} network, ${provider.providers[0].connection.url}`) } catch (e) { /*ignore*/ }
+
+    try {
+        const url = provider.connection ? provider.connection.url : provider.providers[0].connection.url
+        log(`Connecting to ${url}`)
+    } catch (e) { /*ignore*/ }
+    const network = await provider.getNetwork()
 
     const operatorAddress = throwIfBadAddress(OPERATOR_ADDRESS, "env variable OPERATOR_ADDRESS")
     const tokenAddress = await throwIfNotContract(provider, TOKEN_ADDRESS, "env variable TOKEN_ADDRESS")
@@ -55,7 +63,13 @@ async function start() {
     log("  Token symbol: ", await token.symbol())
     log("  Token decimals: ", await token.decimals())
 
-    await deployCommunity(wallet, operatorAddress, tokenAddress, streamrNodeAddress, blockFreezeSeconds, adminFee, log)
+    const contract = await deployCommunity(wallet, operatorAddress, tokenAddress, streamrNodeAddress, blockFreezeSeconds, adminFee, log, STREAMR_WS_URL, STREAMR_HTTP_URL)
+    const joinPartStreamId = await contract.joinPartStream()
+
+    log(`Deployed community contract at ${contract.address}`)
+    log(`Network was ${JSON.stringify(network)}`)
+    log(`JoinPartStream ID: ${joinPartStreamId}`)
+    log("[DONE]")
 }
 
 start().catch(error)

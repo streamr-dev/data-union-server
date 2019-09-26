@@ -9,5 +9,5 @@ module.exports = {
 module.exports = {
     streamrWs: "ws://localhost:8890/api/v1/ws",
     streamrHttp: "http://localhost:8081/streamr-core/api/v1",
-    streamrNodeAddress: "0xc0dBcc4e7a0e0BEF78Da67AC2CD5Ca2Dd3c4C165",
+    streamrNodeAddress: "0xFCAd0B19bB29D4674531d6f115237E16AfCE377c",   // in dev docker
 }
