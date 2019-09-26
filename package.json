@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node ./scripts/start_server.js",
     "postinstall": "./node_modules/.bin/etherlime opt-out || true",
-    "lint": "./node_modules/.bin/eslint *.js src test",
+    "lint": "./node_modules/.bin/eslint src test",
     "flatten": "./node_modules/.bin/etherlime --solcVersion=0.4.24 flatten CommunityProduct.sol",
     "build-contracts": "./node_modules/.bin/etherlime --solcVersion=0.4.24 compile",
     "unit-tests": "./node_modules/.bin/mocha test/unit --exit",
