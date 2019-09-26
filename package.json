@@ -4,9 +4,9 @@
   "description": "Backend node for servicing the Streamr Marketplace community products",
   "main": "start_server.js",
   "scripts": {
-    "start": "node start_server.js",
+    "start": "node ./scripts/start_server.js",
     "postinstall": "./node_modules/.bin/etherlime opt-out || true",
-    "lint": "./node_modules/.bin/eslint *.js src test",
+    "lint": "./node_modules/.bin/eslint src test",
     "flatten": "./node_modules/.bin/etherlime --solcVersion=0.4.24 flatten CommunityProduct.sol",
     "build-contracts": "./node_modules/.bin/etherlime --solcVersion=0.4.24 compile",
     "unit-tests": "./node_modules/.bin/mocha test/unit --exit",
@@ -29,7 +29,7 @@
     "ganache-cli": "^6.4.3",
     "husky": "^3.0.5",
     "monoplasma": "0.1.8",
-    "streamr-client": "^2.2.1"
+    "streamr-client": "2.2.2"
   },
   "devDependencies": {
     "eslint": "^5.16.0",

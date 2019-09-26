@@ -12,16 +12,15 @@ const { Wallet, Contract, providers: { JsonRpcProvider } } = require("ethers")
 const CommunityProductJson = require("../build/CommunityProduct.json")
 
 const FileStore = require("monoplasma/src/fileStore")
-const Operator = require("./src/operator")
-const { throwIfSetButNotContract /*, throwIfNotSet */ } = require("./src/utils/checkArguments")
-const defaultServers = require("./defaultServers.json")
-const deployCommunity = require("./src/utils/deployCommunity")
+const Operator = require("../src/operator")
+const { throwIfSetButNotContract /*, throwIfNotSet */ } = require("../src/utils/checkArguments")
+const deployCommunity = require("../src/utils/deployCommunity")
 
-const deployTestToken = require("./test/utils/deployTestToken")
+const deployTestToken = require("../test/utils/deployTestToken")
 
 const operatorRouter = require("monoplasma/src/routers/member")
 const adminRouter = require("monoplasma/src/routers/admin")
-const Channel = require("./src/streamrChannel")
+const Channel = require("../src/streamrChannel")
 
 const {
     ETHEREUM_SERVER,
@@ -76,7 +75,7 @@ onProcessExit(stopGanache)
 
 async function start() {
     let privateKey
-    let ethereumServer = ETHEREUM_SERVER || defaultServers[ETHEREUM_NETWORK_ID]
+    let ethereumServer = ETHEREUM_SERVER
     if (ethereumServer) {
         if (!ETHEREUM_PRIVATE_KEY) { throw new Error("Private key required to deploy the airdrop contract. Deploy transaction must be signed.") }
         privateKey = ETHEREUM_PRIVATE_KEY.startsWith("0x") ? ETHEREUM_PRIVATE_KEY : "0x" + ETHEREUM_PRIVATE_KEY

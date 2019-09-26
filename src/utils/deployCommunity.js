@@ -1,6 +1,6 @@
 const {
     ContractFactory,
-    utils: { BigNumber }
+    utils: { BigNumber, parseUnits }
 } = require("ethers")
 const StreamrClient = require("streamr-client")
 
@@ -19,7 +19,7 @@ const CommunityJson = require("../../build/CommunityProduct")
  * @param {Number} adminFee fraction of revenue that goes to product admin, 0...1 (optional, default: 0)
  * @param {Function} log
  */
-async function deployCommunity(wallet, operatorAddress, tokenAddress, streamrNodeAddress, blockFreezePeriodSeconds = 0, adminFee = 0, log, streamrWsUrl, streamrHttpUrl) {
+async function deployCommunity(wallet, operatorAddress, tokenAddress, streamrNodeAddress, blockFreezePeriodSeconds = 0, adminFee = 0, log, streamrWsUrl, streamrHttpUrl, gasPriceGwei) {
     throwIfBadAddress(operatorAddress, "deployCommunity function argument operatorAddress")
     throwIfBadAddress(streamrNodeAddress, "deployCommunity function argument streamrNodeAddress")
     await throwIfNotContract(wallet.provider, tokenAddress, "deployCommunity function argument tokenAddress")
@@ -45,9 +45,13 @@ async function deployCommunity(wallet, operatorAddress, tokenAddress, streamrNod
     const res2 = await stream.grantPermission("write", streamrNodeAddress)
     log && log("Grant E&E write", JSON.stringify(res2))
 
+    const options = {}
+    if (gasPriceGwei) { options.gasPrice = parseUnits(gasPriceGwei, "gwei") }
+
     log && log(`Deploying root chain contract (token @ ${tokenAddress}, blockFreezePeriodSeconds = ${blockFreezePeriodSeconds}, joinPartStream = ${stream.id}, adminFee = ${adminFee})...`)
     const deployer = new ContractFactory(CommunityJson.abi, CommunityJson.bytecode, wallet)
-    const result = await deployer.deploy(operatorAddress, stream.id, tokenAddress, blockFreezePeriodSeconds, adminFeeBN)
+    const result = await deployer.deploy(operatorAddress, stream.id, tokenAddress, blockFreezePeriodSeconds, adminFeeBN, options)
+    log && log(`Will be deployed @ ${result.address}, follow deployment: https://etherscan.io/tx/${result.deployTransaction.hash}`)
     await result.deployed()
     return result
 }

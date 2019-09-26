@@ -3,26 +3,25 @@ const express = require("express")
 const cors = require("cors")
 const bodyParser = require("body-parser")
 const onProcessExit = require("exit-hook")
-const { utils: { parseEther } } = require("ethers")
 
 const {
     Contract,
     utils,
     getDefaultProvider,
     Wallet,
-    utils: { getAddress },
+    utils: { getAddress, parseEther },
     providers: { JsonRpcProvider }
 } = require("ethers")
 
-const Channel = require("./src/streamrChannel")
-const { throwIfNotContract, throwIfBadAddress } = require("./src/utils/checkArguments")
-const deployCommunity = require("./src/utils/deployCommunity")
-const sleep = require("./src/utils/sleep-promise")
+const Channel = require("../src/streamrChannel")
+const { throwIfNotContract, throwIfBadAddress } = require("../src/utils/checkArguments")
+const deployCommunity = require("../src/utils/deployCommunity")
+const sleep = require("../src/utils/sleep-promise")
 
-const deployTestToken = require("./test/utils/deployTestToken")
+const deployTestToken = require("../test/utils/deployTestToken")
 
-const CommunityProductServer = require("./src/server")
-const getCommunitiesRouter = require("./src/routers/communities")
+const CommunityProductServer = require("../src/server")
+const getCommunitiesRouter = require("../src/routers/communities")
 
 const {
     ETHEREUM_SERVER,            // explicitly specify server address
@@ -165,13 +164,14 @@ async function start() {
     if (DEVELOPER_MODE) {
         log("DEVELOPER MODE: /admin endpoints available: addRevenue, deploy, addTo/{address}")
         const streamrNodeAddress = process.env.STREAMR_NODE_ADDRESS || "0xFCAd0B19bB29D4674531d6f115237E16AfCE377c" // node address in docker dev environment
+        const adminFee = process.env.ADMIN_FEE || 0
 
         // deploy new communities
-        app.use("/admin/deploy", (req, res) => deployCommunity(wallet, wallet.address, tokenAddress, streamrNodeAddress, 1000, 0, log, config.streamrWsUrl, config.streamrHttpUrl).then(({contract: { address }}) => res.send({ address })).catch(error => res.status(500).send({error})))
+        app.use("/admin/deploy", (req, res) => deployCommunity(wallet, wallet.address, tokenAddress, streamrNodeAddress, 1000, adminFee, log, config.streamrWsUrl, config.streamrHttpUrl).then(({contract: { address }}) => res.send({ address })).catch(error => res.status(500).send({error})))
         app.use("/admin/addTo/:communityAddress", (req, res) => transfer(wallet, req.params.communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
 
         // deploy a test community and provide direct manipulation endpoints for it (useful for seeing if anything is happening)
-        const contract = await deployCommunity(wallet, wallet.address, tokenAddress, streamrNodeAddress, 1000, 0.3, log, config.streamrWsUrl, config.streamrHttpUrl)
+        const contract = await deployCommunity(wallet, wallet.address, tokenAddress, streamrNodeAddress, 1000, adminFee, log, config.streamrWsUrl, config.streamrHttpUrl)
         const communityAddress = contract.address
         app.use("/admin/addRevenue", (req, res) => transfer(wallet, communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
         app.use("/admin/setAdminFee", (req, res) => setFee(wallet, communityAddress, "0.3").then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
@@ -205,7 +205,7 @@ async function start() {
     }
 }
 
-const ERC20Mintable = require("./build/ERC20Mintable.json")
+const ERC20Mintable = require("../build/ERC20Mintable.json")
 async function transfer(wallet, targetAddress, tokenAddress, amount) {
     throwIfBadAddress(targetAddress, "token transfer target address")
     // TODO: null token address => attempt ether transfer?
@@ -216,7 +216,7 @@ async function transfer(wallet, targetAddress, tokenAddress, amount) {
     return tr
 }
 
-const CommunityProduct = require("./build/CommunityProduct")
+const CommunityProduct = require("../build/CommunityProduct")
 async function setFee(wallet, targetAddress, fee) {
     throwIfNotContract(targetAddress, "Monoplasma contract address")
     if (!(fee >= 0 && fee <= 1)) { throw new Error(`Admin fee must be a number between 0...1, got: ${fee}`) }
