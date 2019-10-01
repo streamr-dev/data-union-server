@@ -32,4 +32,4 @@ ENV STREAMR_WS_URL "ws://localhost:8890/api/v1/ws"
 ENV STREAMR_HTTP_URL "http://localhost:8081/streamr-core/api/v1"
 
 ENTRYPOINT ["bash", "docker-entrypoint.sh"]
-CMD node start_server.js
+CMD node scripts/start_server.js
