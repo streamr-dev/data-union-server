@@ -77,8 +77,8 @@ describe("streamrChannel", () => {
 
         const recvQueue = []
         const recvChannel = new Channel(privateKey, streamId, streamrWs, streamrHttp)
-        recvChannel.on("message", (topic, addressList) => {
-            recvQueue.push([topic, addressList])
+        recvChannel.on("message", (type, addressList) => {
+            recvQueue.push([type, addressList])
         })
         await recvChannel.listen()
         await recvChannel.close()

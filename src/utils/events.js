@@ -15,7 +15,7 @@ async function replayOn(plasma, events, messages) {
 
 /** Transition the MonoplasmaState by given Ethereum event or Streamr stream message */
 async function replayEvent(plasma, event) {
-    const type = event.event || event.topic     // stream messages have "topic"
+    const type = event.event || event.type     // stream messages have "type"
     switch (type) {
         // event Transfer(address indexed from, address indexed to, uint256 value);
         case "Transfer": {
