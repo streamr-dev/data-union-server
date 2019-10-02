@@ -45,7 +45,7 @@ module.exports = class StreamrChannel extends EventEmitter {
     }
 
     /**
-     * After this, call .publish(topic, data) to send
+     * After this, call .publish(type, data) to send
      */
     async startServer() {
         if (this.mode) { return Promise.reject(new Error(`Already started as ${this.mode}`))}
@@ -66,14 +66,14 @@ module.exports = class StreamrChannel extends EventEmitter {
 
     /**
      * Send a join/part event into the stream
-     * @param {string} topic "join" or "part"
+     * @param {string} type "join" or "part"
      * @param {Array<Address>} addresses that joined/parted
      */
-    async publish(topic, addresses) {
+    async publish(type, addresses) {
         if (this.mode !== State.SERVER) { return Promise.reject(new Error("Must startServer() first!")) }
 
         return this.stream.publish({
-            topic,
+            type,
             number: this.messageNumber++,
             addresses,
         })
@@ -102,8 +102,8 @@ module.exports = class StreamrChannel extends EventEmitter {
         }, (msg, meta) => {
             this.lastMessageTimestamp = meta.timestamp
             this.lastMessageNumber = msg.number
-            this.emit(msg.topic, msg.addresses)
-            this.emit("message", msg.topic, msg.addresses, meta)
+            this.emit(msg.type, msg.addresses)
+            this.emit("message", msg.type, msg.addresses, meta)
         })
         sub.on("error", this.emit.bind(this, "error"))
 
