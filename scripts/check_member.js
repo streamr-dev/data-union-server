@@ -1,12 +1,14 @@
 const {
     Contract,
     getDefaultProvider,
-    providers: { JsonRpcProvider }
+    providers: { JsonRpcProvider },
+    utils: { BigNumber },
+    Wallet,
 } = require("ethers")
 
 const StreamrClient = require("streamr-client")
 
-const { throwIfNotContract } = require("../src/utils/checkArguments")
+const { throwIfNotContract, throwIfBadAddress } = require("../src/utils/checkArguments")
 
 const TokenJson = require("../build/ERC20Detailed.json")
 const CommunityJson = require("../build/CommunityProduct.json")
@@ -14,6 +16,9 @@ const CommunityJson = require("../build/CommunityProduct.json")
 const {
     ETHEREUM_SERVER,            // explicitly specify server address
     ETHEREUM_NETWORK,           // use ethers.js default servers
+
+    ETHEREUM_PRIVATE_KEY,       // either derive the address from key...
+    MEMBER_ADDRESS,             // ...or get it directly
 
     COMMUNITY_ADDRESS,
 
@@ -43,10 +48,19 @@ async function start() {
     const network = await provider.getNetwork()
     log(`Network is ${JSON.stringify(network)}`)
 
+    let wallet
+    if (ETHEREUM_PRIVATE_KEY) {
+        const privateKey = ETHEREUM_PRIVATE_KEY.startsWith("0x") ? ETHEREUM_PRIVATE_KEY : "0x" + ETHEREUM_PRIVATE_KEY
+        if (privateKey.length !== 66) { throw new Error("Malformed private key, must be 64 hex digits long (optionally prefixed with '0x')") }
+        wallet = new Wallet(privateKey, provider)
+    }
+
     const communityAddress = await throwIfNotContract(provider, COMMUNITY_ADDRESS, "env variable COMMUNITY_ADDRESS")
+    const memberAddress = wallet && wallet.address || await throwIfBadAddress(MEMBER_ADDRESS, "env variable MEMBER_ADDRESS")
 
     log(`Checking community contract at ${communityAddress}...`)
     const community = new Contract(communityAddress, CommunityJson.abi, provider)
+/*
     const getters = CommunityJson.abi.filter(f => f.constant && f.inputs.length === 0).map(f => f.name)
     for (const getter of getters) {
         log(`  ${getter}: ${await community[getter]()}`)
@@ -60,28 +74,49 @@ async function start() {
     log("  Token name: ", await token.name())
     log("  Token symbol: ", await token.symbol())
     log("  Token decimals: ", await token.decimals())
-
+*/
     log("Connecting to Streamr...")
     const opts = {}
     if (STREAMR_WS_URL) { opts.url = STREAMR_WS_URL }
     if (STREAMR_HTTP_URL) { opts.restUrl = STREAMR_HTTP_URL }
     const client = new StreamrClient(opts)
 
-    log("Listing all members...")
-    // TODO: use client once withdraw is available from NPM
-    //const memberList = await client.getMembers(communityAddress)
-    const memberList = await getMembers(communityAddress)
-    for (const {address, earnings} of memberList) {
-        log(`  ${address}`)
-        log(`    Server: Total earnings: ${earnings}`)
-        log(`    Contract: Withdrawn earnings: ${(await community.withdrawn(address)).toString()}`)
+    log(`Member stats for ${memberAddress}...`)
+    const stats = await client.memberStats(communityAddress, memberAddress)
+    if (stats.error) {
+        log(`Error from server: ${stats.error}`)
+        return
     }
+    for (const [key, value] of Object.entries(stats)) {
+        log(`  Server: ${key}: ${value}`)
+    }
+
+    const withdrawnBN = await community.withdrawn(memberAddress)
+    log(`  Contract: Proven earnings: ${(await community.earnings(memberAddress)).toString()}`)
+    log(`  Contract: Withdrawn earnings: ${withdrawnBN.toString()}`)
+
+    // check withdraw proof
+    if (!stats.withdrawableBlockNumber) {
+        log("  No earnings to withdraw.")
+        return
+    }
+
+    // function proofIsCorrect(uint blockNumber, address account, uint balance, bytes32[] memory proof) public view returns(bool)
+    const proofIsCorrect = await community.proofIsCorrect(
+        stats.withdrawableBlockNumber,
+        memberAddress,
+        stats.withdrawableEarnings,
+        stats.proof,
+    )
+    if (!proofIsCorrect) {
+        log("  !!! INCORRECT PROOF !!!")
+        return
+    }
+    log("  Proof checked and valid")
+
+    const earningsBN = new BigNumber(stats.withdrawableEarnings)
+    const unwithdrawnEarningsBN = earningsBN.sub(withdrawnBN)
+    log(`  The withdrawAll tx would transfer ${unwithdrawnEarningsBN.toString()} DATA to ${memberAddress}`)
 }
 
 start().catch(error)
-
-const fetch = require("node-fetch")
-async function getMembers(communityAddress) {
-    const url = `${STREAMR_HTTP_URL || "https://streamr.com/api/v1"}/communities/${communityAddress}/members`
-    return fetch(url).then((res) => res.json())
-}
