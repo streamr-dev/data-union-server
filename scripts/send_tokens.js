@@ -65,18 +65,24 @@ async function start() {
     if (privateKey.length !== 66) { throw new Error("Malformed private key, must be 64 hex digits long (optionally prefixed with '0x')") }
     const wallet = new Wallet(privateKey, provider)
 
-    log(`Checking token contract at ${tokenAddress}...`)
-    const token = new Contract(tokenAddress, TokenJson.abi, wallet)
-    log("  Token name: ", await token.name())
-    log("  Token symbol: ", await token.symbol())
-    log("  Token decimals: ", await token.decimals())
-
     log(`Checking community contract at ${communityAddress}...`)
     const community = new Contract(communityAddress, CommunityJson.abi, provider)
     const getters = CommunityJson.abi.filter(f => f.constant && f.inputs.length === 0).map(f => f.name)
     for (const getter of getters) {
         log(`  ${getter}: ${await community[getter]()}`)
     }
+
+    const communityTokenAddress = await community.token()
+    if (communityTokenAddress !== tokenAddress) {
+        // TODO: get tokenAddress from community if not explicitly given?
+        throw new Error(`Mismatch: token address given was ${tokenAddress}, community expects ${communityTokenAddress}`)
+    }
+
+    log(`Checking token contract at ${tokenAddress}...`)
+    const token = new Contract(tokenAddress, TokenJson.abi, wallet)
+    log("  Token name: ", await token.name())
+    log("  Token symbol: ", await token.symbol())
+    log("  Token decimals: ", await token.decimals())
 
     log(`Transferring ${formatEther(dataWeiAmount)} DATA from ${wallet.address} to ${communityAddress}...`)
     if (sleepMs) {

@@ -28,7 +28,9 @@ export SECRET=secret
 # send_tokens
 export DATA_TOKEN_AMOUNT=0.01
 
+#node scripts/start_server.js
 #node scripts/deploy_community.js
 #node scripts/add_secret.js
 #node scripts/join_community.js
+node scripts/check_community.js
 #node scripts/send_tokens.js
