@@ -110,7 +110,12 @@ async function start() {
     const contract = new Contract(communityAddress, CommunityJson.abi, wallet)
     const options = {}
     if (GAS_PRICE_GWEI) { options.gasPrice = parseUnits(GAS_PRICE_GWEI, "gwei") }
-    const tx = await contract.withdrawAll(stats.withdrawableBlockNumber, stats.withdrawableEarnings, stats.proof, options)
+    const tx = await contract.withdrawAll(
+        stats.withdrawableBlockNumber,
+        stats.withdrawableEarnings,
+        stats.proof,
+        options
+    )
 
     log(`Follow transaction at https://etherscan.io/tx/${tx.hash}`)
     const tr = await tx.wait(1)

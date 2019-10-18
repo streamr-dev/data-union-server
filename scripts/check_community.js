@@ -6,7 +6,7 @@ const {
 
 const StreamrClient = require("streamr-client")
 
-const { throwIfNotContract } = require("../src/utils/checkArguments")
+const { throwIfNotContract, throwIfSetButBadAddress } = require("../src/utils/checkArguments")
 
 const TokenJson = require("../build/ERC20Detailed.json")
 const CommunityJson = require("../build/CommunityProduct.json")
@@ -16,6 +16,7 @@ const {
     ETHEREUM_NETWORK,           // use ethers.js default servers
 
     COMMUNITY_ADDRESS,
+    STREAMR_NODE_ADDRESS,
 
     STREAMR_WS_URL,
     STREAMR_HTTP_URL,
@@ -44,12 +45,15 @@ async function start() {
     log(`Network is ${JSON.stringify(network)}`)
 
     const communityAddress = await throwIfNotContract(provider, COMMUNITY_ADDRESS, "env variable COMMUNITY_ADDRESS")
+    const streamrNodeAddress = await throwIfSetButBadAddress(STREAMR_NODE_ADDRESS, "env variable STREAMR_NODE_ADDRESS")
 
     log(`Checking community contract at ${communityAddress}...`)
     const community = new Contract(communityAddress, CommunityJson.abi, provider)
     const getters = CommunityJson.abi.filter(f => f.constant && f.inputs.length === 0).map(f => f.name)
+    const communityProps = {}
     for (const getter of getters) {
-        log(`  ${getter}: ${await community[getter]()}`)
+        communityProps[getter] = await community[getter]()
+        log(`  ${getter}: ${communityProps[getter]}`)
     }
 
     const _tokenAddress = await community.token()
@@ -66,8 +70,52 @@ async function start() {
     if (STREAMR_WS_URL) { opts.url = STREAMR_WS_URL }
     if (STREAMR_HTTP_URL) { opts.restUrl = STREAMR_HTTP_URL }
     const client = new StreamrClient(opts)
+    log(`  Streamr node address: ${streamrNodeAddress}`)    // TODO: add endpoint for asking this from EE
 
-    log("Listing all members...")
+    const joinPartStreamId = communityProps.joinPartStream
+    log(`Checking joinPartStream ${joinPartStreamId}...`)
+    const stream = await client.getStream(joinPartStreamId)
+    try {
+        const writers = await client.getStreamPublishers(joinPartStreamId)
+        log("  Writers:")
+        for (const wa of writers) {
+            log("    " + wa)
+        }
+        const na = writers.find(a => a.toLowerCase() === streamrNodeAddress.toLowerCase())
+        if (na) {
+            log("  Streamr node can write")
+            if (na !== streamrNodeAddress) {
+                log("  THE CASE IS WRONG THOUGH, that could be a problem")
+            }
+        } else {
+            log("!!! STREAMR NODE NEEDS WRITE PERMISSION, otherwise joins and parts won't work !!!")
+        }
+    } catch (e) {
+        if (e.message.includes("403")) {
+            log(`  Couldn't get publishers, no read permission: ${e.body}`)
+        } else {
+            log(`  Error getting permissions: ${e.body}`)
+        }
+    }
+
+    try {
+        const perms = await stream.getPermissions()
+        log(`  Permissions: ${JSON.stringify(perms)}`)
+        const nodeWritePerm = perms.find(p => p.operation === "write" && p.user === streamrNodeAddress)
+        if (nodeWritePerm) {
+            log("  Streamr node has write permission")
+        } else {
+            log("!!! STREAMR NODE NEEDS WRITE PERMISSION, otherwise joins and parts won't work !!!")
+        }
+    } catch (e) {
+        if (e.message.includes("403")) {
+            log(`  Couldn't get permissions, we're not an owner (with share permission): ${e.body}`)
+        } else {
+            log(`  Error getting permissions: ${e.body}`)
+        }
+    }
+
+    log("Listing all members... (NB: withdrawableEarnings isn't displayed, use check_member.js for that)")
     // TODO: use client once withdraw is available from NPM
     //const memberList = await client.getMembers(communityAddress)
     const memberList = await getMembers(communityAddress)
@@ -82,6 +130,6 @@ start().catch(error)
 
 const fetch = require("node-fetch")
 async function getMembers(communityAddress) {
-    const url = `${STREAMR_HTTP_URL || "https://streamr.com/api/v1"}/communities/${communityAddress}/members`
+    const url = `${STREAMR_HTTP_URL || "https://streamr.network/api/v1"}/communities/${communityAddress}/members`
     return fetch(url).then((res) => res.json())
 }
