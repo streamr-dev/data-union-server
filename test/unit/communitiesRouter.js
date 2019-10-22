@@ -8,9 +8,11 @@ const fetch = require("node-fetch")
 const { Wallet, ContractFactory, providers: { Web3Provider } } = require("ethers")
 
 const CommunityJson = require("../../build/CommunityProduct")
+const TokenJson = require("../../build/TestToken")
 
-const deployTestToken = require("../utils/deployTestToken")
 const ganache = require("ganache-core")
+
+const { until } = require("../utils/await-until")
 
 const MockStreamrChannel = require("../utils/mockStreamrChannel")
 const mockStore = require("monoplasma/test/utils/mockStore")
@@ -38,8 +40,9 @@ describe("Community product server /communities router", () => {
     const serverURL = `http://localhost:${port}`
 
     let httpServer
-    let tokenAddress
+    let token
     let community
+    let channel
     before(async function() {
         this.timeout(5000)
         const secretKey = "0x1234567812345678123456781234567812345678123456781234567812345678"
@@ -56,25 +59,26 @@ describe("Community product server /communities router", () => {
         }
 
         log("Deploying test token and Community contract...")
-        tokenAddress = await deployTestToken(wallet)
+        const tokenDeployer = new ContractFactory(TokenJson.abi, TokenJson.bytecode, wallet)
+        token = await tokenDeployer.deploy("Router test token", "TEST")
+        await token.deployed()
+
         const deployer = new ContractFactory(CommunityJson.abi, CommunityJson.bytecode, wallet)
-        const contract = await deployer.deploy(wallet.address, "dummy-stream-id", tokenAddress, 1000, 0)
+        const contract = await deployer.deploy(wallet.address, "dummy-stream-id", token.address, 1000, 0)
         await contract.deployed()
         const contractAddress = contract.address
 
         log("Starting CommunityProductServer...")
         const storeDir = path.join(os.tmpdir(), `communitiesRouter-test-${+new Date()}`)
         const server = new CommunityProductServer(wallet, storeDir, {
-            tokenAddress,
-            adminAddress: wallet.address,
+            tokenAddress: token.address,
             operatorAddress: wallet.address,
         })
-        const mockChannel = new MockStreamrChannel(secretKey, "dummy-stream-for-router-test")
+        channel = new MockStreamrChannel(secretKey, "dummy-stream-for-router-test")
         server.getStoreFor = () => mockStore(startState, initialBlock, log)
-        server.getChannelFor = () => mockChannel
+        server.getChannelFor = () => channel
         const router = getCommunitiesRouter(server)
         community = await server.startOperating(contractAddress)
-        //mockChannel.publish("join", [])
 
         log("Starting CommunitiesRouter...")
         const app = express()
@@ -102,6 +106,30 @@ describe("Community product server /communities router", () => {
     it("GET /members/address", async () => {
         const member = await fetch(`${serverURL}/communities/${community.address}/members/${members[0].address}`).then(res => res.json())
         assert.strictEqual(member.earnings, "50")
+    })
+
+    it("GET /members/non-existent-address", async () => {
+        const res = await fetch(`${serverURL}/communities/${community.address}/members/0x0000000000000000000000000000000000000001`)
+        assert.strictEqual(res.status, 404)
+    })
+
+    // Test the case where the member is in the community but too new to have earnings in withdrawable blocks
+    // Catch the following:
+    //   UnhandledPromiseRejectionWarning: Error: Address 0x0000000000000000000000000000000000000002 not found!
+    //   at MerkleTree.getPath (node_modules/monoplasma/src/merkletree.js:121:19)
+    //   at MonoplasmaState.getProof (node_modules/monoplasma/src/state.js:153:32)
+    //   at MonoplasmaState.getMember (node_modules/monoplasma/src/state.js:129:26)
+    //   at router.get (src/routers/communities.js:96:31)
+    it("GET /members/new-member-address", async () => {
+        const newMemberAddress = "0x0000000000000000000000000000000000000002"
+        channel.publish("join", [newMemberAddress])
+        await until(async () => {
+            const memberList = await fetch(`${serverURL}/communities/${community.address}/members`).then(res => res.json())
+            return memberList.length > 2
+        })
+        const member = await fetch(`${serverURL}/communities/${community.address}/members/${newMemberAddress}`).then(res => res.json())
+        assert(!member.error)
+        assert.strictEqual(member.withdrawableEarnings, "0")
     })
 
     after(() => {

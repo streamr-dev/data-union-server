@@ -85,7 +85,7 @@ module.exports = (server, logFunc) => {
         res.send(plasma.getMembers())
     })
 
-    router.get("/:communityAddress/members/:address", parseOperator, async (req, res) => {
+    router.get("/:communityAddress/members/:address", parseOperator, (req, res) => {
         const plasma = req.operator.watcher.plasma
         const address = parseAddress(req.params.address)
         if (!address) {
@@ -93,7 +93,9 @@ module.exports = (server, logFunc) => {
             return
         }
         log(`HTTP ${req.params.communityAddress}> Requested member ${address}`)
-        const member = plasma.getMember(address)
+        // TODO: revert to plasma.getMember after monoplasma update
+        //const member = plasma.getMember(address)
+        const member = plasma.getMembers().find(m => m.address === address)
         if (!member) {
             res.status(404).send({error: `Member not found: ${address} in ${req.params.communityAddress}`})
             return
@@ -108,9 +110,15 @@ module.exports = (server, logFunc) => {
         member.frozenEarnings = new BN(member.recordedEarnings).sub(new BN(member.withdrawableEarnings)).toString(10)
         if (withdrawableBlock) {
             member.withdrawableBlockNumber = withdrawableBlock.blockNumber
-            member.proof = await plasma.getProofAt(address, withdrawableBlock.blockNumber)
+            plasma.getProofAt(address, withdrawableBlock.blockNumber).then(proof => {
+                member.proof = proof
+                res.send(member)
+            }).catch(error => {
+                res.status(404).send({ error })
+            })
+        } else {
+            res.send(member)
         }
-        res.send(member)
     })
 
     return router
