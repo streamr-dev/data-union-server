@@ -108,7 +108,6 @@ async function start() {
     config.streamrNodeAddress = STREAMR_NODE_ADDRESS || config.streamrNodeAddress
     config.adminFee = ADMIN_FEE || config.adminFee || 0
     config.contractAddress = CONTRACT_ADDRESS || config.contractAddress || (await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, config.streamrNodeAddress, config.blockFreezeSeconds, config.adminFee, log, config.streamrWsUrl, config.streamrHttpUrl)).address
-    config.defaultReceiverAddress = wallet.address
 
     // augment the config / saved state with variables that may be useful for the validators
     // TODO: find another way to communicate config to demo than state.json

@@ -64,6 +64,8 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
      */
     async start(config) {
         await throwIfSetButNotContract(this.eth, config.contractAddress, "contractAddress from initial config")
+
+        // TODO: this isn't even used; maybe should throw if it's different from what contract gives?
         throwIfSetButBadAddress(config.adminAddress, "adminAddress from initial config")
 
         this.eth.on("block", blockNumber => {

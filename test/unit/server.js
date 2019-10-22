@@ -57,7 +57,6 @@ describe("CommunityProductServer", () => {
         const storeDir = path.join(os.tmpdir(), `communitiesRouter-test2-${+new Date()}`)
         const config = {
             tokenAddress,
-            defaultReceiverAddress: wallet.address,
             operatorAddress: wallet.address,
         }
         const server = new CommunityProductServer(wallet, storeDir, config, log, log)
@@ -93,7 +92,6 @@ describe("CommunityProductServer", () => {
         const storeDir = path.join(os.tmpdir(), `communitiesRouter-test1-${+new Date()}`)
         const config = {
             tokenAddress,
-            defaultReceiverAddress: wallet.address,
             operatorAddress: wallet.address,
         }
         const server = new CommunityProductServer(wallet, storeDir, config, log, log)

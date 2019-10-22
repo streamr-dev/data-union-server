@@ -138,7 +138,6 @@ async function start() {
     const config = {
         tokenAddress,
         operatorAddress,
-        defaultReceiverAddress: wallet.address,
         gasPrice: utils.parseUnits(GAS_PRICE_GWEI || "4", "gwei"),
         finalityWaitSeconds: FINALITY_WAIT_SECONDS || 1000,
         streamrWsUrl: STREAMR_WS_URL,
