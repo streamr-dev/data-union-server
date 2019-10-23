@@ -113,7 +113,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         // replay and cache messages until in sync
         await this.channel.listen(playbackStartingTimestamp)
 
-        this.channel.on("error", this.error)
+        this.channel.on("error", this.log)
         await this.playbackUntilBlock(this.plasma, lastBlock.blockNumber)
 
         // TODO: this should NOT be used for playbackUntilBlock, only for realtimeState
