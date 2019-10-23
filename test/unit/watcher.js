@@ -1,7 +1,12 @@
 const sinon = require("sinon")
 const assert = require("assert")
 
-const { Wallet, ContractFactory, providers: { Web3Provider } } = require("ethers")
+const {
+    Wallet,
+    ContractFactory,
+    utils: { parseEther },
+    providers: { Web3Provider }
+} = require("ethers")
 const ganache = require("ganache-core")
 //const { Wallet, ContractFactory, providers: { JsonRpcProvider } } = require("ethers")
 //const startGanache = require("monoplasma/src/utils/startGanache")
@@ -37,16 +42,17 @@ const startState = {
 
 const MonoplasmaWatcher = require("../../src/watcher")
 describe("MonoplasmaWatcher", () => {
+    let watcher
+    let wallet
     let token
     let community
     let joinPartChannel
-    let watcher
-    let provider
-    before(async function() {
+    let store
+    before(async function () {
         this.timeout(0)
 
         const secretKey = "0x1234567812345678123456781234567812345678123456781234567812345678"
-        provider = new Web3Provider(ganache.provider({
+        const provider = new Web3Provider(ganache.provider({
             accounts: [{ secretKey, balance: "0xffffffffffffffffffffffffff" }],
             logger: { log },
             //blockTime: 1,
@@ -58,7 +64,7 @@ describe("MonoplasmaWatcher", () => {
         */
 
         provider.pollingInterval = 500
-        const wallet = new Wallet(secretKey, provider)
+        wallet = new Wallet(secretKey, provider)
         await provider.getNetwork()     // wait until ganache is up and ethers.js ready
 
         // "start from" block 10
@@ -66,34 +72,39 @@ describe("MonoplasmaWatcher", () => {
             await provider.send("evm_mine")
         }
 
-        joinPartChannel = new MockStreamrChannel(secretKey, "dummy-stream-for-router-test")
-        const store = mockStore(startState, initialBlock, log)
+        joinPartChannel = new MockStreamrChannel(secretKey, "dummy-stream-for-watcher-test")
+        store = mockStore(startState, initialBlock, log)
 
         log("Deploying test token and Community contract...")
         const tokenDeployer = new ContractFactory(TokenJson.abi, TokenJson.bytecode, wallet)
         token = await tokenDeployer.deploy("Test token", "TEST")
         await token.deployed()
+    })
 
+    beforeEach(async function () {
         const communityDeployer = new ContractFactory(CommunityJson.abi, CommunityJson.bytecode, wallet)
         community = await communityDeployer.deploy(wallet.address, "dummy-stream-id", token.address, 1000, 0)
         await community.deployed()
+        await startWatcher()
+    })
 
+    async function startWatcher() {
         log("Starting MonoplasmaWatcher...")
-        watcher = new MonoplasmaWatcher(provider, joinPartChannel, store, log, error)
+        watcher = new MonoplasmaWatcher(wallet.provider, joinPartChannel, store, log, error)
         await watcher.start({
             tokenAddress: token.address,
             adminAddress: wallet.address,
             operatorAddress: wallet.address,
             contractAddress: community.address,
         })
-    })
+    }
 
     it("catches Transfer events", async () => {
         const cb = sinon.fake()
         watcher.on("tokensReceived", cb)
         const tx = await token.transfer(community.address, 1)
         const tr = await tx.wait(1)
-        await sleep(provider.pollingInterval * 2 + 100)
+        await sleep(wallet.provider.pollingInterval * 2 + 100)
         assert(tr.logs.length > 0)
         assert.strictEqual(cb.callCount, 1)
     })
@@ -103,7 +114,7 @@ describe("MonoplasmaWatcher", () => {
         watcher.on("blockCreated", cb)
         const tx = await community.commit(1, "0x1234567812345678123456781234567812345678123456781234567812345678", "")
         const tr = await tx.wait(1)
-        await sleep(provider.pollingInterval * 2 + 100)
+        await sleep(wallet.provider.pollingInterval * 2 + 100)
         assert(tr.logs.length > 0)
         assert.strictEqual(cb.callCount, 1)
     })
@@ -116,7 +127,19 @@ describe("MonoplasmaWatcher", () => {
         assert(cb.calledOnceWithExactly(["0x1234567812345678123456781234567812345678"]))
     })
 
-    it("resumes the correct state after restart", async () => {
-        // TODO
+    it("splits tokens between members and updates the state correctly during playback", async function () {
+        await community.setAdminFee(parseEther("0.5"))
+        await token.transfer(community.address, 40)
+        await token.transfer(community.address, 40)
+
+        await sleep(1000)
+        await startWatcher()
+
+        assert(store.lastSavedState)
+        const newBalances = [
+            { address: "0x2F428050ea2448ed2e4409bE47e1A50eBac0B2d2", earnings: "70" }, // 50 startBalance + 10 + 10 (40 -> 20/2, 20 for admin)
+            { address: "0xb3428050ea2448ed2e4409be47e1a50ebac0b2d2", earnings: "40" }, // 20 startBalance + 10 + 10
+        ]
+        assert.deepStrictEqual(watcher.plasma.getMembers(), newBalances)
     })
 })

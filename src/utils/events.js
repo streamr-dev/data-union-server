@@ -37,6 +37,20 @@ async function replayEvent(plasma, event) {
             const { addressList } = event
             plasma.removeMembers(addressList)
         } break
+        // TODO: this event is not yet implemented in CPS (it is in Monoplasma...)
+        case "OwnershipTransferred": {
+            const { previousOwner, newOwner } = event.args
+            log(`Owner (admin) address changed to ${newOwner} from ${previousOwner} @ block ${event.blockNumber}`)
+            if (plasma.admin != previousOwner) {
+                throw Error(`plasma admin stored in state ${plasma.admin} != previousOwner reported by OwnershipTransferred event ${previousOwner}`)
+            }
+            plasma.admin = newOwner
+        } break
+        case "AdminFeeChanged": {
+            const { adminFee } = event.args
+            log(`Admin fee changed to ${adminFee} @ block ${event.blockNumber}`)
+            plasma.setAdminFeeFraction(adminFee.toString()) // TODO: .toString() not needed once Monoplasma supports ethers.utils.BigNumber
+        } break
         default: {
             log(`WARNING: Unexpected ${type} event: ${JSON.stringify(event)}`)
         }

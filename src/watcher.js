@@ -87,6 +87,8 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         this.state.blockFreezeSeconds = (await this.contract.blockFreezeSeconds()).toString()
         this.log(`Read from contracts: freeze period = ${this.state.blockFreezeSeconds} sec, token @ ${this.state.tokenAddress}`)
 
+        // TODO: next time a new event is added, DRY this (there's like 6 repetitions of listened events)
+        this.adminFeeFilter = this.contract.filters.AdminFeeChanged()
         this.blockCreateFilter = this.contract.filters.BlockCreated()
         this.tokenTransferFilter = this.token.filters.Transfer(null, this.contract.address)
 
@@ -117,19 +119,20 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         const currentBlock = await this.eth.getBlockNumber()
         this.state.lastPublishedBlock = await this.playbackUntilBlock(this.plasma, currentBlock)
 
-        // TODO: this should NOT be used for playbackUntilBlock, only for realtimeState
         this.log("Listening to Ethereum events...")
-        this.token.on(this.tokenTransferFilter, async (to, from, amount, event) => {
-            //event.timestamp = await this.getBlockTimestamp(event.blockNumber)
-            await replayOn(this.plasma, [event])
-            this.emit("tokensReceived", event)
+        this.contract.on(this.adminFeeFilter, async (adminFee, event) => {
+            this.log(`Admin fee changed to ${utils.formatEther(adminFee)} at block ${event.blockNumber}`)
+            this.state.lastPublishedBlock = event.args
+            this.emit("blockCreated", event)
         })
-
         this.contract.on(this.blockCreateFilter, async (blockNumber, rootHash, ipfsHash, event) => {
-            //event.timestamp = await this.getBlockTimestamp(event.blockNumber)
             this.log(`Observed creation of block ${+blockNumber} at block ${event.blockNumber} (root ${rootHash}, ipfs "${ipfsHash})"`)
             this.state.lastPublishedBlock = event.args
             this.emit("blockCreated", event)
+        })
+        this.token.on(this.tokenTransferFilter, async (to, from, amount, event) => {
+            await replayOn(this.plasma, [event])
+            this.emit("tokensReceived", event)
         })
 
         /*
@@ -170,8 +173,8 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
      * @param {Number} toBlock is blockNumber from BlockCreated event
      */
     async playbackUntilBlock(plasma, toBlock) {
-        const fromBlock = this.plasma.currentBlock || 0
-        const fromTimestamp = this.plasma.currentTimestamp || 0
+        const fromBlock = plasma.currentBlock || 0
+        const fromTimestamp = plasma.currentTimestamp || 0
         if (toBlock <= fromBlock) {
             this.log(`Playback skipped: block ${toBlock} requested, already at ${fromBlock}`)
             return
@@ -182,16 +185,19 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         const toTimestamp = await this.getBlockTimestamp(toBlock)
 
         this.log(`Retrieving from blocks ${fromBlock}...${toBlock} (t = ...${toTimestamp})`)
+        const adminFeeFilter = Object.assign({}, this.adminFeeFilter,  { fromBlock, toBlock })
         const blockCreateFilter = Object.assign({}, this.blockCreateFilter, { fromBlock, toBlock })
         const tokenTransferFilter = Object.assign({}, this.tokenTransferFilter,  { fromBlock, toBlock })
+        const adminFeeEvents = await this.eth.getLogs(adminFeeFilter)
         const blockCreateEvents = await this.eth.getLogs(blockCreateFilter)
         const transferEvents = await this.eth.getLogs(tokenTransferFilter)
 
         // "if you use v5, you can use contract.queryFilter, which will include the parsed events" https://github.com/ethers-io/ethers.js/issues/37
+        parseLogs(this.contract.interface, adminFeeEvents)
         parseLogs(this.contract.interface, blockCreateEvents)
         parseLogs(this.token.interface, transferEvents)
 
-        const events = mergeEventLists(blockCreateEvents, transferEvents)
+        const events = mergeEventLists(mergeEventLists(adminFeeEvents, blockCreateEvents), transferEvents)
 
         // TODO: maybe harvest block timestamps from provider in the background after start-up, save to store?
         //   Blocking here could last very long during first playback in case of long-lived community...
@@ -206,10 +212,12 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         const messages = this.messageCache.slice(fromIndex, toIndex)
 
         await replayOn(plasma, events, messages)
-        this.plasma.currentBlock = toBlock
-        this.plasma.currentTimestamp = toTimestamp
-        this.state.lastPublishedBlock = blockCreateEvents && blockCreateEvents.length > 0 ?
-            blockCreateEvents.slice(-1)[0].args : { blockNumber: 0 }
+        plasma.currentBlock = toBlock
+        plasma.currentTimestamp = toTimestamp
+
+        // TODO: smarter way to pass this to start()
+        const lastPublishedBlock = blockCreateEvents && blockCreateEvents.length > 0 ? blockCreateEvents.slice(-1)[0].args : { blockNumber: 0 }
+        return lastPublishedBlock
     }
 
     /**
