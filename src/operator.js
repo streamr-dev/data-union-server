@@ -92,7 +92,10 @@ module.exports = class MonoplasmaOperator {
         await tx.wait(1)   // confirmations
 
         // replace watcher's MonoplasmaState with the final "true" state that was just committed to blockchain
-        this.watcher.plasma = new MonoplasmaState(
+        // also sync it up to date because it's supposed to be "real time"
+        // TODO: there could be a glitch here: perhaps an event gets replayed while syncing, it will be missed when watcher.plasma is overwritten
+        //         of course it will be fixed again after next commit
+        const updatedState = new MonoplasmaState(
             this.watcher.plasma.blockFreezeSeconds,
             this.finalPlasma.members,
             this.watcher.plasma.store,
@@ -101,6 +104,9 @@ module.exports = class MonoplasmaOperator {
             this.finalPlasma.currentBlock,
             this.finalPlasma.currentTimestamp
         )
+        const currentBlock = await this.wallet.provider.getBlockNumber()
+        this.watcher.playbackUntilBlock(updatedState, currentBlock)
+        this.watcher.plasma = updatedState
         this.watcher.channelPruneCache()
         //this.publishBlockInProgress = false
     }
