@@ -33,7 +33,13 @@ module.exports = class MonoplasmaOperator {
         await this.watcher.start(config)
         this.lastPublishedBlock = this.watcher.state.lastPublishedBlock ? this.watcher.state.lastPublishedBlock.blockNumber || 0 : 0
 
-        this.finalPlasma = new MonoplasmaState(0, [], {
+        // TODO: replace after Monoplasma update:
+        // this.finalPlasma = this.watcher.plasma.clone({
+        //     saveBlock: async block => {
+        //         this.lastSavedBlock = block
+        //     }
+        // })
+        this.finalPlasma = new MonoplasmaState(0, this.watcher.plasma.members, {
             saveBlock: async block => {
                 this.lastSavedBlock = block
             }
@@ -78,14 +84,30 @@ module.exports = class MonoplasmaOperator {
         await sleep(this.finalityWaitPeriodSeconds * 1000)
 
         await this.watcher.playbackUntilBlock(this.finalPlasma, blockNumber)
-        this.watcher.channelPruneCache(this.watcher.plasma.currentTimestamp)
-
-        const hash = this.watcher.plasma.getRootHash()
-        const ipfsHash = ""     // TODO: upload this.watcher.plasma to IPFS while waiting for finality
+        const hash = this.finalPlasma.getRootHash()
+        const ipfsHash = ""     // TODO: upload this.finalPlasma to IPFS while waiting for finality
 
         const tx = await this.contract.commit(blockNumber, hash, ipfsHash)
         await this.watcher.plasma.storeBlock(blockNumber)
-        return tx.wait(2)   // confirmations
+        await tx.wait(1)   // confirmations
+
+        // replace watcher's MonoplasmaState with the final "true" state that was just committed to blockchain
+        // also sync it up to date because it's supposed to be "real time"
+        // TODO: there could be a glitch here: perhaps an event gets replayed while syncing, it will be missed when watcher.plasma is overwritten
+        //         of course it will be fixed again after next commit
+        const updatedState = new MonoplasmaState(
+            this.watcher.plasma.blockFreezeSeconds,
+            this.finalPlasma.members,
+            this.watcher.plasma.store,
+            this.finalPlasma.adminAddress,
+            this.finalPlasma.adminFee,
+            this.finalPlasma.currentBlock,
+            this.finalPlasma.currentTimestamp
+        )
+        const currentBlock = await this.wallet.provider.getBlockNumber()
+        this.watcher.playbackUntilBlock(updatedState, currentBlock)
+        this.watcher.plasma = updatedState
+        this.watcher.channelPruneCache()
         //this.publishBlockInProgress = false
     }
 }
