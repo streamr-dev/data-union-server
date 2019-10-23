@@ -78,7 +78,6 @@ module.exports = class MonoplasmaOperator {
         await sleep(this.finalityWaitPeriodSeconds * 1000)
 
         await this.watcher.playbackUntilBlock(this.finalPlasma, blockNumber)
-        this.watcher.channelPruneCache(this.watcher.plasma.currentTimestamp)
 
         const hash = this.watcher.plasma.getRootHash()
         const ipfsHash = ""     // TODO: upload this.watcher.plasma to IPFS while waiting for finality
@@ -86,6 +85,7 @@ module.exports = class MonoplasmaOperator {
         const tx = await this.contract.commit(blockNumber, hash, ipfsHash)
         await this.watcher.plasma.storeBlock(blockNumber)
         return tx.wait(2)   // confirmations
+        this.watcher.channelPruneCache()
         //this.publishBlockInProgress = false
     }
 }

@@ -213,10 +213,11 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
 
     /**
      * Prune message cache after they aren't going to be needed anymore
-     * TODO: move to streamrChannel
-     * @param {Number} lastRemovedTimestamp up to which messages are dropped
+     * TODO: move to streamrChannel as channelPruneCache(lastRemovedTimestamp)
+     * TODO: @param {Number} lastRemovedTimestamp up to which messages are dropped
      */
-    channelPruneCache(lastRemovedTimestamp) {
+    channelPruneCache() {
+        const lastRemovedTimestamp = this.watcher.plasma.currentTimestamp
         const keepIndex = bisectFindFirstIndex(this.messageCache, msg => msg.timestamp > lastRemovedTimestamp)
         this.messageCache = this.messageCache.slice(keepIndex)
         this.cachePrunedUpTo = lastRemovedTimestamp
