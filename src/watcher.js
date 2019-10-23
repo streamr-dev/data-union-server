@@ -114,7 +114,8 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         await this.channel.listen(playbackStartingTimestamp)
 
         this.channel.on("error", this.log)
-        await this.playbackUntilBlock(this.plasma, lastBlock.blockNumber)
+        const currentBlock = await this.eth.getBlockNumber()
+        this.state.lastPublishedBlock = await this.playbackUntilBlock(this.plasma, currentBlock)
 
         // TODO: this should NOT be used for playbackUntilBlock, only for realtimeState
         this.log("Listening to Ethereum events...")
