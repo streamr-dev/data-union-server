@@ -104,20 +104,30 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         const playbackStartingTimestamp = this.state.lastMessageTimestamp || 0
 
         this.log("Listening to joins/parts from the Channel...")
+
+        // replay and cache messages until in sync
+        // TODO: cache only starting from given block (that operator/validator have loaded state from store)
+        this.channel.on("message", async (type, addresses, meta) => {
+            const addressList = addresses.map(utils.getAddress)
+            const event = { type, addressList, timestamp: meta.messageId.timestamp }
+            this.messageCache.push(event)
+        })
+        await this.channel.listen(playbackStartingTimestamp)
+        this.log(`Playing back ${this.messageCache.length} messages from joinPartStream`)
+
+        // messages are now cached => do the Ethereum event playback, sync up this.plasma
+        this.channel.on("error", this.log)
+        const currentBlock = await this.eth.getBlockNumber()
+        this.state.lastPublishedBlock = await this.playbackUntilBlock(this.plasma, currentBlock)
+
+        // for messages from now on: add to cache but also replay directly to "realtime plasma"
         this.channel.on("message", async (type, addresses, meta) => {
             // convert incoming addresses to checksum addresses
             const addressList = addresses.map(utils.getAddress)
             const event = { type, addressList, timestamp: meta.messageId.timestamp }
             this.emit(type, addresses)
             await replayOn(this.plasma, [event])
-            this.messageCache.push(event)   // TODO: cache only starting from given block (that operator/validator have loaded state from store)
         })
-        // replay and cache messages until in sync
-        await this.channel.listen(playbackStartingTimestamp)
-
-        this.channel.on("error", this.log)
-        const currentBlock = await this.eth.getBlockNumber()
-        this.state.lastPublishedBlock = await this.playbackUntilBlock(this.plasma, currentBlock)
 
         this.log("Listening to Ethereum events...")
         this.contract.on(this.adminFeeFilter, async (adminFee, event) => {
