@@ -92,13 +92,22 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         this.blockCreateFilter = this.contract.filters.BlockCreated()
         this.tokenTransferFilter = this.token.filters.Transfer(null, this.contract.address)
 
-        const lastBlock = this.state.lastPublishedBlock &&
-                this.state.lastPublishedBlock.blockNumber &&
-                await this.store.loadBlock(this.state.lastPublishedBlock.blockNumber) || {
+        let lastPublishedBlockNumber = this.state.lastPublishedBlock && this.state.lastPublishedBlock.blockNumber
+        let lastBlock = {
             members: [],
             blockNumber: 0,
             timestamp: 0,
         }
+        if (lastPublishedBlockNumber) {
+            // quick fix for BigNumbers that have ended up in the store.json:
+            //   they get serialized as {"_hex":"0x863a0a"}
+            if (lastPublishedBlockNumber._hex) {
+                lastPublishedBlockNumber = Number.parseInt(lastPublishedBlockNumber._hex)
+            }
+            this.log(`Reading from store lastPublishedBlockNumber ${lastPublishedBlockNumber}`)
+            lastBlock = await this.store.loadBlock(lastPublishedBlockNumber)
+        }
+
         this.log(`Starting from block ${lastBlock.blockNumber} (t=${lastBlock.timestamp}, ${new Date((lastBlock.timestamp || 0) * 1000).toISOString()}) with ${lastBlock.members.length} members`)
         this.plasma = new MonoplasmaState(this.state.blockFreezeSeconds, lastBlock.members, this.store, this.state.adminAddress, this.state.adminFee, lastBlock.blockNumber, lastBlock.timestamp)
 
