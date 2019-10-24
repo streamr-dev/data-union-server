@@ -114,8 +114,10 @@ module.exports = (server, logFunc) => {
                 member.proof = proof
                 res.send(member)
             }).catch(error => {
-                error.reason = `getProofAt(${address}, ${withdrawableBlock.blockNumber}) failed`
-                res.status(404).send(error)
+                res.status(404).send({
+                    error: `getProofAt(${address}, ${withdrawableBlock.blockNumber}) failed`,
+                    stack: error.stack,
+                })
             })
         } else {
             res.send(member)

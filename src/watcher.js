@@ -137,6 +137,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             const addressList = addresses.map(utils.getAddress)
             const event = { type, addressList, timestamp: meta.messageId.timestamp }
             this.emit(type, addresses)
+            this.log(`Members ${type}: ${addressList}`)
             await replayOn(this.plasma, [event])
         })
 
@@ -152,6 +153,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             this.emit("blockCreated", event)
         })
         this.token.on(this.tokenTransferFilter, async (to, from, amount, event) => {
+            this.log(`Received ${utils.formatEther(event.args.value)} DATA`)
             await replayOn(this.plasma, [event])
             this.emit("tokensReceived", event)
         })
