@@ -1,7 +1,8 @@
 const {
     Contract,
     getDefaultProvider,
-    providers: { JsonRpcProvider }
+    utils: { formatEther },
+    providers: { JsonRpcProvider },
 } = require("ethers")
 
 const StreamrClient = require("streamr-client")
@@ -72,6 +73,23 @@ async function start() {
     const client = new StreamrClient(opts)
     log(`  Streamr node address: ${streamrNodeAddress}`)    // TODO: add endpoint for asking this from EE
 
+    log("Community stats from CPS")
+    const stats = await client.communityStats(community.address)
+    log(`  Members: ${stats.memberCount.active} active / ${stats.memberCount.total} total`)
+    log(`  Latest unfrozen block: ${stats.latestWithdrawableBlock.blockNumber} (${stats.latestWithdrawableBlock.memberCount} members)`)
+    log(`  Total earnings received: ${stats.totalEarnings}`)
+
+    const expectedBalance = communityProps.totalWithdrawn.sub(stats.totalEarnings).mul(-1)
+    const communityBalance = await token.balanceOf(community.address)
+    const diff = communityBalance.sub(expectedBalance)
+    log(`  Total withdrawn from contract: ${formatEther(communityProps.totalWithdrawn)}`)
+    log(`  Earnings - withdrawn: ${formatEther(expectedBalance)}`)
+    log(`  Contract balance: ${formatEther(communityBalance)}`)
+    log(`  => Difference: ${formatEther(diff)}`)
+    if (diff.lt(0)) {
+        log("!!! TOKENS MISSING FROM CONTRACT !!!")
+    }
+
     const joinPartStreamId = communityProps.joinPartStream
     log(`Checking joinPartStream ${joinPartStreamId}...`)
     const stream = await client.getStream(joinPartStreamId)
@@ -120,9 +138,15 @@ async function start() {
     //const memberList = await client.getMembers(communityAddress)
     const memberList = await getMembers(communityAddress)
     for (const {address, earnings} of memberList) {
+        const withdrawn = await community.withdrawn(address)
+        const balance = withdrawn.sub(earnings).mul(-1)
         log(`  ${address}`)
-        log(`    Server: Total earnings: ${earnings}`)
-        log(`    Contract: Withdrawn earnings: ${(await community.withdrawn(address)).toString()}`)
+        log(`    Server: Total earnings: ${formatEther(earnings)}`)
+        log(`    Contract: Withdrawn earnings: ${formatEther(withdrawn)}`)
+        log(`    => Balance: ${formatEther(balance)}`)
+        if (balance.lt(0)) {
+            log("!!! NEGATIVE BALANCE !!!")
+        }
     }
 }
 
