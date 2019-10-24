@@ -259,7 +259,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
      * TODO: @param {Number} lastRemovedTimestamp up to which messages are dropped
      */
     channelPruneCache() {
-        const lastRemovedTimestamp = this.watcher.plasma.currentTimestamp
+        const lastRemovedTimestamp = this.plasma.currentTimestamp
         const keepIndex = bisectFindFirstIndex(this.messageCache, msg => msg.timestamp > lastRemovedTimestamp)
         this.messageCache = this.messageCache.slice(keepIndex)
         this.cachePrunedUpTo = lastRemovedTimestamp
