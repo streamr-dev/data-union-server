@@ -39,7 +39,7 @@ module.exports = class MonoplasmaValidator {
         this.plasma.storeBlock(blockNumber)
 
         // update the "validated" version to the block number whose hash was published
-        await this.watcher.playbackUntilBlock(this.validatedPlasma, blockNumber)
+        await this.watcher.playbackUntilBlock(blockNumber, this.validatedPlasma)
         this.watcher.channelPruneCache()
         this.lastCheckedBlock = blockNumber
 

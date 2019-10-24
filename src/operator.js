@@ -83,7 +83,7 @@ module.exports = class MonoplasmaOperator {
         this.log(`Waiting ${this.finalityWaitPeriodSeconds} sec before publishing block ${blockNumber}`)
         await sleep(this.finalityWaitPeriodSeconds * 1000)
 
-        await this.watcher.playbackUntilBlock(this.finalPlasma, blockNumber)
+        await this.watcher.playbackUntilBlock(blockNumber, this.finalPlasma)
         const hash = this.finalPlasma.getRootHash()
         const ipfsHash = ""     // TODO: upload this.finalPlasma to IPFS while waiting for finality
 
@@ -95,18 +95,9 @@ module.exports = class MonoplasmaOperator {
         // also sync it up to date because it's supposed to be "real time"
         // TODO: there could be a glitch here: perhaps an event gets replayed while syncing, it will be missed when watcher.plasma is overwritten
         //         of course it will be fixed again after next commit
-        const updatedState = new MonoplasmaState(
-            this.watcher.plasma.blockFreezeSeconds,
-            this.finalPlasma.members,
-            this.watcher.plasma.store,
-            this.finalPlasma.adminAddress,
-            this.finalPlasma.adminFee,
-            this.finalPlasma.currentBlock,
-            this.finalPlasma.currentTimestamp
-        )
+        this.watcher.setState(this.finalPlasma)
         const currentBlock = await this.wallet.provider.getBlockNumber()
-        this.watcher.playbackUntilBlock(updatedState, currentBlock)
-        this.watcher.plasma = updatedState
+        this.watcher.playbackUntilBlock(currentBlock)
         this.watcher.channelPruneCache()
         //this.publishBlockInProgress = false
     }

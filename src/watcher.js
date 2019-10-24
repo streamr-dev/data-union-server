@@ -129,7 +129,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         // messages are now cached => do the Ethereum event playback, sync up this.plasma
         this.channel.on("error", this.log)
         const currentBlock = await this.eth.getBlockNumber()
-        this.state.lastPublishedBlock = await this.playbackUntilBlock(this.plasma, currentBlock)
+        this.state.lastPublishedBlock = await this.playbackUntilBlock(currentBlock)
 
         // for messages from now on: add to cache but also replay directly to "realtime plasma"
         this.channel.on("message", async (type, addresses, meta) => {
@@ -186,14 +186,24 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
      * @param {MonoplasmaState} monoplasmaState original to be copied
      */
     setState(monoplasmaState) {
-        this.plasma = new MonoplasmaState(this.state.blockFreezeSeconds, monoplasmaState.members, this.store, this.state.adminAddress, this.state.adminFee, monoplasmaState.blockNumber, monoplasmaState.timestamp)
+        this.plasma = new MonoplasmaState(
+            this.state.blockFreezeSeconds,
+            monoplasmaState.members,
+            this.store,
+            this.state.adminAddress,
+            this.state.adminFee,
+            monoplasmaState.blockNumber,
+            monoplasmaState.timestamp
+        )
     }
 
     /**
      * Advance the "committed" or "final" state which reflects the blocks committed by the operator
      * @param {Number} toBlock is blockNumber from BlockCreated event
+     * @param {MonoplasmaState} plasma to sync, default is this watcher's "realtime state"
      */
-    async playbackUntilBlock(plasma, toBlock) {
+    async playbackUntilBlock(toBlock, plasma) {
+        if (!plasma) { plasma = this.plasma }
         const fromBlock = plasma.currentBlock || 0
         const fromTimestamp = plasma.currentTimestamp || 0
         if (toBlock <= fromBlock) {
