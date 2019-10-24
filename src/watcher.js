@@ -206,7 +206,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
      */
     async playbackUntilBlock(toBlock, plasma) {
         if (!plasma) { plasma = this.plasma }
-        const fromBlock = plasma.currentBlock || 0
+        const fromBlock = plasma.currentBlock + 1 || 0      // JSON RPC filters are inclusive, hence +1
         const fromTimestamp = plasma.currentTimestamp || 0
         if (toBlock <= fromBlock) {
             this.log(`Playback skipped: block ${toBlock} requested, already at ${fromBlock}`)
