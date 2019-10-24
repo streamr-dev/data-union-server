@@ -28,7 +28,7 @@
     "exit-hook": "^2.2.0",
     "ganache-cli": "^6.4.3",
     "husky": "^3.0.5",
-    "monoplasma": "0.1.8",
+    "monoplasma": "0.1.9",
     "streamr-client": "2.2.3"
   },
   "devDependencies": {
