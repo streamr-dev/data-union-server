@@ -1,7 +1,7 @@
 const {
     Contract,
     getDefaultProvider,
-    utils: { formatEther },
+    utils: { formatEther, BigNumber },
     providers: { JsonRpcProvider },
 } = require("ethers")
 
@@ -77,7 +77,7 @@ async function start() {
     const stats = await client.communityStats(community.address)
     log(`  Members: ${stats.memberCount.active} active / ${stats.memberCount.total} total`)
     log(`  Latest unfrozen block: ${stats.latestWithdrawableBlock.blockNumber} (${stats.latestWithdrawableBlock.memberCount} members)`)
-    log(`  Total earnings received: ${stats.totalEarnings}`)
+    log(`  Total earnings received: ${formatEther(stats.totalEarnings)}`)
 
     const expectedBalance = communityProps.totalWithdrawn.sub(stats.totalEarnings).mul(-1)
     const communityBalance = await token.balanceOf(community.address)
@@ -137,7 +137,9 @@ async function start() {
     // TODO: use client once withdraw is available from NPM
     //const memberList = await client.getMembers(communityAddress)
     const memberList = await getMembers(communityAddress)
+    let sumOfEarnings = new BigNumber(0)
     for (const {address, earnings} of memberList) {
+        sumOfEarnings = sumOfEarnings.add(earnings)
         const withdrawn = await community.withdrawn(address)
         const balance = withdrawn.sub(earnings).mul(-1)
         log(`  ${address}`)
@@ -148,6 +150,8 @@ async function start() {
             log("!!! NEGATIVE BALANCE !!!")
         }
     }
+    log(`Sum of members' earnings: ${sumOfEarnings}`)
+    log(`Total earnings for the community: ${communityProps.totalEarnings}`)
 }
 
 start().catch(error)
