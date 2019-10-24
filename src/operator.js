@@ -59,7 +59,7 @@ module.exports = class MonoplasmaOperator {
 
     // TODO: block publishing should be based on value-at-risk, that is, publish after so-and-so many tokens received
     async onTokensReceived(event) {
-        const blockNumber = event.blockNumber
+        const blockNumber = +event.blockNumber
         if (blockNumber >= this.lastPublishedBlock + this.minIntervalBlocks) {
             await this.publishBlock(blockNumber)
         } else {
