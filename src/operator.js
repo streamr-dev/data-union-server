@@ -60,7 +60,7 @@ module.exports = class MonoplasmaOperator {
         if (blockNumber >= this.lastPublishedBlock + this.minIntervalBlocks) {
             await this.publishBlock(blockNumber)
         } else {
-            this.log(`Skipped publishing at ${blockNumber}, last publish at ${this.lastPublishedBlock}`)
+            this.log(`Skipped publishing at ${blockNumber}, last publish at ${this.lastPublishedBlock} (this.minIntervalBlocks = ${this.minIntervalBlocks})`)
         }
     }
 
