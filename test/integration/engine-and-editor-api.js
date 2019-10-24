@@ -53,7 +53,7 @@ describe("Community product demo but through a running E&E instance", () => {
 
     async function startServer() {
         console.log("--- Running start_server.js ---")
-        operatorProcess = spawn(process.execPath, ["start_server.js"], {
+        operatorProcess = spawn(process.execPath, ["scripts/start_server.js"], {
             env: {
                 STREAMR_WS_URL: streamrWs,
                 STREAMR_HTTP_URL: streamrHttp,
