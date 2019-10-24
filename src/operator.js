@@ -82,25 +82,30 @@ module.exports = class MonoplasmaOperator {
         if (blockNumber <= this.lastPublishedBlock) { throw new Error(`Block #${this.lastPublishedBlock} has already been published, can't publish #${blockNumber}`) }
         this.lastPublishedBlock = blockNumber
 
+        // TODO: separate finalPlasma currently is so much out of sync with watcher.plasma that proofs turn out wrong
+        //       perhaps communitiesRouter should get the proofs from operator's finalPlasma?
+        //       perhaps operator's finalPlasma should write to store, and not watcher.plasma?
         // MVP re-org resilience is accomplished by assuming finality magically happens after finalityWaitPeriodSeconds
-        this.log(`Waiting ${this.finalityWaitPeriodSeconds} sec before publishing block ${blockNumber}`)
-        await sleep(this.finalityWaitPeriodSeconds * 1000)
+        //this.log(`Waiting ${this.finalityWaitPeriodSeconds} sec before publishing block ${blockNumber}`)
+        //await sleep(this.finalityWaitPeriodSeconds * 1000)
 
-        await this.watcher.playbackUntilBlock(blockNumber, this.finalPlasma)
-        const hash = this.finalPlasma.getRootHash()
+        //await this.watcher.playbackUntilBlock(blockNumber, this.finalPlasma)
+        //const hash = this.finalPlasma.getRootHash()
+        const hash = this.watcher.plasma.getRootHash()
         const ipfsHash = ""     // TODO: upload this.finalPlasma to IPFS while waiting for finality
 
         const tx = await this.contract.commit(blockNumber, hash, ipfsHash)
         await this.watcher.plasma.storeBlock(blockNumber)
         await tx.wait(1)   // confirmations
 
+        // TODO: something causes events to be replayed many times, resulting in wrong balances. It could have something to do with the state cloning that happens here
         // replace watcher's MonoplasmaState with the final "true" state that was just committed to blockchain
         // also sync it up to date because it's supposed to be "real time"
         // TODO: there could be a glitch here: perhaps an event gets replayed while syncing, it will be missed when watcher.plasma is overwritten
         //         of course it will be fixed again after next commit
-        this.watcher.setState(this.finalPlasma)
-        const currentBlock = await this.wallet.provider.getBlockNumber()
-        this.watcher.playbackUntilBlock(currentBlock)
+        //this.watcher.setState(this.finalPlasma)
+        //const currentBlock = await this.wallet.provider.getBlockNumber()
+        //this.watcher.playbackUntilBlock(currentBlock)
         this.watcher.channelPruneCache()
         //this.publishBlockInProgress = false
     }
