@@ -150,8 +150,8 @@ async function start() {
             log("!!! NEGATIVE BALANCE !!!")
         }
     }
-    log(`Sum of members' earnings: ${sumOfEarnings}`)
-    log(`Total earnings for the community: ${communityProps.totalEarnings}`)
+    log(`Sum of members' earnings: ${formatEther(sumOfEarnings)}`)
+    log(`Total earnings for the community: ${formatEther(stats.totalEarnings)}`)
 }
 
 start().catch(error)
