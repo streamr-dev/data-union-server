@@ -33,17 +33,20 @@ module.exports = class MonoplasmaOperator {
         await this.watcher.start(config)
         this.lastPublishedBlock = (this.watcher.state.lastPublishedBlock && this.watcher.state.lastPublishedBlock.blockNumber) || 0
 
-        // TODO: replace after Monoplasma update:
-        // this.finalPlasma = this.watcher.plasma.clone({
-        //     saveBlock: async block => {
-        //         this.lastSavedBlock = block
-        //     }
-        // })
-        this.finalPlasma = new MonoplasmaState(0, this.watcher.plasma.members, {
+        const finalPlasmaStore = {
             saveBlock: async block => {
                 this.lastSavedBlock = block
             }
-        }, this.watcher.plasma.adminAddress, this.watcher.plasma.adminFee, this.watcher.plasma.currentBlock, this.watcher.plasma.currentTimestamp)
+        }
+        this.finalPlasma = new MonoplasmaState(
+            0,
+            this.watcher.plasma.members,
+            finalPlasmaStore,
+            this.watcher.plasma.adminAddress,
+            this.watcher.plasma.adminFee,
+            this.watcher.plasma.currentBlock,
+            this.watcher.plasma.currentTimestamp
+        )
 
         const self = this
         this.watcher.on("tokensReceived", async event => self.onTokensReceived(event).catch(self.error))
