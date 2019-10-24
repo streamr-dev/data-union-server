@@ -22,7 +22,7 @@ const STORE_DIR = __dirname + `/test-store-${+new Date()}`
 const GANACHE_PORT = 8548
 const WEBSERVER_PORT = 8880
 const BLOCK_FREEZE_SECONDS = 1
-const ADMIN_FEE = 0.2
+const ADMIN_FEE = 0
 
 const { streamrWs, streamrHttp, streamrNodeAddress } = require("./CONFIG")
 
