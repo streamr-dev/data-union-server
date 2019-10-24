@@ -31,7 +31,7 @@ module.exports = class MonoplasmaOperator {
         //this.tokensNotCommitted = 0    // TODO: bignumber
 
         await this.watcher.start(config)
-        this.lastPublishedBlock = this.watcher.state.lastPublishedBlock ? this.watcher.state.lastPublishedBlock.blockNumber || 0 : 0
+        this.lastPublishedBlock = (this.watcher.state.lastPublishedBlock && this.watcher.state.lastPublishedBlock.blockNumber) || 0
 
         // TODO: replace after Monoplasma update:
         // this.finalPlasma = this.watcher.plasma.clone({

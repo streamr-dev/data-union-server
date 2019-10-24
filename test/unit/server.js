@@ -23,7 +23,9 @@ const initialBlock = {
 }
 const startState = {
     lastBlockNumber: 5,
-    lastPublishedBlock: 3,
+    lastPublishedBlock: {
+        blockNumber: 3
+    }
 }
 
 const logs = []

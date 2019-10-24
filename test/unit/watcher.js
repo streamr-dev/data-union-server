@@ -37,7 +37,9 @@ const initialBlock = {
 }
 const startState = {
     lastBlockNumber: 5,
-    lastPublishedBlock: 3,
+    lastPublishedBlock: {
+        blockNumber: 3
+    }
 }
 
 const MonoplasmaWatcher = require("../../src/watcher")
@@ -141,5 +143,44 @@ describe("MonoplasmaWatcher", () => {
             { address: "0xb3428050ea2448ed2e4409be47e1a50ebac0b2d2", earnings: "40" }, // 20 startBalance + 10 + 10
         ]
         assert.deepStrictEqual(watcher.plasma.getMembers(), newBalances)
+    })
+
+    /*
+    // fails because mockChannel doesn't play back events
+    // TODO: move to integration tests, try with real channels with real EE
+    it("interleaves join messages and Transfer events correctly during playback", async function () {
+        this.timeout(0)
+        await community.setAdminFee(parseEther("0.5"))
+        await token.transfer(community.address, 40) // 40 -> 20/2 = 10 for members, 20 for admin
+        const joinPromise1 = new Promise(done => watcher.on("join", done))
+        joinPartChannel.publish("join", ["0x1234567812345678123456781234567812345678"])
+        await joinPromise1
+        //await sleep(1000)
+        await token.transfer(community.address, 30) // 40 -> 20/2 = 10 for members, 20 for admin
+        const joinPromise2 = new Promise(done => watcher.on("join", done))
+        joinPartChannel.publish("join", ["0x2234567812345678123456781234567812345678"])
+        await joinPromise2
+        //await new Promise(done => watcher.on("join", done))
+        //await sleep(1000)
+        await token.transfer(community.address, 40)
+
+        assert.strictEqual(watcher.plasma.getMembers().length, 4)
+
+        await sleep(1000)
+        await startWatcher()
+
+        assert(store.lastSavedState)
+        const newBalances = [
+            { address: "0x2F428050ea2448ed2e4409bE47e1A50eBac0B2d2", earnings: "70" }, // 50 startBalance + 10 + 5 + 5
+            { address: "0xb3428050ea2448ed2e4409be47e1a50ebac0b2d2", earnings: "40" }, // 20 startBalance + 10 + 5 + 5
+            { address: "0x1234567812345678123456781234567812345678", earnings: "10" }, // 0 startBalance + 5 + 5
+            { address: "0x2234567812345678123456781234567812345678", earnings: "5" }, // 0 startBalance + 5
+        ]
+        assert.deepStrictEqual(watcher.plasma.getMembers(), newBalances)
+    })
+    */
+
+    it("admin share is calculated correctly", () => {
+        // TODO
     })
 })

@@ -92,12 +92,14 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         this.blockCreateFilter = this.contract.filters.BlockCreated()
         this.tokenTransferFilter = this.token.filters.Transfer(null, this.contract.address)
 
-        const lastBlock = this.state.lastPublishedBlock && await this.store.loadBlock(this.state.lastPublishedBlock) || {
+        const lastBlock = this.state.lastPublishedBlock &&
+                this.state.lastPublishedBlock.blockNumber &&
+                await this.store.loadBlock(this.state.lastPublishedBlock.blockNumber) || {
             members: [],
             blockNumber: 0,
             timestamp: 0,
         }
-        this.log(`Starting from block ${lastBlock.blockNumber} (t=${lastBlock.timestamp}, ${new Date(lastBlock.timestamp * 1000).toISOString()}) with ${lastBlock.members.length} members`)
+        this.log(`Starting from block ${lastBlock.blockNumber} (t=${lastBlock.timestamp}, ${new Date((lastBlock.timestamp || 0) * 1000).toISOString()}) with ${lastBlock.members.length} members`)
         this.plasma = new MonoplasmaState(this.state.blockFreezeSeconds, lastBlock.members, this.store, this.state.adminAddress, this.state.adminFee, lastBlock.blockNumber, lastBlock.timestamp)
 
         this.log("Syncing Monoplasma state...")
