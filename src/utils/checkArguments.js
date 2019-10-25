@@ -7,7 +7,7 @@ const ethers = require("ethers")
  * @returns {Maybe<EthereumAddress>} checksum-formatted by ethers.js, or null if not set
  **/
 async function throwIfSetButNotContract(eth, address, variableDescription) {
-    if (!address) { return }
+    if (!address) { return null }
     return throwIfNotContract(eth, address, variableDescription)
 }
 

@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 const {
     Contract,
     getDefaultProvider,
@@ -7,7 +9,7 @@ const {
 
 const StreamrClient = require("streamr-client")
 
-const { throwIfNotContract, throwIfSetButBadAddress } = require("../src/utils/checkArguments")
+const { throwIfNotContract, throwIfSetButNotContract, throwIfSetButBadAddress } = require("../src/utils/checkArguments")
 
 const TokenJson = require("../build/ERC20Detailed.json")
 const CommunityJson = require("../build/CommunityProduct.json")
@@ -33,11 +35,11 @@ const error = (e, ...args) => {
     process.exit(1)
 }
 
+const lastArg = process.argv.pop()
+const communityAddressArg = lastArg.endsWith("check_community.js") ? "" : lastArg
+
 async function start() {
-    const provider =
-        ETHEREUM_SERVER ? new JsonRpcProvider(ETHEREUM_SERVER) :
-        ETHEREUM_NETWORK ? getDefaultProvider(ETHEREUM_NETWORK) : null
-    if (!provider) { throw new Error("Must supply either ETHEREUM_SERVER or ETHEREUM_NETWORK") }
+    const provider = ETHEREUM_SERVER ? new JsonRpcProvider(ETHEREUM_SERVER) : getDefaultProvider(ETHEREUM_NETWORK)
     try {
         const url = provider.connection ? provider.connection.url : provider.providers[0].connection.url
         log(`Connecting to ${url}`)
@@ -45,7 +47,9 @@ async function start() {
     const network = await provider.getNetwork()
     log(`Network is ${JSON.stringify(network)}`)
 
-    const communityAddress = await throwIfNotContract(provider, COMMUNITY_ADDRESS, "env variable COMMUNITY_ADDRESS")
+    const communityAddress =
+        await throwIfSetButNotContract(provider, communityAddressArg, "command-line argument (Community contract Ethereum address)") ||
+        await throwIfNotContract(provider, COMMUNITY_ADDRESS, "env variable COMMUNITY_ADDRESS")
     const streamrNodeAddress = await throwIfSetButBadAddress(STREAMR_NODE_ADDRESS, "env variable STREAMR_NODE_ADDRESS")
 
     log(`Checking community contract at ${communityAddress}...`)
@@ -71,7 +75,6 @@ async function start() {
     if (STREAMR_WS_URL) { opts.url = STREAMR_WS_URL }
     if (STREAMR_HTTP_URL) { opts.restUrl = STREAMR_HTTP_URL }
     const client = new StreamrClient(opts)
-    log(`  Streamr node address: ${streamrNodeAddress}`)    // TODO: add endpoint for asking this from EE
 
     log("Community stats from CPS")
     const stats = await client.communityStats(community.address)
@@ -90,46 +93,50 @@ async function start() {
         log("!!! TOKENS MISSING FROM CONTRACT !!!")
     }
 
-    const joinPartStreamId = communityProps.joinPartStream
-    log(`Checking joinPartStream ${joinPartStreamId}...`)
-    const stream = await client.getStream(joinPartStreamId)
-    try {
-        const writers = await client.getStreamPublishers(joinPartStreamId)
-        log("  Writers:")
-        for (const wa of writers) {
-            log("    " + wa)
-        }
-        const na = writers.find(a => a.toLowerCase() === streamrNodeAddress.toLowerCase())
-        if (na) {
-            log("  Streamr node can write")
-            if (na !== streamrNodeAddress) {
-                log("  THE CASE IS WRONG THOUGH, that could be a problem")
+    // check EE can write into joinPartStream
+    if (streamrNodeAddress) {
+        log(`  Streamr node address: ${streamrNodeAddress}`)    // TODO: add endpoint for asking this from EE
+        const joinPartStreamId = communityProps.joinPartStream
+        log(`Checking joinPartStream ${joinPartStreamId}...`)
+        const stream = await client.getStream(joinPartStreamId)
+        try {
+            const writers = await client.getStreamPublishers(joinPartStreamId)
+            log("  Writers:")
+            for (const wa of writers) {
+                log("    " + wa)
             }
-        } else {
-            log("!!! STREAMR NODE NEEDS WRITE PERMISSION, otherwise joins and parts won't work !!!")
+            const na = writers.find(a => a.toLowerCase() === streamrNodeAddress.toLowerCase())
+            if (na) {
+                log("  Streamr node can write")
+                if (na !== streamrNodeAddress) {
+                    log("  THE CASE IS WRONG THOUGH, that could be a problem")
+                }
+            } else {
+                log("!!! STREAMR NODE NEEDS WRITE PERMISSION, otherwise joins and parts won't work !!!")
+            }
+        } catch (e) {
+            if (e.message.includes("403")) {
+                log(`  Couldn't get publishers, no read permission: ${e.body}`)
+            } else {
+                log(`  Error getting permissions: ${e.body}`)
+            }
         }
-    } catch (e) {
-        if (e.message.includes("403")) {
-            log(`  Couldn't get publishers, no read permission: ${e.body}`)
-        } else {
-            log(`  Error getting permissions: ${e.body}`)
-        }
-    }
 
-    try {
-        const perms = await stream.getPermissions()
-        log(`  Permissions: ${JSON.stringify(perms)}`)
-        const nodeWritePerm = perms.find(p => p.operation === "write" && p.user === streamrNodeAddress)
-        if (nodeWritePerm) {
-            log("  Streamr node has write permission")
-        } else {
-            log("!!! STREAMR NODE NEEDS WRITE PERMISSION, otherwise joins and parts won't work !!!")
-        }
-    } catch (e) {
-        if (e.message.includes("403")) {
-            log(`  Couldn't get permissions, we're not an owner (with share permission): ${e.body}`)
-        } else {
-            log(`  Error getting permissions: ${e.body}`)
+        try {
+            const perms = await stream.getPermissions()
+            log(`  Permissions: ${JSON.stringify(perms)}`)
+            const nodeWritePerm = perms.find(p => p.operation === "write" && p.user === streamrNodeAddress)
+            if (nodeWritePerm) {
+                log("  Streamr node has write permission")
+            } else {
+                log("!!! STREAMR NODE NEEDS WRITE PERMISSION, otherwise joins and parts won't work !!!")
+            }
+        } catch (e) {
+            if (e.message.includes("403")) {
+                log(`  Couldn't get permissions, we're not an owner (with share permission): ${e.body}`)
+            } else {
+                log(`  Error getting permissions: ${e.body}`)
+            }
         }
     }
 
