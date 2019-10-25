@@ -108,15 +108,16 @@ module.exports = (server, logFunc) => {
         member.recordedEarnings = memberFrozen.earnings || "0"
         member.withdrawableEarnings = memberWithdrawable.earnings || "0"
         member.frozenEarnings = new BN(member.recordedEarnings).sub(new BN(member.withdrawableEarnings)).toString(10)
-        if (withdrawableBlock) {
+        if (member.withdrawableEarnings > 0) {
             member.withdrawableBlockNumber = withdrawableBlock.blockNumber
             plasma.getProofAt(address, withdrawableBlock.blockNumber).then(proof => {
                 member.proof = proof
                 res.send(member)
             }).catch(error => {
-                res.status(404).send({
+                res.send({
+                    member,
                     error: `getProofAt(${address}, ${withdrawableBlock.blockNumber}) failed`,
-                    stack: error.stack,
+                    errorMessage: error.message,
                 })
             })
         } else {
