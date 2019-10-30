@@ -118,7 +118,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
 
         // replay and cache messages until in sync
         // TODO: cache only starting from given block (that operator/validator have loaded state from store)
-        this.channel.on("message", async (type, addresses, meta) => {
+        this.channel.on("message", (type, addresses, meta) => {
             const addressList = addresses.map(utils.getAddress)
             const event = { type, addressList, timestamp: meta.messageId.timestamp }
             this.messageCache.push(event)
@@ -136,9 +136,9 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             // convert incoming addresses to checksum addresses
             const addressList = addresses.map(utils.getAddress)
             const event = { type, addressList, timestamp: meta.messageId.timestamp }
-            this.emit(type, addresses)
             this.log(`Members ${type}: ${addressList}`)
             await replayOn(this.plasma, [event])
+            this.emit(type, addresses)
         })
 
         this.log("Listening to Ethereum events...")
@@ -147,7 +147,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             await replayOn(this.plasma, [event])
             this.emit("adminFeeChanged", event)
         })
-        this.contract.on(this.blockCreateFilter, async (blockNumber, rootHash, ipfsHash, event) => {
+        this.contract.on(this.blockCreateFilter, (blockNumber, rootHash, ipfsHash, event) => {
             this.log(`Observed creation of block ${+blockNumber} at block ${event.blockNumber} (root ${rootHash}, ipfs "${ipfsHash}")`)
             this.state.lastPublishedBlock = event.args
             this.emit("blockCreated", event)

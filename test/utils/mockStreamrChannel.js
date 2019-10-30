@@ -15,16 +15,25 @@ module.exports = class MockStreamrChannel {
             error: [],
             close: [],
         }
+        this.pastEventsWithTimestamps = []
     }
     startServer() { this.mode = "server" }
-    listen() { this.mode = "client" }
+    listen() {
+        this.pastEventsWithTimestamps.forEach(e => {
+            this.publishAt(...e)
+        })
+        this.mode = "client"
+    }
     close() { this.mode = "" }
     publish(type, ...args) {
+        this.publishAt(Date.now(), type, ...args)
+    }
+    publishAt(timestamp, type, ...args) {
         for (const func of this.listeners[type]) {
             func(...args)
         }
         for (const func of this.listeners.message) {
-            func(type, ...args, { messageId: { timestamp: Date.now() }})
+            func(type, ...args, { messageId: { timestamp }})
         }
     }
     on(type, cb) {

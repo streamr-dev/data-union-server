@@ -4,7 +4,7 @@ const assert = require("assert")
 const {
     Wallet,
     ContractFactory,
-    utils: { parseEther },
+    utils: { parseEther, formatEther },
     providers: { Web3Provider }
 } = require("ethers")
 const ganache = require("ganache-core")
@@ -51,7 +51,7 @@ describe("MonoplasmaWatcher", () => {
     let joinPartChannel
     let store
     before(async function () {
-        this.timeout(0)
+        //this.timeout(0)
 
         const secretKey = "0x1234567812345678123456781234567812345678123456781234567812345678"
         const provider = new Web3Provider(ganache.provider({
@@ -145,40 +145,54 @@ describe("MonoplasmaWatcher", () => {
         assert.deepStrictEqual(watcher.plasma.getMembers(), newBalances)
     })
 
-    /*
-    // fails because mockChannel doesn't play back events
-    // TODO: move to integration tests, try with real channels with real EE
     it("interleaves join messages and Transfer events correctly during playback", async function () {
-        this.timeout(0)
+        this.timeout(10000)
         await community.setAdminFee(parseEther("0.5"))
-        await token.transfer(community.address, 40) // 40 -> 20/2 = 10 for members, 20 for admin
-        const joinPromise1 = new Promise(done => watcher.on("join", done))
-        joinPartChannel.publish("join", ["0x1234567812345678123456781234567812345678"])
-        await joinPromise1
-        //await sleep(1000)
-        await token.transfer(community.address, 30) // 40 -> 20/2 = 10 for members, 20 for admin
-        const joinPromise2 = new Promise(done => watcher.on("join", done))
-        joinPartChannel.publish("join", ["0x2234567812345678123456781234567812345678"])
-        await joinPromise2
-        //await new Promise(done => watcher.on("join", done))
-        //await sleep(1000)
-        await token.transfer(community.address, 40)
+        await sleep(1000)
+        console.log("Admin fee: " + watcher.plasma.adminFeeFraction)
 
-        assert.strictEqual(watcher.plasma.getMembers().length, 4)
+        console.log(JSON.stringify(watcher.plasma.getMembers()))
+
+        await token.transfer(community.address, 40) // -> 20/2 = 10 for members, 20 for admin
+        await sleep(1000)
+        console.log(JSON.stringify(watcher.plasma.getMembers()))
+        const afterTransfer1 = await wallet.provider.getBlock()
+        await new Promise(done => {
+            watcher.on("join", done)
+            joinPartChannel.publish("join", ["0x1234567812345678123456781234567812345678"])
+        })
+
+        console.log(JSON.stringify(watcher.plasma.getMembers()))
+
+        await token.transfer(community.address, 30) // -> 15/3 = 5 for members, 15 for admin
+        await sleep(1000)
+        console.log(JSON.stringify(watcher.plasma.getMembers()))
+        const afterTransfer2 = await wallet.provider.getBlock()
+        await new Promise(done => {
+            watcher.on("join", done)
+            joinPartChannel.publish("join", ["0x2234567812345678123456781234567812345678"])
+        })
+        await token.transfer(community.address, 40) // -> 20/4 = 5 for members, 20 for admin
 
         await sleep(1000)
-        await startWatcher()
-
-        assert(store.lastSavedState)
-        const newBalances = [
+        console.log(JSON.stringify(watcher.plasma.getMembers()))
+        const expectedBalances = [
             { address: "0x2F428050ea2448ed2e4409bE47e1A50eBac0B2d2", earnings: "70" }, // 50 startBalance + 10 + 5 + 5
             { address: "0xb3428050ea2448ed2e4409be47e1a50ebac0b2d2", earnings: "40" }, // 20 startBalance + 10 + 5 + 5
             { address: "0x1234567812345678123456781234567812345678", earnings: "10" }, // 0 startBalance + 5 + 5
             { address: "0x2234567812345678123456781234567812345678", earnings: "5" }, // 0 startBalance + 5
         ]
-        assert.deepStrictEqual(watcher.plasma.getMembers(), newBalances)
+        assert.deepStrictEqual(watcher.plasma.getMembers(), expectedBalances)
+
+        joinPartChannel.pastEventsWithTimestamps = [
+            [afterTransfer1.timestamp * 1000, "join", ["0x1234567812345678123456781234567812345678"]],
+            [afterTransfer2.timestamp * 1000, "join", ["0x2234567812345678123456781234567812345678"]],
+        ]
+        await startWatcher()
+
+        assert(store.lastSavedState)
+        assert.deepStrictEqual(watcher.plasma.getMembers(), expectedBalances)
     })
-    */
 
     it("admin share is calculated correctly", () => {
         // TODO
