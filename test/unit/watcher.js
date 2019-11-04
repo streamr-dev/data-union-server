@@ -4,7 +4,7 @@ const assert = require("assert")
 const {
     Wallet,
     ContractFactory,
-    utils: { parseEther, formatEther },
+    utils: { parseEther },
     providers: { Web3Provider }
 } = require("ethers")
 const ganache = require("ganache-core")
