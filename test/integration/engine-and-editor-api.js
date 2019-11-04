@@ -22,21 +22,20 @@ const STORE_DIR = __dirname + `/test-store-${+new Date()}`
 const BLOCK_FREEZE_SECONDS = 1
 const ADMIN_FEE = 0.2
 
-// settings compatible with streamr-docker-dev, TODO: read from env or add to CONFIG?
-const WEBSERVER_PORT = 8085
-const ETHEREUM_SERVER = "http://localhost:8545"
-const ETHEREUM_PRIVATE_KEY = "0x5e98cce00cff5dea6b454889f359a4ec06b9fa6b88e9d69b86de8e1c81887da0"    // ganache 0, TODO: try another?
-//const ETHEREUM_PRIVATE_KEY = "0xe5af7834455b7239881b85be89d905d6881dcb4751063897f12be1b0dd546bdb"
-//const TOKEN_ADDRESS = "0xbAA81A0179015bE47Ad439566374F2Bae098686F"
-//const MARKETPLACE_ADDRESS = "0xEAA002f7Dc60178B6103f8617Be45a9D3df659B6"
-
-const { streamrWs, streamrHttp, streamrNodeAddress } = require("./CONFIG")
+const {
+    STREAMR_WS_URL,
+    STREAMR_HTTP_URL,
+    STREAMR_NODE_ADDRESS,
+    ETHEREUM_SERVER,
+    ETHEREUM_PRIVATE_KEY,
+    TOKEN_ADDRESS,
+    WEBSERVER_PORT,
+} = require("./CONFIG")
 
 /**
  * Same as community-product-demo.js except only through E&E APIs,
  *   "more end-to-end" because it won't poke the stream and server directly, only talks to E&E
- * Only needs to run against dev docker, hence run againt streamr-ganache docker,
- *   notice the hard-coded ETHEREUM_SERVER (TODO: why not support stand-alone too though)
+ * Only needs to run against streamr-ganache docker, so uses ETHEREUM_SERVER from CONFIG
  */
 describe("Community product demo but through a running E&E instance", () => {
     let operatorProcess
@@ -55,11 +54,11 @@ describe("Community product demo but through a running E&E instance", () => {
         console.log("--- Running start_server.js ---")
         operatorProcess = spawn(process.execPath, ["scripts/start_server.js"], {
             env: {
-                STREAMR_WS_URL: streamrWs,
-                STREAMR_HTTP_URL: streamrHttp,
+                STREAMR_WS_URL,
+                STREAMR_HTTP_URL,
                 ETHEREUM_SERVER,
                 ETHEREUM_PRIVATE_KEY,
-                //TOKEN_ADDRESS,
+                TOKEN_ADDRESS,
                 STORE_DIR,
                 WEBSERVER_PORT,
                 BLOCK_FREEZE_SECONDS,
@@ -69,7 +68,10 @@ describe("Community product demo but through a running E&E instance", () => {
         operatorProcess.stdout.on("data", data => { console.log(`<server> ${data.toString().trim()}`) })
         operatorProcess.stderr.on("data", data => { console.log(`server *** ERROR: ${data}`) })
         operatorProcess.on("close", code => { console.log(`start_server.js exited with code ${code}`) })
-        operatorProcess.on("error", err => { console.log(`start_server.js ERROR: ${err}`) })
+        operatorProcess.on("error", err => {
+            console.log(`start_server.js ERROR: ${err}`)
+            process.exit(1)
+        })
 
         await untilStreamContains(operatorProcess.stdout, "[DONE]")
 
@@ -92,14 +94,15 @@ describe("Community product demo but through a running E&E instance", () => {
     }
 
     it("should get through the happy path", async function () {
-        this.timeout(5 * 60 * 1000)
+        this.timeout(10 * 60 * 1000)
 
         const {
             ganacheProvider,
             adminPrivateKey,
             privateKey,
             address,
-        } = await startServer() // connectToLocalGanache()
+        } = await startServer()
+        //} = await connectToLocalGanache()
 
         console.log("--- Server started, getting the operator config ---")
         // TODO: eliminate direct server communication (use /stats? Change EE?)
@@ -116,7 +119,7 @@ describe("Community product demo but through a running E&E instance", () => {
         console.log("1) Create a new Community product")
 
         console.log("1.1) Get Streamr session token")
-        /*
+        /* API keys are going to be deprecated, use StreamrClient instead
         const apiKey = "tester1-api-key"
         const loginResponse = await fetch(`${streamrHttp}/login/apikey`, {
             method: "POST",
@@ -128,8 +131,8 @@ describe("Community product demo but through a running E&E instance", () => {
         */
         const client = new StreamrClient({
             auth: { privateKey },
-            url: streamrWs,
-            restUrl: streamrHttp,
+            url: STREAMR_WS_URL,
+            restUrl: STREAMR_HTTP_URL,
         })
         const sessionToken = await client.session.sessionTokenPromise
         console.log("Session token: " + sessionToken)
@@ -137,21 +140,24 @@ describe("Community product demo but through a running E&E instance", () => {
 
         // wrap fetch; with the Authorization header the noise is just too much...
         async function GET(url) {
-            return fetch(streamrHttp + url, {
+            return fetch(STREAMR_HTTP_URL + url, {
                 headers: {
                     "Authorization": `Bearer ${sessionToken}`
                 }
             }).then(resp => resp.json())
         }
-        async function POST(url, bodyObject) {
-            return fetch(streamrHttp + url, {
-                method: "POST",
+        async function POST(url, bodyObject, sessionTokenOverride, methodOverride) {
+            return fetch(STREAMR_HTTP_URL + url, {
+                method: methodOverride || "POST",
                 body: JSON.stringify(bodyObject),
                 headers: {
-                    "Authorization": `Bearer ${sessionToken}`,
+                    "Authorization": `Bearer ${sessionTokenOverride || sessionToken}`,
                     "Content-Type": "application/json",
                 }
             }).then(resp => resp.json())
+        }
+        async function PUT(url, bodyObject) {
+            return POST(url, bodyObject, null, "PUT")
         }
 
         console.log("1.2) create a stream that's going to go into the product")
@@ -194,7 +200,7 @@ describe("Community product demo but through a running E&E instance", () => {
         console.log("1.4) Create joinPartStream")   // done inside deployCommunity below
         console.log("1.5) Deploy CommunityProduct contract")
         const wallet = new Wallet(privateKey, ganacheProvider)
-        const nodeAddress = getAddress(streamrNodeAddress)
+        const nodeAddress = getAddress(STREAMR_NODE_ADDRESS)
         const communityContract = await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, ADMIN_FEE, console.log, config.streamrWsUrl, config.streamrHttpUrl)
         const communityAddress = communityContract.address
 
@@ -211,14 +217,7 @@ describe("Community product demo but through a running E&E instance", () => {
 
         console.log("1.7) Set beneficiary in Product DB entry")
         product.beneficiaryAddress = communityAddress
-        const putResponse = await fetch(`${streamrHttp}/products/${productId}`, {
-            method: "PUT",
-            headers: {
-                "Authorization": `Bearer ${sessionToken}`,
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(product),
-        }).then(resp => resp.json())
+        const putResponse = await PUT(`/products/${productId}`, product)
         console.log(`     Response: ${JSON.stringify(putResponse)}`)
 
         console.log("2) Add members")
@@ -246,22 +245,14 @@ describe("Community product demo but through a running E&E instance", () => {
             const memberAddress = computeAddress(privateKey)
             const tempClient = new StreamrClient({
                 auth: { privateKey },
-                url: streamrWs,
-                restUrl: streamrHttp,
+                url: STREAMR_WS_URL,
+                restUrl: STREAMR_HTTP_URL,
             })
-            const memberSessionToken = await tempClient.session.sessionTokenPromise
-            const joinResponse = await fetch(`${streamrHttp}/communities/${communityAddress}/joinRequests`, {
-                method: "POST",
-                body: JSON.stringify({
-                    memberAddress,
-                    secret: "test",
-                    metadata: { test: "PLEASE DELETE ME, I'm a Community Product server test joinRequest" },
-                }),
-                headers: {
-                    "Authorization": `Bearer ${memberSessionToken}`,
-                    "Content-Type": "application/json",
-                }
-            }).then(resp => resp.json())
+            const joinResponse = await POST(`/communities/${communityAddress}/joinRequests`, {
+                memberAddress,
+                secret: "test",
+                metadata: { test: "PLEASE DELETE ME, I'm a Community Product server test joinRequest" },
+            }, await tempClient.session.sessionTokenPromise)
             console.log(`     Response: ${JSON.stringify(joinResponse)}`)
         }
 
@@ -273,6 +264,7 @@ describe("Community product demo but through a running E&E instance", () => {
             members = await GET(`/communities/${communityAddress}/members`)
         }
 
+        // TODO: send revenue by purchasing the product on Marketplace
         console.log("3) Send revenue in and check tokens were distributed")
         const token = new Contract(config.tokenAddress, ERC20Mintable.abi, wallet)
         for (let i = 0; i < 5; i++) {
@@ -304,7 +296,7 @@ describe("Community product demo but through a running E&E instance", () => {
 
         const contract = new Contract(communityAddress, CommunityProduct.abi, wallet)
         const withdrawTx = await contract.withdrawAll(member.withdrawableBlockNumber, member.withdrawableEarnings, member.proof)
-        await withdrawTx.wait(2)
+        await withdrawTx.wait(1)
 
         const res4b = await GET(`/communities/${communityAddress}/members/${address}`)
         console.log(JSON.stringify(res4b))

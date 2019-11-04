@@ -88,7 +88,7 @@ describe("CommunityProductServer", () => {
     })
 
     it("resumed operating communities it's operated before (e.g. a crash)", async function () {
-        this.timeout(0)
+        //this.timeout(0)
 
         log("Starting CommunityProductServer...")
         const storeDir = path.join(os.tmpdir(), `communitiesRouter-test1-${+new Date()}`)
