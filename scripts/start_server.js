@@ -27,7 +27,7 @@ const getServerRouter = require("../src/routers/server")
 const {
     ETHEREUM_SERVER,            // explicitly specify server address
     ETHEREUM_NETWORK,           // use ethers.js default servers
-    ETHEREUM_PRIVATE_KEY,
+    OPERATOR_PRIVATE_KEY,
     TOKEN_ADDRESS,
     STREAMR_WS_URL,
     STREAMR_HTTP_URL,
@@ -112,12 +112,12 @@ async function start() {
         })
         log("Connected to Ethereum network: ", JSON.stringify(network))
 
-        if (!ETHEREUM_PRIVATE_KEY) { throw new Error("env ETHEREUM_PRIVATE_KEY required to operate Monoplasma, for 'commit' transactions.") }
-        const privateKey = ETHEREUM_PRIVATE_KEY.startsWith("0x") ? ETHEREUM_PRIVATE_KEY : "0x" + ETHEREUM_PRIVATE_KEY
+        if (!OPERATOR_PRIVATE_KEY) { throw new Error("env OPERATOR_PRIVATE_KEY required to operate Monoplasma, for 'commit' transactions.") }
+        const privateKey = OPERATOR_PRIVATE_KEY.startsWith("0x") ? OPERATOR_PRIVATE_KEY : "0x" + OPERATOR_PRIVATE_KEY
         if (privateKey.length !== 66) { throw new Error("Malformed private key, must be 64 hex digits long (optionally prefixed with '0x')") }
         wallet = new Wallet(privateKey, provider)
     } else {
-        log("Starting Ethereum simulator...")
+        log("No env ETHEREUM_SERVER or ETHEREUM_NETWORK provided, starting Ethereum simulator...")
         const ganachePort = GANACHE_PORT || 8545
         const ganacheLog = msg => { log(" <Ganache> " + msg) }
         ganache = await require("monoplasma/src/utils/startGanache")(ganachePort, ganacheLog, error, 4)

@@ -29,7 +29,7 @@ Start server script can be modified using the following environment variables:
 | --- | --- |
 |  ETHEREUM_SERVER | explicitly specify server address |
 |  ETHEREUM_NETWORK | use ethers.js default servers |
-|  ETHEREUM_PRIVATE_KEY | private key of the operators, used for identifying which contracts we should be serving |
+|  OPERATOR_PRIVATE_KEY | private key of the operators, used for identifying which contracts we should be serving |
 |  TOKEN_ADDRESS | $DATA token address |
 |  STREAMR_WS_URL | Default: wss://www.streamr.com/api/v1/ws |
 |  STREAMR_HTTP_URL | Default: https://www.streamr.com/api/v1 |
