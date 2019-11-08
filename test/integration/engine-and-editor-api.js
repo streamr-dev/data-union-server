@@ -27,7 +27,7 @@ const {
     STREAMR_HTTP_URL,
     STREAMR_NODE_ADDRESS,
     ETHEREUM_SERVER,
-    ETHEREUM_PRIVATE_KEY,
+    OPERATOR_PRIVATE_KEY,
     TOKEN_ADDRESS,
     WEBSERVER_PORT,
 } = require("./CONFIG")
@@ -57,7 +57,7 @@ describe("Community product demo but through a running E&E instance", () => {
                 STREAMR_WS_URL,
                 STREAMR_HTTP_URL,
                 ETHEREUM_SERVER,
-                ETHEREUM_PRIVATE_KEY,
+                OPERATOR_PRIVATE_KEY,
                 TOKEN_ADDRESS,
                 STORE_DIR,
                 WEBSERVER_PORT,
@@ -77,7 +77,7 @@ describe("Community product demo but through a running E&E instance", () => {
 
         return {
             ganacheProvider: new JsonRpcProvider(ETHEREUM_SERVER),
-            adminPrivateKey: ETHEREUM_PRIVATE_KEY,
+            adminPrivateKey: OPERATOR_PRIVATE_KEY,
             privateKey: "0xe5af7834455b7239881b85be89d905d6881dcb4751063897f12be1b0dd546bdb", // ganache 1
             address: "0x4178baBE9E5148c6D5fd431cD72884B07Ad855a0",
         }

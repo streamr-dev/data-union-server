@@ -25,7 +25,7 @@ const Channel = require("../src/streamrChannel")
 const {
     ETHEREUM_SERVER,
     ETHEREUM_NETWORK_ID,
-    ETHEREUM_PRIVATE_KEY,
+    OPERATOR_PRIVATE_KEY,
 
     STREAMR_WS_URL,
     STREAMR_HTTP_URL,
@@ -77,8 +77,8 @@ async function start() {
     let privateKey
     let ethereumServer = ETHEREUM_SERVER
     if (ethereumServer) {
-        if (!ETHEREUM_PRIVATE_KEY) { throw new Error("Private key required to deploy the airdrop contract. Deploy transaction must be signed.") }
-        privateKey = ETHEREUM_PRIVATE_KEY.startsWith("0x") ? ETHEREUM_PRIVATE_KEY : "0x" + ETHEREUM_PRIVATE_KEY
+        if (!OPERATOR_PRIVATE_KEY) { throw new Error("env OPERATOR_PRIVATE_KEY required to deploy the airdrop contract. Deploy transaction must be signed.") }
+        privateKey = OPERATOR_PRIVATE_KEY.startsWith("0x") ? OPERATOR_PRIVATE_KEY : "0x" + OPERATOR_PRIVATE_KEY
         if (privateKey.length !== 66) { throw new Error("Malformed private key, must be 64 hex digits long (optionally prefixed with '0x')") }
     } else {
         // use account 0: 0xa3d1f77acff0060f7213d7bf3c7fec78df847de1
