@@ -36,11 +36,10 @@ async function start() {
         ETHEREUM_NETWORK ? getDefaultProvider(ETHEREUM_NETWORK) : null
     if (!provider) { throw new Error("Must supply either ETHEREUM_SERVER or ETHEREUM_NETWORK") }
 
-    try {
-        const url = provider.connection ? provider.connection.url : provider.providers[0].connection.url
-        log(`Connecting to ${url}`)
-    } catch (e) { /*ignore*/ }
-    const network = await provider.getNetwork()
+    const network = await provider.getNetwork().catch(e => {
+        throw new Error(`Connecting to Ethereum failed, env ETHEREUM_SERVER=${ETHEREUM_SERVER} ETHEREUM_NETWORK=${ETHEREUM_NETWORK}`, e)
+    })
+    log("Connected to Ethereum network: ", JSON.stringify(network))
 
     const privateKey = ETHEREUM_PRIVATE_KEY.startsWith("0x") ? ETHEREUM_PRIVATE_KEY : "0x" + ETHEREUM_PRIVATE_KEY
     if (privateKey.length !== 66) { throw new Error("Malformed private key, must be 64 hex digits long (optionally prefixed with '0x')") }

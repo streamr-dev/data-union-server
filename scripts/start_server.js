@@ -106,9 +106,11 @@ async function start() {
 
     let wallet
     if (provider) {
-        try {
-            log(`Connecting to ${provider._network.name} network, ${provider.providers[0].connection.url}`)
-        } catch (e) { /*ignore*/ }
+        const network = await provider.getNetwork().catch(e => {
+            throw new Error(`Connecting to Ethereum failed, env ETHEREUM_SERVER=${ETHEREUM_SERVER} ETHEREUM_NETWORK=${ETHEREUM_NETWORK}`, e)
+        })
+        log("Connected to Ethereum network: ", JSON.stringify(network))
+
         if (!OPERATOR_PRIVATE_KEY) { throw new Error("env OPERATOR_PRIVATE_KEY required to operate Monoplasma, for 'commit' transactions.") }
         const privateKey = OPERATOR_PRIVATE_KEY.startsWith("0x") ? OPERATOR_PRIVATE_KEY : "0x" + OPERATOR_PRIVATE_KEY
         if (privateKey.length !== 66) { throw new Error("Malformed private key, must be 64 hex digits long (optionally prefixed with '0x')") }
