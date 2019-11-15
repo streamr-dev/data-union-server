@@ -40,12 +40,10 @@ const communityAddressArg = lastArg.endsWith("check_community.js") ? "" : lastAr
 
 async function start() {
     const provider = ETHEREUM_SERVER ? new JsonRpcProvider(ETHEREUM_SERVER) : getDefaultProvider(ETHEREUM_NETWORK)
-    try {
-        const url = provider.connection ? provider.connection.url : provider.providers[0].connection.url
-        log(`Connecting to ${url}`)
-    } catch (e) { /*ignore*/ }
-    const network = await provider.getNetwork()
-    log(`Network is ${JSON.stringify(network)}`)
+    const network = await provider.getNetwork().catch(e => {
+        throw new Error(`Connecting to Ethereum failed, env ETHEREUM_SERVER=${ETHEREUM_SERVER} ETHEREUM_NETWORK=${ETHEREUM_NETWORK}`, e)
+    })
+    log("Connected to Ethereum network: ", JSON.stringify(network))
 
     const communityAddress =
         await throwIfSetButNotContract(provider, communityAddressArg, "command-line argument (Community contract Ethereum address)") ||

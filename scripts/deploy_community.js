@@ -42,11 +42,10 @@ async function start() {
         ETHEREUM_NETWORK ? getDefaultProvider(ETHEREUM_NETWORK) : null
     if (!provider) { throw new Error("Must supply either ETHEREUM_SERVER or ETHEREUM_NETWORK") }
 
-    try {
-        const url = provider.connection ? provider.connection.url : provider.providers[0].connection.url
-        log(`Connecting to ${url}`)
-    } catch (e) { /*ignore*/ }
-    const network = await provider.getNetwork()
+    const network = await provider.getNetwork().catch(e => {
+        throw new Error(`Connecting to Ethereum failed, env ETHEREUM_SERVER=${ETHEREUM_SERVER} ETHEREUM_NETWORK=${ETHEREUM_NETWORK}`, e)
+    })
+    log("Connected to Ethereum network: ", JSON.stringify(network))
 
     const operatorAddress = throwIfBadAddress(OPERATOR_ADDRESS, "env variable OPERATOR_ADDRESS")
     const tokenAddress = await throwIfNotContract(provider, TOKEN_ADDRESS, "env variable TOKEN_ADDRESS")
