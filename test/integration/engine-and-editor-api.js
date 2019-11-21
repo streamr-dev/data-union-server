@@ -55,8 +55,8 @@ describe("Community product demo but through a running E&E instance", () => {
         console.log("--- Running start_server.js ---")
         operatorProcess = spawn(process.execPath, ["scripts/start_server.js"], {
             env: {
-                STREAMR_WS_URL: streamrWs,
-                STREAMR_HTTP_URL: streamrHttp,
+                STREAMR_WS_URL,
+                STREAMR_HTTP_URL,
                 ETHEREUM_SERVER,
                 OPERATOR_PRIVATE_KEY,
                 TOKEN_ADDRESS,
@@ -194,7 +194,7 @@ describe("Community product demo but through a running E&E instance", () => {
         console.log("1.4) Create joinPartStream")   // done inside deployCommunity below
         console.log("1.5) Deploy CommunityProduct contract")
         const wallet = new Wallet(privateKey, ganacheProvider)
-        const nodeAddress = getAddress(streamrNodeAddress)
+        const nodeAddress = getAddress(STREAMR_NODE_ADDRESS)
         const communityContract = await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, ADMIN_FEE, console.log, config.streamrWsUrl, config.streamrHttpUrl)
         const communityAddress = communityContract.address
 
