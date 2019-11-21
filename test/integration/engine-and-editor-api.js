@@ -58,13 +58,8 @@ describe("Community product demo but through a running E&E instance", () => {
                 STREAMR_WS_URL: streamrWs,
                 STREAMR_HTTP_URL: streamrHttp,
                 ETHEREUM_SERVER,
-<<<<<<< HEAD
-                ETHEREUM_PRIVATE_KEY,
-                //TOKEN_ADDRESS,
-=======
                 OPERATOR_PRIVATE_KEY,
                 TOKEN_ADDRESS,
->>>>>>> 55391cd... Changed ETHEREUM_PRIVATE_KEY -> OPERATOR_PRIVATE_KEY where it means the server's key
                 STORE_DIR,
                 WEBSERVER_PORT,
                 BLOCK_FREEZE_SECONDS,
