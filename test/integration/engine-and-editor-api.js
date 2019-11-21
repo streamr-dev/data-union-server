@@ -22,15 +22,15 @@ const STORE_DIR = __dirname + `/test-store-${+new Date()}`
 const BLOCK_FREEZE_SECONDS = 1
 const ADMIN_FEE = 0.2
 
-// settings compatible with streamr-docker-dev, TODO: read from env or add to CONFIG?
-const WEBSERVER_PORT = 8085
-const ETHEREUM_SERVER = "http://localhost:8545"
-const ETHEREUM_PRIVATE_KEY = "0x5e98cce00cff5dea6b454889f359a4ec06b9fa6b88e9d69b86de8e1c81887da0"    // ganache 0, TODO: try another?
-//const ETHEREUM_PRIVATE_KEY = "0xe5af7834455b7239881b85be89d905d6881dcb4751063897f12be1b0dd546bdb"
-//const TOKEN_ADDRESS = "0xbAA81A0179015bE47Ad439566374F2Bae098686F"
-//const MARKETPLACE_ADDRESS = "0xEAA002f7Dc60178B6103f8617Be45a9D3df659B6"
-
-const { streamrWs, streamrHttp, streamrNodeAddress } = require("./CONFIG")
+const {
+    STREAMR_WS_URL,
+    STREAMR_HTTP_URL,
+    STREAMR_NODE_ADDRESS,
+    ETHEREUM_SERVER,
+    OPERATOR_PRIVATE_KEY,
+    TOKEN_ADDRESS,
+    WEBSERVER_PORT,
+} = require("./CONFIG")
 
 /**
  * Same as community-product-demo.js except only through E&E APIs,
@@ -55,11 +55,11 @@ describe("Community product demo but through a running E&E instance", () => {
         console.log("--- Running start_server.js ---")
         operatorProcess = spawn(process.execPath, ["scripts/start_server.js"], {
             env: {
-                STREAMR_WS_URL: streamrWs,
-                STREAMR_HTTP_URL: streamrHttp,
+                STREAMR_WS_URL,
+                STREAMR_HTTP_URL,
                 ETHEREUM_SERVER,
-                ETHEREUM_PRIVATE_KEY,
-                //TOKEN_ADDRESS,
+                OPERATOR_PRIVATE_KEY,
+                TOKEN_ADDRESS,
                 STORE_DIR,
                 WEBSERVER_PORT,
                 BLOCK_FREEZE_SECONDS,
@@ -75,7 +75,7 @@ describe("Community product demo but through a running E&E instance", () => {
 
         return {
             ganacheProvider: new JsonRpcProvider(ETHEREUM_SERVER),
-            adminPrivateKey: ETHEREUM_PRIVATE_KEY,
+            adminPrivateKey: OPERATOR_PRIVATE_KEY,
             privateKey: "0xe5af7834455b7239881b85be89d905d6881dcb4751063897f12be1b0dd546bdb", // ganache 1
             address: "0x4178baBE9E5148c6D5fd431cD72884B07Ad855a0",
         }
@@ -194,7 +194,7 @@ describe("Community product demo but through a running E&E instance", () => {
         console.log("1.4) Create joinPartStream")   // done inside deployCommunity below
         console.log("1.5) Deploy CommunityProduct contract")
         const wallet = new Wallet(privateKey, ganacheProvider)
-        const nodeAddress = getAddress(streamrNodeAddress)
+        const nodeAddress = getAddress(STREAMR_NODE_ADDRESS)
         const communityContract = await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, ADMIN_FEE, console.log, config.streamrWsUrl, config.streamrHttpUrl)
         const communityAddress = communityContract.address
 

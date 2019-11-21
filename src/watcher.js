@@ -16,7 +16,7 @@ const MonoplasmaJson = require("../build/Monoplasma.json")
 /**
  * Rewrote ethers.js parseLog mainly because of naming incompatibilities (also use of "this"... hrrr...)
  * This one pulls an ugly one and mutates incoming logs (adds "event" and "args")
- * It's here only until v5 is out: "if you use v5, you can use contract.queryFilter, which will include the parsed events" https://github.com/ethers-io/ethers.js/issues/37
+ * It's here only until ethers.js v5 is out: "if you use v5, you can use contract.queryFilter, which will include the parsed events" https://github.com/ethers-io/ethers.js/issues/37
  *
  * @see https://github.com/ethers-io/ethers.js/blob/master/utils/interface.js#L357
  * @param {utils.Interface} interface from ethers Contract.interface
