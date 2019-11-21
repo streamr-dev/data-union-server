@@ -59,11 +59,6 @@ describe("MonoplasmaWatcher", () => {
             logger: { log },
             //blockTime: 1,
         }))
-        /*
-        const ganache = await startGanache(8678, () => {}, null, 1)
-        const provider = new JsonRpcProvider(ganache.httpUrl)
-        const secretKey = ganache.privateKeys[0]
-        */
 
         provider.pollingInterval = 500
         wallet = new Wallet(secretKey, provider)

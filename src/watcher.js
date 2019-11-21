@@ -16,7 +16,7 @@ const MonoplasmaJson = require("../build/Monoplasma.json")
 /**
  * Rewrote ethers.js parseLog mainly because of naming incompatibilities (also use of "this"... hrrr...)
  * This one pulls an ugly one and mutates incoming logs (adds "event" and "args")
- * It's here only until v5 is out: "if you use v5, you can use contract.queryFilter, which will include the parsed events" https://github.com/ethers-io/ethers.js/issues/37
+ * It's here only until ethers.js v5 is out: "if you use v5, you can use contract.queryFilter, which will include the parsed events" https://github.com/ethers-io/ethers.js/issues/37
  *
  * @see https://github.com/ethers-io/ethers.js/blob/master/utils/interface.js#L357
  * @param {utils.Interface} interface from ethers Contract.interface
@@ -31,6 +31,28 @@ function parseLogs(interface, logs) {
                 log.args = event.decode(log.data, log.topics)
             }
         }
+    }
+}
+
+/** TODO: this might belong to state? getLatestBlockSummary, getLatestWithdrawableBlockSummary
+ * @typedef {Object} BlockSummary
+ * @property {Number} blockNumber
+ * @property {Number} timestamp when the Monoplasma block was stored, NOT Ethereum block timestamp
+ * @property {Number} memberCount
+ * @property {Number} totalEarnings
+ */
+
+/**
+ * Don't send the full member list back, only member count
+ * @returns {BlockSummary}
+ */
+function summarizeBlock(block) {
+    if (!block || !block.members) { block = { members: [] } }
+    return {
+        blockNumber: block.blockNumber || 0,
+        timestamp: block.timestamp || 0,
+        memberCount: block.members.length,
+        totalEarnings: block.totalEarnings || 0,
     }
 }
 
@@ -284,5 +306,24 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
     async getContractTokenBalance() {
         const balance = await this.token.methods.balanceOf(this.state.contractAddress).call()
         return balance
+    }
+
+    /**
+     * Returns the "real-time plasma" stats
+     * @returns {Object} summary of different stats and config of the community the watcher is watching
+     */
+    getStats() {
+        const joinPartStreamId = this.channel.stream.id
+        const memberCount = this.plasma.getMemberCount()
+        const totalEarnings = this.plasma.getTotalRevenue()
+        const latestBlock = summarizeBlock(this.plasma.getLatestBlock())
+        const latestWithdrawableBlock = summarizeBlock(this.plasma.getLatestWithdrawableBlock())
+        return {
+            memberCount,
+            totalEarnings,
+            latestBlock,
+            latestWithdrawableBlock,
+            joinPartStreamId,
+        }
     }
 }

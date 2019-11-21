@@ -1,28 +1,18 @@
 const express = require("express")
-const BN = require("bn.js")
-const ethers = require("ethers")
+const {
+    utils: { getAddress, BigNumber }
+} = require("ethers")
 
 /** Convert Ethereum address into checksummed case */
 function parseAddress(address) {
     try {
-        return ethers.utils.getAddress(address)
+        return getAddress(address)
     } catch (e) {
         return null
     }
 }
 
-/** Don't send the full member list back, only member count */
-function blockToApiObject(block) {
-    if (!block || !block.members) { block = { members: [] } }
-    return {
-        blockNumber: block.blockNumber || 0,
-        timestamp: block.timestamp || 0,
-        memberCount: block.members.length,
-        totalEarnings: block.totalEarnings || 0,
-    }
-}
-
-/** @type {(server: CommunityProductServer, logFunc: Function<String>) => Function} */
+/** @type {(server: CommunityProductServer, logFunc: Function<String>) => express.Router} */
 module.exports = (server, logFunc) => {
     const log = logFunc || process.env.QUIET ? () => {} : console.log
     const router = express.Router()
@@ -63,20 +53,8 @@ module.exports = (server, logFunc) => {
 
     router.get("/:communityAddress/stats", parseOperator, (req, res) => {
         log(`HTTP ${req.params.communityAddress}> Requested community stats`)
-        const plasma = req.operator.watcher.plasma
-        const channel = req.operator.watcher.channel
-        const joinPartStreamId = channel.stream.id
-        const memberCount = plasma.getMemberCount()
-        const totalEarnings = plasma.getTotalRevenue()
-        const latestBlock = blockToApiObject(plasma.getLatestBlock())
-        const latestWithdrawableBlock = blockToApiObject(plasma.getLatestWithdrawableBlock())
-        res.send({
-            memberCount,
-            totalEarnings,
-            latestBlock,
-            latestWithdrawableBlock,
-            joinPartStreamId,
-        })
+        const stats = req.operator.watcher.getStats()
+        res.send(stats)
     })
 
     router.get("/:communityAddress/members", parseOperator, (req, res) => {
@@ -107,7 +85,7 @@ module.exports = (server, logFunc) => {
         const memberWithdrawable = withdrawableBlock ? withdrawableBlock.members.find(m => m.address === address) || {} : {}
         member.recordedEarnings = memberFrozen.earnings || "0"
         member.withdrawableEarnings = memberWithdrawable.earnings || "0"
-        member.frozenEarnings = new BN(member.recordedEarnings).sub(new BN(member.withdrawableEarnings)).toString(10)
+        member.frozenEarnings = new BigNumber(member.recordedEarnings).sub(member.withdrawableEarnings).toString()
         if (member.withdrawableEarnings > 0) {
             member.withdrawableBlockNumber = withdrawableBlock.blockNumber
             plasma.getProofAt(address, withdrawableBlock.blockNumber).then(proof => {

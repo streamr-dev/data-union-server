@@ -22,6 +22,7 @@ const deployTestToken = require("../test/utils/deployTestToken")
 
 const CommunityProductServer = require("../src/server")
 const getCommunitiesRouter = require("../src/routers/communities")
+const getServerRouter = require("../src/routers/server")
 
 const {
     ETHEREUM_SERVER,            // explicitly specify server address
@@ -154,8 +155,9 @@ async function start() {
     const app = express()
     app.use(cors())
     app.use(bodyParser.json({limit: "50mb"}))
-    app.get("/config", (req, res) => { res.send(config) })
+    app.get("/config", (req, res) => { res.send(config) }) // TODO: remove
     app.use("/communities", getCommunitiesRouter(server))
+    app.use("/", getServerRouter(server))
     app.listen(port, () => log(`Web server started at ${serverURL}`))
 
     await sleep(200)

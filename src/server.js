@@ -207,6 +207,10 @@ module.exports = class CommunityProductServer {
         const operator = new MonoplasmaOperator(this.wallet, operatorChannel, operatorStore, log, error)
         await operator.start(config)
 
+        /* TODO: move start after adding community to this.communities, to enable seeing a "syncing" community
+        const community = {
+            state: "syncing",
+        */
         const community = {
             state: "running",
             address,
@@ -214,6 +218,10 @@ module.exports = class CommunityProductServer {
             joinPartStreamId: operatorChannel.stream.id,
         }
         this.communities[address] = community
+        /*
+        await operator.start(config)
+        community.state = "running"
+        */
         return community
     }
 }
