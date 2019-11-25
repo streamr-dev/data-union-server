@@ -34,16 +34,20 @@ jobs:
     #     - sleep 5m
     #     - docker ps
     #     - "npm run integration-tests"
-    - stage: "Build docker (dev)"
+    - stage: Build docker (Dev/Nightly)
       if: tag IS blank
       install: true
-      env:
-        - OWNER=streamr
-        - IMAGE_NAME=streamr-community-products
-        - TAG=dev
       script:
-        - docker build -t $OWNER/$IMAGE_NAME:$TAG .
+      - docker build -t $OWNER/$IMAGE_NAME:taggit .
       deploy:
-        - provider: script
-          script: bash .travis_scripts/deploy_docker.sh staging
+      - provider: script
+        script: bash .travis_scripts/deploy_docker.sh dev
+    - stage: Build docker (Production)
+      if: tag IS present
+      install: true
+      script:
+      - docker build -t $OWNER/$IMAGE_NAME:taggit .
+      deploy:
+      - provider: script
+        script: bash .travis_scripts/deploy_docker.sh production
 
