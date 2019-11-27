@@ -118,7 +118,7 @@ describe("Community product demo but through a running E&E instance", () => {
         console.log("1.1) Get Streamr session token")
         /*
         const apiKey = "tester1-api-key"
-        const loginResponse = await fetch(`${streamrHttp}/login/apikey`, {
+        const loginResponse = await fetch(`${STREAMR_HTTP_URL}/login/apikey`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ apiKey }),
@@ -128,8 +128,8 @@ describe("Community product demo but through a running E&E instance", () => {
         */
         const client = new StreamrClient({
             auth: { privateKey },
-            url: streamrWs,
-            restUrl: streamrHttp,
+            url: STREAMR_WS_URL,
+            restUrl: STREAMR_HTTP_URL,
         })
         const sessionToken = await client.session.sessionTokenPromise
         console.log("Session token: " + sessionToken)
@@ -137,14 +137,14 @@ describe("Community product demo but through a running E&E instance", () => {
 
         // wrap fetch; with the Authorization header the noise is just too much...
         async function GET(url) {
-            return fetch(streamrHttp + url, {
+            return fetch(STREAMR_HTTP_URL + url, {
                 headers: {
                     "Authorization": `Bearer ${sessionToken}`
                 }
             }).then(resp => resp.json())
         }
         async function POST(url, bodyObject) {
-            return fetch(streamrHttp + url, {
+            return fetch(STREAMR_HTTP_URL + url, {
                 method: "POST",
                 body: JSON.stringify(bodyObject),
                 headers: {
@@ -195,7 +195,7 @@ describe("Community product demo but through a running E&E instance", () => {
         console.log("1.5) Deploy CommunityProduct contract")
         const wallet = new Wallet(privateKey, ganacheProvider)
         const nodeAddress = getAddress(STREAMR_NODE_ADDRESS)
-        const communityContract = await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, ADMIN_FEE, console.log, config.streamrWsUrl, config.streamrHttpUrl)
+        const communityContract = await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, ADMIN_FEE, console.log, config.STREAMR_WS_URLUrl, config.STREAMR_HTTP_URLUrl)
         const communityAddress = communityContract.address
 
         console.log("1.6) Wait until Operator starts")
@@ -211,7 +211,7 @@ describe("Community product demo but through a running E&E instance", () => {
 
         console.log("1.7) Set beneficiary in Product DB entry")
         product.beneficiaryAddress = communityAddress
-        const putResponse = await fetch(`${streamrHttp}/products/${productId}`, {
+        const putResponse = await fetch(`${STREAMR_HTTP_URL}/products/${productId}`, {
             method: "PUT",
             headers: {
                 "Authorization": `Bearer ${sessionToken}`,
@@ -246,11 +246,11 @@ describe("Community product demo but through a running E&E instance", () => {
             const memberAddress = computeAddress(privateKey)
             const tempClient = new StreamrClient({
                 auth: { privateKey },
-                url: streamrWs,
-                restUrl: streamrHttp,
+                url: STREAMR_WS_URL,
+                restUrl: STREAMR_HTTP_URL,
             })
             const memberSessionToken = await tempClient.session.sessionTokenPromise
-            const joinResponse = await fetch(`${streamrHttp}/communities/${communityAddress}/joinRequests`, {
+            const joinResponse = await fetch(`${STREAMR_HTTP_URL}/communities/${communityAddress}/joinRequests`, {
                 method: "POST",
                 body: JSON.stringify({
                     memberAddress,
