@@ -94,6 +94,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         this.log(`Connected to Ethereum network: ${JSON.stringify(network)}`)
         if (network.chainId === 1) {
             this.blockTimestampCache = require("../mainnet_timestamp_cache.json")
+            this.log(`Loaded ${this.blockTimestampCache.keys().length} block timestamps from disk`)
         }
 
         this.eth.on("block", blockNumber => {
