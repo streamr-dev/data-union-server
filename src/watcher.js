@@ -90,6 +90,12 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         // TODO: this isn't even used; maybe should throw if it's different from what contract gives?
         throwIfSetButBadAddress(config.adminAddress, "adminAddress from initial config")
 
+        const network = await this.eth.getNetwork()
+        this.log(`Connected to Ethereum network: ${JSON.stringify(network)}`)
+        if (network.chainId === 1) {
+            this.blockTimestampCache = require("../mainnet_timestamp_cache.json")
+        }
+
         this.eth.on("block", blockNumber => {
             if (blockNumber % 10 === 0) { this.log(`Block ${blockNumber} observed`) }
             this.state.lastObservedBlockNumber = blockNumber
