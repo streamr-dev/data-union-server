@@ -18,7 +18,25 @@ module.exports = (server, logFunc) => {
     const router = express.Router()
 
     router.get("/", (req, res) => {
-        res.send(Object.keys(server.communities))
+        log("Requested server summary")
+        const result = {
+            config: server.operatorConfig,
+            communities: {},
+        }
+        for (const [address, c] of Object.entries(server.communities)) {
+            // is the community already syncing or running?
+            if (c.operator) {
+                const stats = c.operator.watcher.getStats()
+                result.communities[address] = stats
+            } else {
+                result.communities[address] = {
+                    memberCount: { total: 0, active: 0, inactive: 0 },
+                    totalEarnings: 0,
+                }
+            }
+            result.communities[address].state = c.state
+        }
+        res.send(result)
     })
 
     function parseOperator(req, res, next) {

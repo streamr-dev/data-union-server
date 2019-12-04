@@ -91,8 +91,33 @@ describe("Community product server /communities router", () => {
     })
 
     it("GET /", async () => {
-        const resp = await fetch(`${serverURL}/communities/${community.address}`).then(res => res.json())
-        assert.strictEqual(resp.status, "ok")
+        const resp = await fetch(`${serverURL}/communities`).then(res => res.json())
+        assert.deepStrictEqual(resp, {
+            config: {
+                tokenAddress: "0x8688966AE53807c273D8B9fCcf667F0A0a91b1d3",
+                operatorAddress: "0x8D7f03FdE1A626223364E592740a233b72395235"
+            },
+            communities: {
+                "0xfb5755567e071663F2DA276aC1D6167B093f00f4": {
+                    memberCount: { total: 2, active: 2, inactive: 0 },
+                    totalEarnings: "70",
+                    latestBlock: {
+                        blockNumber: 0,
+                        timestamp: 0,
+                        memberCount: 0,
+                        totalEarnings: 0
+                    },
+                    latestWithdrawableBlock: {
+                        blockNumber: 0,
+                        timestamp: 0,
+                        memberCount: 0,
+                        totalEarnings: 0
+                    },
+                    joinPartStreamId: "dummy-stream-for-router-test",
+                    state: "running"
+                }
+            }
+        })
     })
 
     it("GET /stats", async () => {
