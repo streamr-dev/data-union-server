@@ -169,10 +169,11 @@ module.exports = class CommunityProductServer {
         const address = getAddress(communityAddress)
         const contract = new Contract(address, CommunityProductJson.abi, this.eth)
 
-        // check if joinPartStream is valid (TODO: move to Channel?)
         const joinPartStreamId = await contract.joinPartStream()
-        const channel = new StreamrChannel(this.wallet.privateKey, joinPartStreamId, this.operatorConfig.streamrWsUrl, this.operatorConfig.streamrHttpUrl)
-        await channel.client.getStream(joinPartStreamId).catch(e => { throw new Error(`joinPartStream ${joinPartStreamId} in CommunityProduct contract at ${communityAddress} is not found in Streamr (error: ${e.stack.toString()})`) })
+        const channel = new StreamrChannel(joinPartStreamId, this.operatorConfig.streamrWsUrl, this.operatorConfig.streamrHttpUrl)
+
+        // TODO: ensure joinPartStream is valid. That function should be in channel
+        //await channel.client.getStream(joinPartStreamId).catch(e => { throw new Error(`joinPartStream ${joinPartStreamId} in CommunityProduct contract at ${communityAddress} is not found in Streamr (error: ${e.stack.toString()})`) })
 
         return channel
     }

@@ -15,8 +15,8 @@ describe("Channel", () => {
     let streamId
     before(async function () {
         this.timeout(5000)
-        const joinPartChannel = new Channel(privateKey, null, streamrWs, streamrHttp)
-        await joinPartChannel.startServer()
+        const joinPartChannel = new Channel(null, streamrWs, streamrHttp)
+        await joinPartChannel.startServer(privateKey)
         streamId = joinPartChannel.stream.id
         joinPartChannel.close()
     })

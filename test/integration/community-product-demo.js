@@ -20,7 +20,7 @@ const CommunityProduct = require("../../build/CommunityProduct.json")
 
 const STORE_DIR = __dirname + `/test-store-${+new Date()}`
 const GANACHE_PORT = 8548
-const WEBSERVER_PORT = 8880
+const WEBSERVER_PORT = 8085//8880
 const BLOCK_FREEZE_SECONDS = 1
 const ADMIN_FEE = 0
 
@@ -86,7 +86,7 @@ describe("Community product demo", () => {
     // for pre-started server, so to be able to debug also the server while running tests
     async function connectToLocalGanache() {    //eslint-disable-line no-unused-vars
         return {
-            ganacheProvider: new JsonRpcProvider(`http://localhost:${GANACHE_PORT}`),
+            ganacheProvider: new JsonRpcProvider("http://localhost:8545"),
             adminPrivateKey: "0x5e98cce00cff5dea6b454889f359a4ec06b9fa6b88e9d69b86de8e1c81887da0",  // ganache 0
             privateKey: "0xe5af7834455b7239881b85be89d905d6881dcb4751063897f12be1b0dd546bdb", // ganache 1
             address: "0x4178baBE9E5148c6D5fd431cD72884B07Ad855a0",
@@ -101,7 +101,8 @@ describe("Community product demo", () => {
             adminPrivateKey,
             privateKey,
             address,
-        } = await startServer() // connectToLocalGanache()
+        } = await startServer()
+        //} = await connectToLocalGanache()
 
         console.log("--- Server started, getting the operator config ---")
         const config = await fetch(`http://localhost:${WEBSERVER_PORT}/config`).then(resp => resp.json())
@@ -143,8 +144,8 @@ describe("Community product demo", () => {
             "0x4d4bb0980c214b8f4e24d7d58ccf5f8a92f70d76",
         ]
         const joinPartStreamId = await communityContract.joinPartStream()
-        const channel = new StreamrChannel(privateKey, joinPartStreamId, config.streamrWsUrl, config.streamrHttpUrl)
-        await channel.startServer()
+        const channel = new StreamrChannel(joinPartStreamId, config.streamrWsUrl, config.streamrHttpUrl)
+        await channel.startServer(privateKey)
         channel.publish("join", userList)
 
         let members = []

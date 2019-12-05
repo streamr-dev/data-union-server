@@ -118,8 +118,8 @@ async function start() {
 
     const contract = new Contract(config.contractAddress, CommunityProductJson.abi, this.eth)
     const joinPartStreamId = await contract.joinPartStream()
-    const adminChannel = new Channel(privateKey, joinPartStreamId, config.streamrWsUrl, config.streamrHttpUrl)
-    await adminChannel.startServer()
+    const adminChannel = new Channel(joinPartStreamId, config.streamrWsUrl, config.streamrHttpUrl)
+    await adminChannel.startServer(privateKey)
     const operatorChannel = new Channel(privateKey, config.joinPartStreamId, config.streamrWsUrl, config.streamrHttpUrl)
     const operator = new Operator(wallet, operatorChannel, fileStore, log, error)
     await operator.start(config)

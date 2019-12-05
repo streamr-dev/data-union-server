@@ -10,8 +10,8 @@ const streamId = process.env.__JOINPART_STREAM_ID
 
 async function start() {
     console.log("Starting server...")
-    const channel = new Channel(privateKey, streamId, streamrWs, streamrHttp)
-    await channel.startServer()
+    const channel = new Channel(streamId, streamrWs, streamrHttp)
+    await channel.startServer(privateKey)
     console.log("Stream ID", channel.stream.id)
 
     await sleep(200)

@@ -183,8 +183,8 @@ async function start() {
 
         log("Adding members...")
         const streamId = await contract.joinPartStream()
-        const channel = new Channel(wallet.privateKey, streamId, config.streamrWsUrl, config.streamrHttpUrl)
-        await channel.startServer()
+        const channel = new Channel(streamId, config.streamrWsUrl, config.streamrHttpUrl)
+        await channel.startServer(wallet.privateKey)
         await channel.publish("join", [
             wallet.address,
             "0xdc353aa3d81fc3d67eb49f443df258029b01d8ab",

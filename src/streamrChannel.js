@@ -1,6 +1,7 @@
 const EventEmitter = require("events")
 const StreamrClient = require("streamr-client")
-const { utils } = require("ethers")
+const { utils: { computeAddress } } = require("ethers")
+const debug = require("debug")("CPS::StreamrChannel")
 
 /**
  * @typedef {string} State
@@ -25,42 +26,66 @@ const State = {
 module.exports = class StreamrChannel extends EventEmitter {
     /**
      * @param {string} privateKey to use for authenticating with Streamr
-     * @param {string} joinPartStreamId to try to connect to. If omitted, startServer will create a new stream.
+     * @param {string} joinPartStreamId to try to connect to
      * @param {string} streamrWsUrl default is "wss://www.streamr.com/api/v1/ws"
      * @param {string} streamrHttpUrl default is "https://www.streamr.com/api/v1"
      */
-    constructor(privateKey, joinPartStreamId, streamrWsUrl, streamrHttpUrl) {
-        if (!privateKey) { throw new Error("Must supply a private key to new StreamrChannel") }
+    constructor(joinPartStreamId, streamrWsUrl, streamrHttpUrl) {
         super()
-        const opts = {
-            auth: { privateKey },
-            retryResendAfter: 1000,
-        }
-        if (streamrWsUrl) { opts.url = streamrWsUrl }
-        if (streamrHttpUrl) { opts.restUrl = streamrHttpUrl }
-        this.client = new StreamrClient(opts)
-        this.ethereumAddress = utils.computeAddress(privateKey)
+        this.clientOptions = { retryResendAfter: 1000 }
+        if (streamrWsUrl) { this.clientOptions.url = streamrWsUrl }
+        if (streamrHttpUrl) { this.clientOptions.restUrl = streamrHttpUrl }
         this.joinPartStreamId = joinPartStreamId
         this.mode = State.CLOSED
+    }
+
+    // TODO: use StreamrClient.deployCommunity instead
+    static async create(privateKey, streamrWsUrl, streamrHttpUrl) {
+
+        const clientOptions = Object.assign({}, this.clientOptions, {
+            auth: { privateKey }
+        })
+        const client = new StreamrClient(clientOptions)
+
+        const name = `Join-Part-${this.ethereumAddress.slice(0, 10)}-${Date.now()}`
+        const stream = await client.createStream({ name })
+        debug(`Stream created: ${JSON.stringify(stream.toObject())}`)
+
+        const res1 = await stream.grantPermission("read", null)
+        debug(`Grant read permission response from server: ${JSON.stringify(res1)}`)
+        //TODO, or just use deployCommunity
+        //const res2 = await stream.grantPermission("write", streamrNodeAddress)
+        //debug(`Grant write permission response to ${streamrNodeAddress} from server: ${JSON.stringify(res2)}`)
+
+        const channel = new StreamrChannel(stream.id, streamrWsUrl, streamrHttpUrl)
+        return channel
+    }
+
+    static async open(joinPartStreamId, streamrWsUrl, streamrHttpUrl) {
+        // check joinPartStream exists
+        const client = new StreamrClient(this.clientOptions)
+        await client.getStream(joinPartStreamId).catch(e => { throw new Error(`joinPartStream ${joinPartStreamId} is not found in Streamr (error: ${e.stack.toString()})`) })
+        await client.ensureDisconnected()
+
+        return new StreamrChannel(joinPartStreamId, streamrWsUrl, streamrHttpUrl)
     }
 
     /**
      * After this, call .publish(type, data) to send
      */
-    async startServer() {
+    async startServer(privateKey) {
         if (this.mode) { return Promise.reject(new Error(`Already started as ${this.mode}`))}
+        if (!privateKey) { throw new Error("Must supply a private key to startServer") }
+        this.ethereumAddress = computeAddress(privateKey)
+        debug(`Starting server as ${this.ethereumAddress}`)
+
+        this.clientOptions.auth = { privateKey }
+        this.client = new StreamrClient(this.clientOptions)
 
         this.messageNumber = +Date.now()
-        if (this.joinPartStreamId) {
-            this.stream = await this.client.getStream(this.joinPartStreamId)
-        } else {
-            const name = `Join-Part-${this.ethereumAddress.slice(0, 10)}-${Date.now()}`
-            this.stream = await this.client.createStream({ name })
+        this.stream = await this.client.getStream(this.joinPartStreamId)
 
-            // every watcher should be able to read joins and parts in order to sync the state
-            await this.stream.grantPermission("read", null)
-        }
-
+        debug(`Writing to stream ${JSON.stringify(this.stream.toObject())}`)
         this.mode = State.SERVER
     }
 
@@ -81,13 +106,14 @@ module.exports = class StreamrChannel extends EventEmitter {
 
     /**
      * Start listening to events
-     * @param {Number} syncStartTimestamp resend messages starting from (0 if omitted)
+     * @param {Number} syncStartTimestamp resend messages starting from (from beginning if omitted)
      * @returns {Promise<ResendResponseResent>} resolves when all events up to now are received
      */
     async listen(syncStartTimestamp) {
         if (this.mode) { return Promise.reject(new Error(`Already started as ${this.mode}`))}
 
-        this.stream = await this.client.getStream(this.joinPartStreamId)   // will throw if joinPartStreamId is bad
+        this.client = new StreamrClient(this.clientOptions)
+        this.stream = await this.client.getStream(this.joinPartStreamId) // will throw if joinPartStreamId is bad
 
         this.handlers = {}
         this.queue = []
@@ -120,13 +146,11 @@ module.exports = class StreamrChannel extends EventEmitter {
     }
 
     /** Close the channel */
-    close() {
-        if (!this.mode) { throw new Error("Can't close, already closed")}
+    async close() {
+        if (this.mode === State.CLOSED) { throw new Error("Can't close, already closed")}
         this.emit("close")
         this.removeAllListeners()
-        if (this.client.connection.state !== "disconnected") {
-            this.client.disconnect()
-        }
+        await this.client.ensureDisconnected()
         this.mode = State.CLOSED
     }
 }
