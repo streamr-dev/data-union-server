@@ -14,4 +14,5 @@ new StreamrClient({ retryResendAfter: 1000 }).subscribe({
     message.addresses.forEach(address => {
         console.log(`${message.type} ${address}`)
     })
-})
+}).on("resent", () => process.exit(0))
+setTimeout(() => process.exit(1), 10 * 60 * 1000)
