@@ -71,7 +71,7 @@ async function start() {
     const channel = await StreamrChannel.open(joinPartStreamId, config.streamrWsUrl, config.streamrHttpUrl)
 
     log("Starting the MonoplasmaWatcher")
-    const watcher = new MonoplasmaWatcher(provider, channel, fileStore, log, error)
+    const watcher = new MonoplasmaWatcher(provider, channel, fileStore)
     await watcher.start(config)
 
     log("Starting web server...")

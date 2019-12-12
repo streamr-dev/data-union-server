@@ -1,24 +1,29 @@
 const { Contract } = require("ethers")
 
+const { throwIfBadAddress } = require("./utils/checkArguments")
+
 const MonoplasmaState = require("./state")
 const MonoplasmaWatcher = require("./watcher")
 
 const MonoplasmaJson = require("../build/Monoplasma.json")
 
+const debug = require("debug")
+
 module.exports = class MonoplasmaValidator {
-    constructor(watchedAccounts, wallet, joinPartChannel, store, logFunc, errorFunc) {
+    constructor(watchedAccounts, wallet, joinPartChannel, store) {
         this.watchedAccounts = watchedAccounts
         this.wallet = wallet
-        this.watcher = new MonoplasmaWatcher(wallet.provider, joinPartChannel, store, logFunc, errorFunc)
+        this.watcher = new MonoplasmaWatcher(wallet.provider, joinPartChannel, store)
 
         this.eventQueue = []
         this.lastSavedBlock = null
     }
 
     async start(config) {
-        await this.watcher.start()
-        this.contract = new Contract(this.watcher.state.contractAddress, MonoplasmaJson.abi, this.wallet)
+        throwIfBadAddress(config.operatorAddress, "MonoplasmaOperator argument config.operatorAddress")
+        this.log = debug("CPS::validator::" + config.contractAddress)
 
+        this.contract = new Contract(config.contractAddress, MonoplasmaJson.abi, this.wallet)
         await this.watcher.start(config)
 
         this.validatedPlasma = new MonoplasmaState(0, [], {
@@ -52,6 +57,7 @@ module.exports = class MonoplasmaValidator {
             this.lastValidatedBlock = blockNumber
             this.lastValidatedMembers = this.watchedAccounts.map(address => this.validatedPlasma.getMember(address))
         } else {
+            // TODO: this.emit()?
             this.log(`WARNING: Discrepancy detected @ ${blockNumber}!`)
             // TODO: recovery attempt logic before gtfo and blowing up everything?
             // TODO: needs more research into possible and probable failure modes

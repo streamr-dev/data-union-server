@@ -202,10 +202,8 @@ module.exports = class CommunityProductServer {
 
         const operatorChannel = await this.getChannelFor(address)
         const operatorStore = await this.getStoreFor(address)
-        const log = (...args) => { this.log(`${address}> `, ...args) }
-        const error = (e, ...args) => { this.error(e, `\n${address}> `, ...args) }
         const config = Object.assign({}, this.operatorConfig, { contractAddress: address })
-        const operator = new MonoplasmaOperator(this.wallet, operatorChannel, operatorStore, log, error)
+        const operator = new MonoplasmaOperator(this.wallet, operatorChannel, operatorStore)
         await operator.start(config)
 
         /* TODO: move start after adding community to this.communities, to enable seeing a "syncing" community
