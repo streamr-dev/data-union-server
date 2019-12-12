@@ -65,7 +65,7 @@ describe("MonoplasmaWatcher", () => {
             await provider.send("evm_mine")
         }
 
-        joinPartChannel = new MockStreamrChannel(secretKey, "dummy-stream-for-watcher-test")
+        joinPartChannel = new MockStreamrChannel("dummy-stream-for-watcher-test")
         store = mockStore(startState, initialBlock, log)
 
         log("Deploying test token and Community contract...")
