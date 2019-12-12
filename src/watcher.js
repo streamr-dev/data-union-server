@@ -149,6 +149,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         // replay and cache messages until in sync
         // TODO: cache only starting from given block (that operator/validator have loaded state from store)
         this.channel.on("message", (type, addresses, meta) => {
+            this.log(`Message received: ${type} ${addresses}`)
             const addressList = addresses.map(utils.getAddress)
             const event = { type, addressList, timestamp: meta.messageId.timestamp }
             this.messageCache.push(event)
