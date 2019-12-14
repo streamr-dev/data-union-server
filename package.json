@@ -30,7 +30,7 @@
     "ganache-cli": "^6.7.0",
     "husky": "^3.0.5",
     "monoplasma": "0.1.9",
-    "streamr-client": "2.2.7"
+    "streamr-client": "3.0.0"
   },
   "devDependencies": {
     "eslint": "^5.16.0",
