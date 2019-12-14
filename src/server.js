@@ -113,12 +113,18 @@ module.exports = class CommunityProductServer {
                     eventDetectedAt: Date.now(),
                 }
 
-                this.communityIsRunning(address) // create the promise to prevent later creation
+                void this.communityIsRunning(address) // create the promise to prevent later (duplicate) creation
                 try {
                     const result = await this.startOperating(address)
                     this.communityIsRunningPromises[address].setRunning(result)
-                } catch (err) {
-                    this.communityIsRunningPromises[address].setFailed(err)
+                } catch (error) {
+                    this.communities[address] = {
+                        state: "failed",
+                        error,
+                        eventDetectedAt: this.communities[address].eventDetectedAt,
+                        failedAt: Date.now(),
+                    }
+                    this.communityIsRunningPromises[address].setFailed(error)
                 }
             } else {
                 this.log(`Detected a community for operator ${newOperatorAddress}, ignoring.`)
