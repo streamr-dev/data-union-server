@@ -175,11 +175,12 @@ module.exports = class CommunityProductServer {
         const address = getAddress(communityAddress)
         const contract = new Contract(address, CommunityProductJson.abi, this.eth)
 
+        // throws if joinPartStreamId doesn't exist
         const joinPartStreamId = await contract.joinPartStream()
         const channel = new StreamrChannel(joinPartStreamId, this.operatorConfig.streamrWsUrl, this.operatorConfig.streamrHttpUrl)
-
-        // TODO: ensure joinPartStream is valid. That function should be in channel
-        //await channel.client.getStream(joinPartStreamId).catch(e => { throw new Error(`joinPartStream ${joinPartStreamId} in CommunityProduct contract at ${communityAddress} is not found in Streamr (error: ${e.stack.toString()})`) })
+        if (!await channel.isValid()) {
+            throw new Error(`Faulty StreamrChannel("${joinPartStreamId}", "${this.operatorConfig.streamrWsUrl}", "${this.operatorConfig.streamrHttpUrl}")`)
+        }
 
         return channel
     }
@@ -206,7 +207,7 @@ module.exports = class CommunityProductServer {
             throw new Error(`startOperating: Community requesting operator ${operatorAddress}, not a job for me (${this.wallet.address})`)
         }
 
-        const operatorChannel = await this.getChannelFor(address)
+        const operatorChannel = await this.getChannelFor(address) // throws if joinPartStream doesn't exist
         const operatorStore = await this.getStoreFor(address)
         const config = Object.assign({}, this.operatorConfig, { contractAddress: address })
         const operator = new MonoplasmaOperator(this.wallet, operatorChannel, operatorStore)

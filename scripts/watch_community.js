@@ -67,8 +67,10 @@ async function start() {
     const contract = new Contract(contractAddress, CommunityProductJson.abi, provider)
 
     const joinPartStreamId = await contract.joinPartStream()
-    //const channel = new StreamrChannel(joinPartStreamId, config.streamrWsUrl, config.streamrHttpUrl)
-    const channel = await StreamrChannel.open(joinPartStreamId, config.streamrWsUrl, config.streamrHttpUrl)
+    const channel = new StreamrChannel(joinPartStreamId, config.streamrWsUrl, config.streamrHttpUrl)
+    if (!await channel.isValid()) {
+        throw new Error(`Faulty StreamrChannel("${joinPartStreamId}", "${config.streamrWsUrl}", "${config.streamrHttpUrl}")`)
+    }
 
     log("Starting the MonoplasmaWatcher")
     const watcher = new MonoplasmaWatcher(provider, channel, fileStore)

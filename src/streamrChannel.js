@@ -32,42 +32,24 @@ module.exports = class StreamrChannel extends EventEmitter {
      */
     constructor(joinPartStreamId, streamrWsUrl, streamrHttpUrl) {
         super()
-        this.clientOptions = { retryResendAfter: 1000 }
+        this.clientOptions = {
+            orderMessages: false,
+            retryResendAfter: 1000,
+        }
         if (streamrWsUrl) { this.clientOptions.url = streamrWsUrl }
         if (streamrHttpUrl) { this.clientOptions.restUrl = streamrHttpUrl }
         this.joinPartStreamId = joinPartStreamId
         this.mode = State.CLOSED
     }
 
-    // TODO: use StreamrClient.deployCommunity instead
-    static async create(privateKey, streamrWsUrl, streamrHttpUrl) {
-
-        const clientOptions = Object.assign({}, this.clientOptions, {
-            auth: { privateKey }
-        })
-        const client = new StreamrClient(clientOptions)
-
-        const name = `Join-Part-${this.ethereumAddress.slice(0, 10)}-${Date.now()}`
-        const stream = await client.createStream({ name })
-        debug(`Stream created: ${JSON.stringify(stream.toObject())}`)
-
-        const res1 = await stream.grantPermission("read", null)
-        debug(`Grant read permission response from server: ${JSON.stringify(res1)}`)
-        //TODO, or just use deployCommunity
-        //const res2 = await stream.grantPermission("write", streamrNodeAddress)
-        //debug(`Grant write permission response to ${streamrNodeAddress} from server: ${JSON.stringify(res2)}`)
-
-        const channel = new StreamrChannel(stream.id, streamrWsUrl, streamrHttpUrl)
-        return channel
-    }
-
-    static async open(joinPartStreamId, streamrWsUrl, streamrHttpUrl) {
-        // check joinPartStream exists
+    /**
+     * Just check if the joinPartStream exists
+     */
+    async isValid() {
         const client = new StreamrClient(this.clientOptions)
-        await client.getStream(joinPartStreamId).catch(e => { throw new Error(`joinPartStream ${joinPartStreamId} is not found in Streamr (error: ${e.stack.toString()})`) })
+        const res = await client.getStream(this.joinPartStreamId).catch(e => e)
         await client.ensureDisconnected()
-
-        return new StreamrChannel(joinPartStreamId, streamrWsUrl, streamrHttpUrl)
+        return !(res instanceof Error)
     }
 
     /**
@@ -81,11 +63,10 @@ module.exports = class StreamrChannel extends EventEmitter {
 
         this.clientOptions.auth = { privateKey }
         this.client = new StreamrClient(this.clientOptions)
-
-        this.messageNumber = +Date.now()
-        this.stream = await this.client.getStream(this.joinPartStreamId)
+        this.stream = await this.client.getStream(this.joinPartStreamId) // will throw if joinPartStreamId is bad
 
         debug(`Writing to stream ${JSON.stringify(this.stream.toObject())}`)
+        this.messageNumber = +Date.now()
         this.mode = State.SERVER
     }
 

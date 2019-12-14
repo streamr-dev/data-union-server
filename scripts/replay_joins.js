@@ -44,7 +44,7 @@ async function start() {
 
     const joinPartStreamId = await contract.joinPartStream()
     //const channel = new StreamrChannel(joinPartStreamId, config.streamrWsUrl, config.streamrHttpUrl)
-    const channel = await StreamrChannel.open(joinPartStreamId, config.streamrWsUrl, config.streamrHttpUrl)
+    const channel = new StreamrChannel(joinPartStreamId, config.streamrWsUrl, config.streamrHttpUrl)
 
     channel.on("join", addresses => {
         if (!Array.isArray(addresses)) {
