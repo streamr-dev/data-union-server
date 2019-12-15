@@ -84,7 +84,7 @@ describe("Community product demo but through a running E&E instance", () => {
     }
 
     // for pre-started start_server.js, so to be able to debug also the server in IDE while running tests
-    async function connectToLocalGanache() {    //eslint-disable-line no-unused-vars
+    function connectToLocalGanache() {    //eslint-disable-line no-unused-vars
         return {
             ganacheProvider: new JsonRpcProvider("http://localhost:8545"),
             adminPrivateKey: "0x5e98cce00cff5dea6b454889f359a4ec06b9fa6b88e9d69b86de8e1c81887da0",  // ganache 0
@@ -102,7 +102,7 @@ describe("Community product demo but through a running E&E instance", () => {
             privateKey,
             address,
         } = await startServer()
-        //} = await connectToLocalGanache()
+        // } = connectToLocalGanache()
 
         console.log("--- Server started, getting the operator config ---")
         // TODO: eliminate direct server communication (use /stats? Change EE?)
@@ -119,22 +119,13 @@ describe("Community product demo but through a running E&E instance", () => {
         console.log("1) Create a new Community product")
 
         console.log("1.1) Get Streamr session token")
-        /* API keys are going to be deprecated, use StreamrClient instead
-        const apiKey = "tester1-api-key"
-        const loginResponse = await fetch(`${streamrHttp}/login/apikey`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ apiKey }),
-        }).then(resp => resp.json())
-        console.log(`     Response: ${JSON.stringify(loginResponse)}`)
-        const sessionToken = loginResponse.token
-        */
         const client = new StreamrClient({
             auth: { privateKey },
             url: STREAMR_WS_URL,
             restUrl: STREAMR_HTTP_URL,
         })
         const sessionToken = await client.session.sessionTokenPromise
+        await client.ensureDisconnected()
         console.log("Session token: " + sessionToken)
         assert(sessionToken)
 
@@ -205,12 +196,12 @@ describe("Community product demo but through a running E&E instance", () => {
         const communityAddress = communityContract.address
 
         console.log("1.6) Wait until Operator starts")
-        let stats = { code: true }
+        let stats = { error: true }
         const statsTimeout = setTimeout(() => { throw new Error("Response from E&E: " + JSON.stringify(stats)) }, 100000)
         let sleepTime = 100
-        while (stats.code) {
+        while (stats.error) {
             await sleep(sleepTime *= 2)
-            stats = await GET(`/communities/${communityAddress}/stats`)
+            stats = await GET(`/communities/${communityAddress}/stats`).catch(() => ({error: true}))
         }
         clearTimeout(statsTimeout)
         console.log(`     Stats before adding: ${JSON.stringify(stats)}`)
@@ -253,6 +244,7 @@ describe("Community product demo but through a running E&E instance", () => {
                 secret: "test",
                 metadata: { test: "PLEASE DELETE ME, I'm a Community Product server test joinRequest" },
             }, await tempClient.session.sessionTokenPromise)
+            await tempClient.ensureDisconnected()
             console.log(`     Response: ${JSON.stringify(joinResponse)}`)
         }
 
@@ -266,6 +258,7 @@ describe("Community product demo but through a running E&E instance", () => {
 
         // TODO: send revenue by purchasing the product on Marketplace
         console.log("3) Send revenue in and check tokens were distributed")
+        const memberBeforeRevenues = await GET(`/communities/${communityAddress}/members/${address}`)
         const token = new Contract(config.tokenAddress, ERC20Mintable.abi, wallet)
         for (let i = 0; i < 5; i++) {
             const balance = await token.balanceOf(address)
@@ -280,14 +273,13 @@ describe("Community product demo but through a running E&E instance", () => {
         }
 
         console.log("3.1) Wait for blocks to unfreeze...") //... and also that state updates.
-        const before = await GET(`/communities/${communityAddress}/members/${address}`)
-        let member = { withdrawableEarnings: 0 }
+        let member = memberBeforeRevenues
         // TODO: what's the expected final withdrawableEarnings?
-        while (member.withdrawableEarnings < 1 + before.withdrawableEarnings) {
+        while (member.withdrawableEarnings < 1 + memberBeforeRevenues.withdrawableEarnings) {
             await sleep(1000)
             member = await GET(`/communities/${communityAddress}/members/${address}`)
-            console.log(JSON.stringify(member))
         }
+        Object.keys(member).forEach(k => console.log(`    ${k} ${JSON.stringify(member[k])}`))
 
         console.log("4) Withdraw tokens")
 
@@ -299,7 +291,7 @@ describe("Community product demo but through a running E&E instance", () => {
         await withdrawTx.wait(1)
 
         const res4b = await GET(`/communities/${communityAddress}/members/${address}`)
-        console.log(JSON.stringify(res4b))
+        Object.keys(res4b).forEach(k => console.log(`    ${k} ${JSON.stringify(res4b[k])}`))
 
         const balanceAfter = await token.balanceOf(address)
         console.log(`   Token balance after: ${formatEther(balanceAfter)}`)
@@ -307,7 +299,32 @@ describe("Community product demo but through a running E&E instance", () => {
         const difference = balanceAfter.sub(balanceBefore)
         console.log(`   Withdraw effect: ${formatEther(difference)}`)
 
-        assert(difference.eq(parseEther("5")))
+        console.log("4.1) Withdraw tokens for another account")
+        const address2 = members[1].address // 0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf
+        const member2 = await GET(`/communities/${communityAddress}/members/${address2}`)
+        Object.keys(member2).forEach(k => console.log(`    ${k} ${JSON.stringify(member2[k])}`))
+
+        const balanceBefore2 = await token.balanceOf(address2)
+        console.log(`   Token balance before: ${formatEther(balanceBefore2)}`)
+
+        const withdrawTx2 = await contract.withdrawAllFor(address2, member2.withdrawableBlockNumber, member2.withdrawableEarnings, member2.proof)
+        await withdrawTx2.wait(2)
+
+        const res4c = await GET(`/communities/${communityAddress}/members/${address2}`)
+        Object.keys(res4c).forEach(k => console.log(`    ${k} ${JSON.stringify(res4c[k])}`))
+
+        const balanceAfter2 = await token.balanceOf(address2)
+        console.log(`   Token balance after: ${formatEther(balanceAfter2)}`)
+
+        const difference2 = balanceAfter2.sub(balanceBefore2)
+        console.log(`   Withdraw effect: ${formatEther(difference2)}`)
+
+        const adminEarnings = parseEther("14").toString()
+        const memberEarnings = parseEther("4").toString()
+        assert.strictEqual(member.withdrawableEarnings, adminEarnings)
+        assert.strictEqual(member2.withdrawableEarnings, memberEarnings)
+        assert.strictEqual(difference.toString(), adminEarnings)
+        assert.strictEqual(difference2.toString(), memberEarnings)
     })
 
     afterEach(() => {

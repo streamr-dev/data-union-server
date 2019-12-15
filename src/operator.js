@@ -8,18 +8,19 @@ const MonoplasmaState = require("monoplasma/src/state")
 
 const MonoplasmaJson = require("../build/Monoplasma.json")
 
+const debug = require("debug")
+
 module.exports = class MonoplasmaOperator {
 
-    constructor(wallet, joinPartChannel, store, logFunc, errorFunc) {
+    constructor(wallet, joinPartChannel, store) {
         this.wallet = wallet
-        this.log = logFunc || (() => {})
-        this.error = errorFunc || console.error
-        this.watcher = new MonoplasmaWatcher(wallet.provider, joinPartChannel, store, logFunc, errorFunc)
+        this.watcher = new MonoplasmaWatcher(wallet.provider, joinPartChannel, store)
         this.lastSavedBlock = null
     }
 
     async start(config) {
         throwIfBadAddress(config.operatorAddress, "MonoplasmaOperator argument config.operatorAddress")
+        this.log = debug("CPS::operator::" + config.contractAddress)
 
         this.finalityWaitPeriodSeconds = config.finalityWaitPeriodSeconds || 1 // TODO: in production || 3600
         this.address = config.operatorAddress

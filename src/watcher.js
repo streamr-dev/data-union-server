@@ -10,6 +10,8 @@ const bisectFindFirstIndex = require("./utils/bisectFindFirstIndex")
 const TokenJson = require("../build/ERC20Mintable.json")
 const MonoplasmaJson = require("../build/Monoplasma.json")
 
+const debug = require("debug")
+
 // TODO: this typedef is foobar. How to get the real thing with JSDoc?
 /** @typedef {number} BigNumber */
 
@@ -62,13 +64,11 @@ function summarizeBlock(block) {
  */
 module.exports = class MonoplasmaWatcher extends EventEmitter {
 
-    constructor(eth, joinPartChannel, store, logFunc, errorFunc) {
+    constructor(eth, joinPartChannel, store) {
         super()
         this.eth = eth
         this.channel = joinPartChannel
         this.store = store
-        this.log = logFunc || (() => {})
-        this.error = errorFunc || console.error
 
         // TODO: move messageCache to streamrChannel? I.e. require playback of old messages.
         this.messageCache = []
@@ -86,9 +86,17 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
      */
     async start(config) {
         await throwIfSetButNotContract(this.eth, config.contractAddress, "contractAddress from initial config")
+        this.log = debug("CPS::watcher::" + config.contractAddress)
 
         // TODO: this isn't even used; maybe should throw if it's different from what contract gives?
         throwIfSetButBadAddress(config.adminAddress, "adminAddress from initial config")
+
+        const network = await this.eth.getNetwork()
+        this.log(`Connected to Ethereum network: ${JSON.stringify(network)}`)
+        if (network.chainId === 1) {
+            this.blockTimestampCache = require("../mainnet_timestamp_cache.json")
+            this.log(`Loaded ${Object.keys(this.blockTimestampCache).length} block timestamps from disk`)
+        }
 
         this.eth.on("block", blockNumber => {
             if (blockNumber % 10 === 0) { this.log(`Block ${blockNumber} observed`) }
@@ -141,6 +149,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         // replay and cache messages until in sync
         // TODO: cache only starting from given block (that operator/validator have loaded state from store)
         this.channel.on("message", (type, addresses, meta) => {
+            this.log(`Message received: ${type} ${addresses}`)
             const addressList = addresses.map(utils.getAddress)
             const event = { type, addressList, timestamp: meta.messageId.timestamp }
             this.messageCache.push(event)

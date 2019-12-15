@@ -1,12 +1,11 @@
 const { utils } = require("ethers")
 
 module.exports = class MockStreamrChannel {
-    constructor(privateKey, joinPartStreamId/*, streamrWsUrl, streamrHttpUrl*/) {
+    constructor(joinPartStreamId/*, streamrWsUrl, streamrHttpUrl*/) {
         this.stream = {
             id: joinPartStreamId,
             name: "Join-Part-Stream-Mock",
         }
-        this.ethereumAddress = utils.computeAddress(privateKey)
         this.mode = ""
         this.listeners = {
             join: [],
@@ -17,7 +16,10 @@ module.exports = class MockStreamrChannel {
         }
         this.pastEventsWithTimestamps = []
     }
-    startServer() { this.mode = "server" }
+    startServer(privateKey) {
+        this.ethereumAddress = utils.computeAddress(privateKey)
+        this.mode = "server"
+    }
     listen() {
         this.pastEventsWithTimestamps.forEach(e => {
             this.publishAt(...e)

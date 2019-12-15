@@ -24,11 +24,12 @@ ENV WEBSERVER_PORT 8085
 
 # dev docker: use streamr-ganache and local EE
 ENV STREAMR_WS_URL "ws://localhost:8890/api/v1/ws"
-ENV STREAMR_HTTP_URL "http://localhost:8081/streamr-core/api/v1"
+ENV STREAMR_HTTP_URL "http://localhost/api/v1"
 ENV ETHEREUM_SERVER "http://localhost:8545"
 ENV OPERATOR_PRIVATE_KEY "0x5e98cce00cff5dea6b454889f359a4ec06b9fa6b88e9d69b86de8e1c81887da0"
 ENV TOKEN_ADDRESS "0xbAA81A0179015bE47Ad439566374F2Bae098686F"
 ENV STREAMR_NODE_ADDRESS "0xFCAd0B19bB29D4674531d6f115237E16AfCE377c"
+ENV DEBUG "*"
 
 # staging: same as above except
 #ENV OPERATOR_PRIVATE_KEY from 1password "Community Products (CP) server Ethereum keys - staging" / password

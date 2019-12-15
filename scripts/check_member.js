@@ -10,7 +10,6 @@ const StreamrClient = require("streamr-client")
 
 const { throwIfNotContract, throwIfBadAddress } = require("../src/utils/checkArguments")
 
-const TokenJson = require("../build/ERC20Detailed.json")
 const CommunityJson = require("../build/CommunityProduct.json")
 
 const {
@@ -37,11 +36,7 @@ const error = (e, ...args) => {
 }
 
 async function start() {
-    const provider =
-        ETHEREUM_SERVER ? new JsonRpcProvider(ETHEREUM_SERVER) :
-        ETHEREUM_NETWORK ? getDefaultProvider(ETHEREUM_NETWORK) : null
-    if (!provider) { throw new Error("Must supply either ETHEREUM_SERVER or ETHEREUM_NETWORK") }
-
+    const provider = ETHEREUM_SERVER ? new JsonRpcProvider(ETHEREUM_SERVER) : getDefaultProvider(ETHEREUM_NETWORK)
     const network = await provider.getNetwork().catch(e => {
         throw new Error(`Connecting to Ethereum failed, env ETHEREUM_SERVER=${ETHEREUM_SERVER} ETHEREUM_NETWORK=${ETHEREUM_NETWORK}`, e)
     })
@@ -59,21 +54,7 @@ async function start() {
 
     log(`Checking community contract at ${communityAddress}...`)
     const community = new Contract(communityAddress, CommunityJson.abi, provider)
-/*
-    const getters = CommunityJson.abi.filter(f => f.constant && f.inputs.length === 0).map(f => f.name)
-    for (const getter of getters) {
-        log(`  ${getter}: ${await community[getter]()}`)
-    }
 
-    const _tokenAddress = await community.token()
-    const tokenAddress = await throwIfNotContract(provider, _tokenAddress, `community(${communityAddress}).token`)
-
-    log(`Checking token contract at ${tokenAddress}...`)
-    const token = new Contract(tokenAddress, TokenJson.abi, provider)
-    log("  Token name: ", await token.name())
-    log("  Token symbol: ", await token.symbol())
-    log("  Token decimals: ", await token.decimals())
-*/
     log("Connecting to Streamr...")
     const opts = {}
     if (STREAMR_WS_URL) { opts.url = STREAMR_WS_URL }
@@ -83,7 +64,7 @@ async function start() {
     log(`Member stats for ${memberAddress}...`)
     const stats = await client.memberStats(communityAddress, memberAddress)
     if (stats.error) {
-        log(`Error from server: ${stats.error}`)
+        log(`Error from server: ${JSON.stringify(stats)}`)
         return
     }
     for (const [key, value] of Object.entries(stats)) {

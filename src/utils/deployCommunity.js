@@ -35,7 +35,7 @@ async function deployCommunity(wallet, operatorAddress, tokenAddress, streamrNod
     if (streamrWsUrl) { opts.url = streamrWsUrl }
     if (streamrHttpUrl) { opts.restUrl = streamrHttpUrl }
     const client = new StreamrClient(opts)
-    const stream = await client.getOrCreateStream({ name: joinPartStreamName })
+    const stream = await client.createStream({ name: joinPartStreamName })
 
     // every watcher should be able to read joins and parts in order to sync the state
     const res1 = await stream.grantPermission("read", null)

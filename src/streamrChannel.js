@@ -1,6 +1,7 @@
 const EventEmitter = require("events")
 const StreamrClient = require("streamr-client")
-const { utils } = require("ethers")
+const { utils: { computeAddress } } = require("ethers")
+const debug = require("debug")("CPS::StreamrChannel")
 
 /**
  * @typedef {string} State
@@ -25,42 +26,47 @@ const State = {
 module.exports = class StreamrChannel extends EventEmitter {
     /**
      * @param {string} privateKey to use for authenticating with Streamr
-     * @param {string} joinPartStreamId to try to connect to. If omitted, startServer will create a new stream.
+     * @param {string} joinPartStreamId to try to connect to
      * @param {string} streamrWsUrl default is "wss://www.streamr.com/api/v1/ws"
      * @param {string} streamrHttpUrl default is "https://www.streamr.com/api/v1"
      */
-    constructor(privateKey, joinPartStreamId, streamrWsUrl, streamrHttpUrl) {
-        if (!privateKey) { throw new Error("Must supply a private key to new StreamrChannel") }
+    constructor(joinPartStreamId, streamrWsUrl, streamrHttpUrl) {
         super()
-        const opts = {
-            auth: { privateKey },
+        this.clientOptions = {
+            orderMessages: false,
             retryResendAfter: 1000,
         }
-        if (streamrWsUrl) { opts.url = streamrWsUrl }
-        if (streamrHttpUrl) { opts.restUrl = streamrHttpUrl }
-        this.client = new StreamrClient(opts)
-        this.ethereumAddress = utils.computeAddress(privateKey)
+        if (streamrWsUrl) { this.clientOptions.url = streamrWsUrl }
+        if (streamrHttpUrl) { this.clientOptions.restUrl = streamrHttpUrl }
         this.joinPartStreamId = joinPartStreamId
         this.mode = State.CLOSED
     }
 
     /**
+     * Just check if the joinPartStream exists
+     */
+    async isValid() {
+        const client = new StreamrClient(this.clientOptions)
+        const res = await client.getStream(this.joinPartStreamId).catch(e => e)
+        await client.ensureDisconnected()
+        return !(res instanceof Error)
+    }
+
+    /**
      * After this, call .publish(type, data) to send
      */
-    async startServer() {
+    async startServer(privateKey) {
         if (this.mode) { return Promise.reject(new Error(`Already started as ${this.mode}`))}
+        if (!privateKey) { throw new Error("Must supply a private key to startServer") }
+        this.ethereumAddress = computeAddress(privateKey)
+        debug(`Starting server as ${this.ethereumAddress}`)
 
+        this.clientOptions.auth = { privateKey }
+        this.client = new StreamrClient(this.clientOptions)
+        this.stream = await this.client.getStream(this.joinPartStreamId) // will throw if joinPartStreamId is bad
+
+        debug(`Writing to stream ${JSON.stringify(this.stream.toObject())}`)
         this.messageNumber = +Date.now()
-        if (this.joinPartStreamId) {
-            this.stream = await this.client.getStream(this.joinPartStreamId)
-        } else {
-            const name = `Join-Part-${this.ethereumAddress.slice(0, 10)}-${Date.now()}`
-            this.stream = await this.client.createStream({ name })
-
-            // every watcher should be able to read joins and parts in order to sync the state
-            await this.stream.grantPermission("read", null)
-        }
-
         this.mode = State.SERVER
     }
 
@@ -81,13 +87,14 @@ module.exports = class StreamrChannel extends EventEmitter {
 
     /**
      * Start listening to events
-     * @param {Number} syncStartTimestamp resend messages starting from (0 if omitted)
+     * @param {Number} syncStartTimestamp resend messages starting from (from beginning if omitted)
      * @returns {Promise<ResendResponseResent>} resolves when all events up to now are received
      */
     async listen(syncStartTimestamp) {
         if (this.mode) { return Promise.reject(new Error(`Already started as ${this.mode}`))}
 
-        this.stream = await this.client.getStream(this.joinPartStreamId)   // will throw if joinPartStreamId is bad
+        this.client = new StreamrClient(this.clientOptions)
+        this.stream = await this.client.getStream(this.joinPartStreamId) // will throw if joinPartStreamId is bad
 
         this.handlers = {}
         this.queue = []
@@ -95,8 +102,7 @@ module.exports = class StreamrChannel extends EventEmitter {
             stream: this.stream.id,
             resend: {
                 from: {
-                    timestamp: syncStartTimestamp || 0,
-                    sequenceNumber: 0,
+                    timestamp: syncStartTimestamp || 1,
                 },
             },
         }, (msg, meta) => {
@@ -121,13 +127,11 @@ module.exports = class StreamrChannel extends EventEmitter {
     }
 
     /** Close the channel */
-    close() {
-        if (!this.mode) { throw new Error("Can't close, already closed")}
+    async close() {
+        if (this.mode === State.CLOSED) { throw new Error("Can't close, already closed")}
         this.emit("close")
         this.removeAllListeners()
-        if (this.client.connection.state !== "disconnected") {
-            this.client.disconnect()
-        }
+        await this.client.ensureDisconnected()
         this.mode = State.CLOSED
     }
 }
