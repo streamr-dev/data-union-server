@@ -88,47 +88,67 @@ module.exports = class StreamrChannel extends EventEmitter {
     /**
      * Start listening to events
      * @param {Number} syncStartTimestamp resend messages starting from (from beginning if omitted)
+     * @param {Number} playbackTimeoutMs give up with error after timeout (default 10 minutes)
      * @returns {Promise<ResendResponseResent>} resolves when all events up to now are received
      */
-    async listen(syncStartTimestamp) {
+    async listen(syncStartTimestamp, playbackTimeoutMs = 600000) {
         if (this.mode) { return Promise.reject(new Error(`Already started as ${this.mode}`))}
 
         this.client = new StreamrClient(this.clientOptions)
         this.stream = await this.client.getStream(this.joinPartStreamId) // will throw if joinPartStreamId is bad
 
-        this.handlers = {}
-        this.queue = []
-        const sub = this.client.subscribe({
+        const self = this
+        function emitMessage(msg, meta) {
+            self.lastMessageTimestamp = meta.messageId.timestamp
+            self.lastMessageNumber = msg.number
+            self.emit(msg.type, msg.addresses)
+            self.emit("message", msg.type, msg.addresses, meta)
+        }
+
+        debug(`Starting playback of ${this.stream.id}`)
+        const playbackSub = await this.client.resend({
             stream: this.stream.id,
             resend: {
                 from: {
                     timestamp: syncStartTimestamp || 1,
+                    sequenceNumber: 0,
                 },
             },
+        }, emitMessage)
+
+        const queue = []
+        this.client.subscribe({
+            stream: this.stream.id
         }, (msg, meta) => {
-            this.lastMessageTimestamp = meta.timestamp
-            this.lastMessageNumber = msg.number
-            this.emit(msg.type, msg.addresses)
-            this.emit("message", msg.type, msg.addresses, meta)
+            const len = queue.push({msg, meta})
+            debug(`Got message ${JSON.stringify(msg)}, queue length = ${len}}`)
         })
-        sub.on("error", this.emit.bind(this, "error"))
+
+        playbackSub.on("error", this.emit.bind(this, "error"))
+
+        await new Promise((done, fail) => {
+            playbackSub.on("error", fail)
+            playbackSub.on("resent", done)
+            playbackSub.on("no_resend", done)
+            setTimeout(fail, playbackTimeoutMs)
+        })
+        debug(`Playback of ${this.stream.id} done`)
+
+        // TODO: remove this hack and just emit messages directly from realtime stream
+        this.consumerInterval = setInterval(() => {
+            if (queue.length < 1) { return }
+            const {msg, meta} = queue.shift()
+            debug(`Sending message ${JSON.stringify(msg)}, queue length = ${queue.length}}`)
+            emitMessage(msg, meta)
+        }, 100)
 
         this.mode = State.CLIENT
-
-        return new Promise((done, fail) => {
-            sub.on("error", fail)
-            sub.on("resent", done)
-            sub.on("no_resend", () => {
-                // give some time for retryResendAfter
-                // TODO: should rely on "resent" event instead
-                setTimeout(done, 1500)
-            })
-        })
     }
 
     /** Close the channel */
     async close() {
         if (this.mode === State.CLOSED) { throw new Error("Can't close, already closed")}
+        clearInterval(this.consumerInterval)
         this.emit("close")
         this.removeAllListeners()
         await this.client.ensureDisconnected()
