@@ -1,5 +1,8 @@
 const StreamrClient = require("streamr-client")
-new StreamrClient({ retryResendAfter: 1000 }).subscribe({
+new StreamrClient({
+    retryResendAfter: 1000,
+    orderMessages: false,
+}).subscribe({
     stream: "gT4g0ZkiQ9GB_eWKN7DM9w",
     resend: {
         from: {
