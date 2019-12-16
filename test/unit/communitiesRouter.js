@@ -76,7 +76,7 @@ describe("Community product server /communities router", () => {
             tokenAddress: token.address,
             operatorAddress: wallet.address,
         })
-        channel = new MockStreamrChannel("dummy-stream-for-router-test")
+        channel = new MockStreamrChannel(secretKey, "dummy-stream-for-router-test")
         server.getStoreFor = () => mockStore(startState, initialBlock, log)
         server.getChannelFor = () => channel
         const router = getCommunitiesRouter(server, log)
