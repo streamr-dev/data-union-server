@@ -34,7 +34,7 @@ jobs:
          - docker ps
          - $TRAVIS_BUILD_DIR/streamr-docker-dev/streamr-docker-dev/bin.sh start engine-and-editor
          - $TRAVIS_BUILD_DIR/streamr-docker-dev/streamr-docker-dev/bin.sh start ganache
-         - sleep 5m
+         - sleep 4m
          - docker ps
          - node ./scripts/create_user.js
          - ./node_modules/.bin/mocha --exit test/integration/engine-and-editor-api.js
