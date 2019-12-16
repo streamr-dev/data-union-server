@@ -3,6 +3,10 @@ node_js:
   - 10.14.0
 before_install:
   - npm i -g npm@6.4.1
+branches:
+  only:
+    - master
+    - /^v\d+\.\d+(\.\d+)?(-\S*)?$/
 env:
   global:
     - secure: Bk+l7xq83osEqRExjlaX8E7Hy6nk8QXv7FAweHV+00hRBJOcCilbud70z4zSuVi1MAQQIr4g79GnWyQk6A7WftCKEH5fLT3BzS0s6/13eVevWBUQYyyteOOtF0g4ASQK1ePYj8g9DhPtZdyribexf5Rqzdu04DuS3lzJtIoop+ZPoZqsm8mv96//ivu5RDFBd6s4leOqNDxvG6lXpjdrzJGsParbujO0tRWwDlwg7zNCbqCqsSEW8/Vmrl20dNSK3D6YBKyfMCBEGG0esavSr2o7rkv9V14WdlpuFSbX0kGJYpfS6Qv7vltNwB6vrjiR1PUMTrb2/GU6q+4X3jtEqxbdA5belOsQAOCUeP/1bsWXNzT2N86A9t72uA0KyunxlG8iAJZ8TvrQleHcWi87WTWaZ7rA2Y+qeYgK/EM9tx7UwehdzGOHZ/uFwKwWlo9PS3ck5s9wG9HqR9ffithJUoJJ0wnQEBj9c2za9s6+rns4H5w+oSqpE8yXbaWNIfZZ0HQeib5oiIVGdSQC/DKZT34Aa1kaDZEwSWosBC5WL27zSTxPP9yeppTkMnQWJWu6eVRyJAsT5YEOdpweC+Bjsbo3gFm6sEso0SAATseqlvjrjhyvin7cxFYEKhe/X58ZLIi5Nb8QOzkujuvhFosGtMvWei2DB2oTqP+eUDyZ9CU=
@@ -15,26 +19,26 @@ jobs:
       script:
         - npm run lint
         - npm run unit-tests
-     - stage: integration tests
-       env:
-         - STREAMR_WS_URL: ws://localhost:8890/api/v1/ws
-         - STREAMR_HTTP_URL: http://localhost:8081/streamr-core/api/v1
-         - STREAMR_NODE_ADDRESS: "0xc0dBcc4e7a0e0BEF78Da67AC2CD5Ca2Dd3c4C165"
-         - ETHEREUM_PRIVATE_KEY: "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF"
-       script:
-         - sudo /etc/init.d/mysql stop
-         - git clone https://github.com/streamr-dev/streamr-docker-dev.git
-         - sudo ifconfig docker0 10.200.10.1/24
-         - $TRAVIS_BUILD_DIR/streamr-docker-dev/streamr-docker-dev/bin.sh start 1
-         - sleep 1m
-         - docker ps
-         - $TRAVIS_BUILD_DIR/streamr-docker-dev/streamr-docker-dev/bin.sh start engine-and-editor
-         - $TRAVIS_BUILD_DIR/streamr-docker-dev/streamr-docker-dev/bin.sh start ganache
-         - sleep 4m
-         - docker ps
-         - node ./scripts/create_user.js
-         - ./node_modules/.bin/mocha --exit test/integration/engine-and-editor-api.js
-         #- ./node_modules/.bin/mocha --exit test/integration
+      - stage: integration tests
+        env:
+          - STREAMR_WS_URL: ws://localhost:8890/api/v1/ws
+          - STREAMR_HTTP_URL: http://localhost:8081/streamr-core/api/v1
+          - STREAMR_NODE_ADDRESS: "0xc0dBcc4e7a0e0BEF78Da67AC2CD5Ca2Dd3c4C165"
+          - ETHEREUM_PRIVATE_KEY: "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF"
+        script:
+          - sudo /etc/init.d/mysql stop
+          - git clone https://github.com/streamr-dev/streamr-docker-dev.git
+          - sudo ifconfig docker0 10.200.10.1/24
+          - $TRAVIS_BUILD_DIR/streamr-docker-dev/streamr-docker-dev/bin.sh start 1
+          - sleep 1m
+          - docker ps
+          - $TRAVIS_BUILD_DIR/streamr-docker-dev/streamr-docker-dev/bin.sh start engine-and-editor
+          - $TRAVIS_BUILD_DIR/streamr-docker-dev/streamr-docker-dev/bin.sh start ganache
+          - sleep 4m
+          - docker ps
+          - node ./scripts/create_user.js
+          - ./node_modules/.bin/mocha --exit test/integration/engine-and-editor-api.js
+          #- ./node_modules/.bin/mocha --exit test/integration
     - stage: Build docker (Dev/Nightly)
       if: tag IS blank
       install: true
