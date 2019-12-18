@@ -291,7 +291,7 @@ describe("Community product demo but through a running E&E instance", () => {
 
         console.log("3.1) Wait for blocks to unfreeze...") //... and also that state updates.
         let member = memberBeforeRevenues
-        // TODO: what's the expected final withdrawableEarnings?
+        // wait until member.withdrawableEarnings exists && has increased
         while (member.withdrawableEarnings < 1 + memberBeforeRevenues.withdrawableEarnings) {
             await sleep(1000)
             member = await GET(`/communities/${communityAddress}/members/${address}`)

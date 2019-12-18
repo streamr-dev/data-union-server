@@ -248,7 +248,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         }
         const toTimestamp = await this.getBlockTimestamp(toBlock)
 
-        this.log(`Retrieving from blocks ${fromBlock}...${toBlock} (t = ...${toTimestamp})`)
+        this.log(`Retrieving from blocks ${fromBlock}...${toBlock}`)
         const adminFeeFilter = Object.assign({}, this.adminFeeFilter,  { fromBlock, toBlock })
         const blockCreateFilter = Object.assign({}, this.blockCreateFilter, { fromBlock, toBlock })
         const tokenTransferFilter = Object.assign({}, this.tokenTransferFilter,  { fromBlock, toBlock })
@@ -270,11 +270,12 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             event.timestamp = await this.getBlockTimestamp(event.blockNumber)
         }
 
-        // find range in cache
+        this.log(`Getting messages between ${fromTimestamp}...${toTimestamp} from cache`)
         const fromIndex = bisectFindFirstIndex(this.messageCache, msg => msg.timestamp > fromTimestamp)
         const toIndex = bisectFindFirstIndex(this.messageCache, msg => msg.timestamp > toTimestamp)
         const messages = this.messageCache.slice(fromIndex, toIndex)
 
+        this.log(`Replaying ${events.length} events and ${messages.length} messages`)
         await replayOn(plasma, events, messages)
         plasma.currentBlock = toBlock
         plasma.currentTimestamp = toTimestamp
@@ -303,6 +304,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
      */
     async getBlockTimestamp(blockNumber) {
         if (!(blockNumber in this.blockTimestampCache)) {
+            this.log(`blockTimestampCache miss for block number ${blockNumber}`)
             const block = await this.eth.getBlock(blockNumber)
             this.blockTimestampCache[blockNumber] = block.timestamp * 1000
         }
