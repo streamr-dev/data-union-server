@@ -63,7 +63,7 @@ describe("CommunityProductServer", () => {
         }
         const server = new CommunityProductServer(wallet, storeDir, config, log, log)
         server.getStoreFor = () => mockStore(startState, initialBlock, log)
-        server.getChannelFor = () => new MockStreamrChannel(wallet.privateKey, "dummy-stream-id")
+        server.getChannelFor = () => new MockStreamrChannel("dummy-stream-id")
 
         sinon.spy(server, "onOperatorChangedEventAt")
         sinon.spy(server, "startOperating")
@@ -98,7 +98,7 @@ describe("CommunityProductServer", () => {
         }
         const server = new CommunityProductServer(wallet, storeDir, config, log, log)
         server.getStoreFor = () => mockStore(startState, initialBlock, log)
-        server.getChannelFor = () => new MockStreamrChannel(wallet.privateKey, "dummy-stream-id")
+        server.getChannelFor = () => new MockStreamrChannel("dummy-stream-id")
         await server.start()
 
         const contract = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)

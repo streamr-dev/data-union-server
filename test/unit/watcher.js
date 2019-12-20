@@ -20,10 +20,6 @@ const MockStreamrChannel = require("../utils/mockStreamrChannel")
 const mockStore = require("monoplasma/test/utils/mockStore")
 
 const log = console.log  // () => {}
-const error = e => {
-    console.error(e.stack)
-    process.exit(1)
-}
 
 const members = [
     { address: "0x2F428050ea2448ed2e4409bE47e1A50eBac0B2d2", earnings: "50" },
@@ -69,7 +65,7 @@ describe("MonoplasmaWatcher", () => {
             await provider.send("evm_mine")
         }
 
-        joinPartChannel = new MockStreamrChannel(secretKey, "dummy-stream-for-watcher-test")
+        joinPartChannel = new MockStreamrChannel("dummy-stream-for-watcher-test")
         store = mockStore(startState, initialBlock, log)
 
         log("Deploying test token and Community contract...")
@@ -87,7 +83,7 @@ describe("MonoplasmaWatcher", () => {
 
     async function startWatcher() {
         log("Starting MonoplasmaWatcher...")
-        watcher = new MonoplasmaWatcher(wallet.provider, joinPartChannel, store, log, error)
+        watcher = new MonoplasmaWatcher(wallet.provider, joinPartChannel, store)
         await watcher.start({
             tokenAddress: token.address,
             adminAddress: wallet.address,

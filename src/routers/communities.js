@@ -81,6 +81,7 @@ module.exports = (server, logFunc) => {
         res.send(plasma.getMembers())
     })
 
+    // NOTE: this function gets the highest query load
     router.get("/:communityAddress/members/:address", parseOperator, (req, res) => {
         const plasma = req.operator.watcher.plasma
         const address = parseAddress(req.params.address)

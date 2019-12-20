@@ -15,45 +15,47 @@ env:
     - IMAGE_NAME=streamr-community-products
 jobs:
   include:
-    - stage: "lint & unit tests"
+    - stage: lint & unit tests
       script:
-        - "npm run lint"
-        - "npm run unit-tests"
-    # - stage: "integration tests"
+        - npm run lint
+        - npm run unit-tests
+    # - stage: integration tests
     #   env:
-    #     - STREAMR_WS_URL: ws://localhost:8890/api/v1/ws
-    #     - STREAMR_HTTP_URL: http://localhost:8081/streamr-core/api/v1
-    #     - STREAMR_NODE_ADDRESS: "0xc0dBcc4e7a0e0BEF78Da67AC2CD5Ca2Dd3c4C165"
+    #     - STREAMR_WS_URL="ws://localhost:8890/api/v1/ws"
+    #     - STREAMR_HTTP_URL="http://localhost:8081/streamr-core/api/v1"
+    #     - STREAMR_NODE_ADDRESS="0xc0dBcc4e7a0e0BEF78Da67AC2CD5Ca2Dd3c4C165"
+    #     - ETHEREUM_PRIVATE_KEY="0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF"
     #   script:
     #     - sudo /etc/init.d/mysql stop
     #     - git clone https://github.com/streamr-dev/streamr-docker-dev.git
     #     - sudo ifconfig docker0 10.200.10.1/24
-    #     - "$TRAVIS_BUILD_DIR/streamr-docker-dev/streamr-docker-dev/bin.sh start 1"
+    #     - $TRAVIS_BUILD_DIR/streamr-docker-dev/streamr-docker-dev/bin.sh start 1
     #     - sleep 1m
     #     - docker ps
-    #     - "$TRAVIS_BUILD_DIR/streamr-docker-dev/streamr-docker-dev/bin.sh start engine-and-editor"
-    #     - "$TRAVIS_BUILD_DIR/streamr-docker-dev/streamr-docker-dev/bin.sh start ganache"
+    #     - $TRAVIS_BUILD_DIR/streamr-docker-dev/streamr-docker-dev/bin.sh start engine-and-editor
+    #     - $TRAVIS_BUILD_DIR/streamr-docker-dev/streamr-docker-dev/bin.sh start ganache
     #     - sleep 5m
     #     - docker ps
-    #     - "npm run integration-tests"
+    #     - node ./scripts/create_user.js
+    #     - ./node_modules/.bin/mocha --exit test/integration/engine-and-editor-api.js
     - stage: Build docker (Dev/Nightly)
       if: tag IS blank
       install: true
       script:
-      - docker build -t $OWNER/$IMAGE_NAME:local .
-      - .travis_scripts/smoke_test.sh
+        - docker build -t $OWNER/$IMAGE_NAME:local .
+        - .travis_scripts/smoke_test.sh
       after_failure:
-      - docker ps;
-      - docker logs streamr_dev_cp;
+        - docker ps;
+        - docker logs streamr_dev_cp;
       deploy:
-      - provider: script
-        script: bash .travis_scripts/deploy_docker.sh dev
+        - provider: script
+          script: bash .travis_scripts/deploy_docker.sh dev
     - stage: Build docker (Production)
       if: tag IS present
       install: true
       script:
-      - docker build -t $OWNER/$IMAGE_NAME:local .
-      - .travis_scripts/smoke_test.sh
+        - docker build -t $OWNER/$IMAGE_NAME:local .
+        - .travis_scripts/smoke_test.sh
       deploy:
-      - provider: script
-        script: bash .travis_scripts/deploy_docker.sh production
+        - provider: script
+          script: bash .travis_scripts/deploy_docker.sh production

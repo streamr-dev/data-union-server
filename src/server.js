@@ -113,12 +113,18 @@ module.exports = class CommunityProductServer {
                     eventDetectedAt: Date.now(),
                 }
 
-                this.communityIsRunning(address) // create the promise to prevent later creation
+                void this.communityIsRunning(address) // create the promise to prevent later (duplicate) creation
                 try {
                     const result = await this.startOperating(address)
                     this.communityIsRunningPromises[address].setRunning(result)
-                } catch (err) {
-                    this.communityIsRunningPromises[address].setFailed(err)
+                } catch (error) {
+                    this.communities[address] = {
+                        state: "failed",
+                        error,
+                        eventDetectedAt: this.communities[address].eventDetectedAt,
+                        failedAt: Date.now(),
+                    }
+                    this.communityIsRunningPromises[address].setFailed(error)
                 }
             } else {
                 this.log(`Detected a community for operator ${newOperatorAddress}, ignoring.`)
@@ -169,10 +175,12 @@ module.exports = class CommunityProductServer {
         const address = getAddress(communityAddress)
         const contract = new Contract(address, CommunityProductJson.abi, this.eth)
 
-        // check if joinPartStream is valid (TODO: move to Channel?)
+        // throws if joinPartStreamId doesn't exist
         const joinPartStreamId = await contract.joinPartStream()
-        const channel = new StreamrChannel(this.wallet.privateKey, joinPartStreamId, this.operatorConfig.streamrWsUrl, this.operatorConfig.streamrHttpUrl)
-        await channel.client.getStream(joinPartStreamId).catch(e => { throw new Error(`joinPartStream ${joinPartStreamId} in CommunityProduct contract at ${communityAddress} is not found in Streamr (error: ${e.stack.toString()})`) })
+        const channel = new StreamrChannel(joinPartStreamId, this.operatorConfig.streamrWsUrl, this.operatorConfig.streamrHttpUrl)
+        if (!await channel.isValid()) {
+            throw new Error(`Faulty StreamrChannel("${joinPartStreamId}", "${this.operatorConfig.streamrWsUrl}", "${this.operatorConfig.streamrHttpUrl}")`)
+        }
 
         return channel
     }
@@ -199,12 +207,10 @@ module.exports = class CommunityProductServer {
             throw new Error(`startOperating: Community requesting operator ${operatorAddress}, not a job for me (${this.wallet.address})`)
         }
 
-        const operatorChannel = await this.getChannelFor(address)
+        const operatorChannel = await this.getChannelFor(address) // throws if joinPartStream doesn't exist
         const operatorStore = await this.getStoreFor(address)
-        const log = (...args) => { this.log(`${address}> `, ...args) }
-        const error = (e, ...args) => { this.error(e, `\n${address}> `, ...args) }
         const config = Object.assign({}, this.operatorConfig, { contractAddress: address })
-        const operator = new MonoplasmaOperator(this.wallet, operatorChannel, operatorStore, log, error)
+        const operator = new MonoplasmaOperator(this.wallet, operatorChannel, operatorStore)
         await operator.start(config)
 
         /* TODO: move start after adding community to this.communities, to enable seeing a "syncing" community

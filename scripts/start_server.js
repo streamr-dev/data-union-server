@@ -28,30 +28,31 @@ const {
     ETHEREUM_NETWORK,           // use ethers.js default servers
     OPERATOR_PRIVATE_KEY,
     TOKEN_ADDRESS,
-    STREAMR_WS_URL,
-    STREAMR_HTTP_URL,
-
-    BLOCK_FREEZE_SECONDS,
-    FINALITY_WAIT_SECONDS,
+    STREAMR_WS_URL,             // default: production
+    STREAMR_HTTP_URL,           // default: production
+    STORE_DIR,
+    QUIET,
     GAS_PRICE_GWEI,
     //RESET,
 
-    STORE_DIR,
-    QUIET,
+    // Monoplasma parameters
+    BLOCK_FREEZE_SECONDS,
+    FINALITY_WAIT_SECONDS,
 
-    DEVELOPER_MODE,
-
-    // these will be used  1) for demo token  2) if TOKEN_ADDRESS doesn't support name() and symbol()
-    TOKEN_SYMBOL,
-    TOKEN_NAME,
-
-    // if ETHEREUM_SERVER isn't specified, start a local Ethereum simulator (Ganache) in given port
-    GANACHE_PORT,
-
-    // HTTP API for /config and /communities endpoints
+    // Optional; HTTP API for /config and /communities endpoints
     WEBSERVER_PORT,
 
+    // Optional; for sending out the error reports
     SENTRY_TOKEN,
+
+    DEVELOPER_MODE, // TODO: remove
+
+    // these will be used  1) for demo token  2) if TOKEN_ADDRESS doesn't support name() and symbol()
+    TOKEN_SYMBOL, // TODO: remove
+    TOKEN_NAME, // TODO: remove
+
+    // if ETHEREUM_SERVER isn't specified, start a local Ethereum simulator (Ganache) in given port
+    GANACHE_PORT, // TODO: remove
 } = process.env
 
 let Sentry
@@ -148,61 +149,64 @@ async function start() {
     const server = new CommunityProductServer(wallet, storeDir, config, log, error)
     await server.start()
 
-    log("Starting web server...")
-    const port = WEBSERVER_PORT || 8080
-    const serverURL = `http://localhost:${port}`
-    const app = express()
-    app.use(cors())
-    app.use(bodyParser.json({limit: "50mb"}))
-    app.get("/config", (req, res) => { res.send(config) }) // TODO: remove
-    app.use("/communities", getCommunitiesRouter(server))
-    app.listen(port, () => log(`Web server started at ${serverURL}`))
+    if (WEBSERVER_PORT) {
+        log("Starting web server...")
+        const port = WEBSERVER_PORT
+        const serverURL = `http://localhost:${port}`
+        const app = express()
+        app.use(cors())
+        app.use(bodyParser.json({limit: "50mb"}))
+        app.get("/config", (req, res) => { res.send(config) }) // TODO: remove
+        app.use("/communities", getCommunitiesRouter(server))
+        app.listen(port, () => log(`Web server started at ${serverURL}`))
 
-    await sleep(200)
-    log("[DONE]")
+        if (DEVELOPER_MODE) {
+            await sleep(200)
 
-    if (DEVELOPER_MODE) {
-        log("DEVELOPER MODE: /admin endpoints available: addRevenue, deploy, addTo/{address}")
-        const streamrNodeAddress = process.env.STREAMR_NODE_ADDRESS || "0xFCAd0B19bB29D4674531d6f115237E16AfCE377c" // node address in docker dev environment
-        const adminFee = process.env.ADMIN_FEE || 0
+            log("DEVELOPER MODE: /admin endpoints available: addRevenue, deploy, addTo/{address}")
+            const streamrNodeAddress = process.env.STREAMR_NODE_ADDRESS || "0xFCAd0B19bB29D4674531d6f115237E16AfCE377c" // node address in docker dev environment
+            const adminFee = process.env.ADMIN_FEE || 0
 
-        // deploy new communities
-        app.use("/admin/deploy", (req, res) => deployCommunity(wallet, wallet.address, tokenAddress, streamrNodeAddress, BLOCK_FREEZE_SECONDS || 1000, adminFee, log, config.streamrWsUrl, config.streamrHttpUrl).then(({contract: { address }}) => res.send({ address })).catch(error => res.status(500).send({error})))
-        app.use("/admin/addTo/:communityAddress", (req, res) => transfer(wallet, req.params.communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
+            // deploy new communities
+            app.use("/admin/deploy", (req, res) => deployCommunity(wallet, wallet.address, tokenAddress, streamrNodeAddress, BLOCK_FREEZE_SECONDS || 1000, adminFee, log, config.streamrWsUrl, config.streamrHttpUrl).then(({contract: { address }}) => res.send({ address })).catch(error => res.status(500).send({error})))
+            app.use("/admin/addTo/:communityAddress", (req, res) => transfer(wallet, req.params.communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
 
-        // deploy a test community and provide direct manipulation endpoints for it (useful for seeing if anything is happening)
-        const contract = await deployCommunity(wallet, wallet.address, tokenAddress, streamrNodeAddress, BLOCK_FREEZE_SECONDS || 1000, adminFee, log, config.streamrWsUrl, config.streamrHttpUrl)
-        const communityAddress = contract.address
-        app.use("/admin/addRevenue", (req, res) => transfer(wallet, communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
-        app.use("/admin/setAdminFee", (req, res) => setFee(wallet, communityAddress, "0.3").then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
-        app.use("/admin/resetAdminFee", (req, res) => setFee(wallet, communityAddress, 0).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
+            // deploy a test community and provide direct manipulation endpoints for it (useful for seeing if anything is happening)
+            const contract = await deployCommunity(wallet, wallet.address, tokenAddress, streamrNodeAddress, BLOCK_FREEZE_SECONDS || 1000, adminFee, log, config.streamrWsUrl, config.streamrHttpUrl)
+            const communityAddress = contract.address
+            app.use("/admin/addRevenue", (req, res) => transfer(wallet, communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
+            app.use("/admin/setAdminFee", (req, res) => setFee(wallet, communityAddress, "0.3").then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
+            app.use("/admin/resetAdminFee", (req, res) => setFee(wallet, communityAddress, 0).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
 
-        log(`Deployed community at ${communityAddress}, waiting for server to notice...`)
-        await server.communityIsRunning(communityAddress)
-        await sleep(500)
+            log(`Deployed community at ${communityAddress}, waiting for server to notice...`)
+            await server.communityIsRunning(communityAddress)
+            await sleep(500)
 
-        log("Adding members...")
-        const streamId = await contract.joinPartStream()
-        const channel = new Channel(wallet.privateKey, streamId, config.streamrWsUrl, config.streamrHttpUrl)
-        await channel.startServer()
-        await channel.publish("join", [
-            wallet.address,
-            "0xdc353aa3d81fc3d67eb49f443df258029b01d8ab",
-            "0x4178babe9e5148c6d5fd431cd72884b07ad855a0",
-        ])
-        log("Waiting for server to notice joins...")
-        while (server.communities[communityAddress].operator.watcher.plasma.members.length > 1) {
-            await sleep(1000)
-        }
+            log("Adding members...")
+            const streamId = await contract.joinPartStream()
+            const channel = new Channel(streamId, config.streamrWsUrl, config.streamrHttpUrl)
+            await channel.startServer(wallet.privateKey)
+            await channel.publish("join", [
+                wallet.address,
+                "0xdc353aa3d81fc3d67eb49f443df258029b01d8ab",
+                "0x4178babe9e5148c6d5fd431cd72884b07ad855a0",
+            ])
+            log("Waiting for server to notice joins...")
+            while (server.communities[communityAddress].operator.watcher.plasma.members.length > 1) {
+                await sleep(1000)
+            }
 
-        log("Transferring tokens to the contract...")
-        await transfer(wallet, communityAddress, tokenAddress)
+            log("Transferring tokens to the contract...")
+            await transfer(wallet, communityAddress, tokenAddress)
 
-        // this is here just so it's easy to add a breakpoint and inspect this scope
-        for (;;) {
-            await sleep(1000)
+            // this is here just so it's easy to add a breakpoint and inspect this scope
+            for (;;) {
+                await sleep(1000)
+            }
         }
     }
+
+    log("[DONE]")
 }
 
 const ERC20Mintable = require("../build/ERC20Mintable.json")

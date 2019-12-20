@@ -44,6 +44,7 @@ async function start() {
 
     const privateKey = ETHEREUM_PRIVATE_KEY.startsWith("0x") ? ETHEREUM_PRIVATE_KEY : "0x" + ETHEREUM_PRIVATE_KEY
     if (privateKey.length !== 66) { throw new Error("Malformed private key, must be 64 hex digits long (optionally prefixed with '0x')") }
+    const memberAddress = computeAddress(privateKey)
 
     const communityAddress = await throwIfNotContract(provider, COMMUNITY_ADDRESS, "env variable COMMUNITY_ADDRESS")
 
@@ -53,12 +54,10 @@ async function start() {
     if (STREAMR_HTTP_URL) { opts.restUrl = STREAMR_HTTP_URL }
     const client = new StreamrClient(opts)
 
-    const memberAddress = computeAddress(privateKey)
-
     log(`Adding https://streamr.com/api/v1/communities/${communityAddress}/members/${memberAddress} ...`)
     const res = await client.joinCommunity(communityAddress, memberAddress, SECRET)
 
-    log(`Community join successful, response: ${JSON.stringify(res)}`)
+    log(`Community join sent, response: ${JSON.stringify(res)}`)
     log(`Network was ${JSON.stringify(network)}`)
 }
 

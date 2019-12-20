@@ -16,13 +16,13 @@ describe("streamrChannel", () => {
     let streamId
     before(async function () {
         this.timeout(10000)
-        sendChannel = new Channel(privateKey, null, streamrWs, streamrHttp)
-        await sendChannel.startServer()
+        sendChannel = new Channel(null, streamrWs, streamrHttp)
+        await sendChannel.startServer(privateKey)
         streamId = sendChannel.stream.id
     })
 
     it("gets messages through", async () => {
-        const recvChannel = new Channel(privateKey, streamId, streamrWs, streamrHttp)
+        const recvChannel = new Channel(streamId, streamrWs, streamrHttp)
         await recvChannel.listen()
         let joinMsg = [], partMsg = []
         recvChannel.on("join", msg => { joinMsg = msg })
@@ -47,17 +47,17 @@ describe("streamrChannel", () => {
     }).timeout(15000)
 
     it("can't double-start server", async () => {
-        const channel = new Channel(privateKey, streamId, streamrWs, streamrHttp)
-        await channel.startServer()
-        assertFails(channel.startServer(), "Already started as server")
+        const channel = new Channel(streamId, streamrWs, streamrHttp)
+        await channel.startServer(privateKey)
+        assertFails(channel.startServer(privateKey), "Already started as server")
         assertFails(channel.listen(), "Already started as server")
         await channel.close()
     }).timeout(5000)
 
     it("can't double-start client", async () => {
-        const channel = new Channel(privateKey, streamId, streamrWs, streamrHttp)
+        const channel = new Channel(streamId, streamrWs, streamrHttp)
         await channel.listen()
-        assertFails(channel.startServer(), "Already started as client")
+        assertFails(channel.startServer(privateKey), "Already started as client")
         assertFails(channel.listen(), "Already started as client")
         await channel.close()
     }).timeout(5000)
@@ -76,7 +76,7 @@ describe("streamrChannel", () => {
         await sleep(1000)
 
         const recvQueue = []
-        const recvChannel = new Channel(privateKey, streamId, streamrWs, streamrHttp)
+        const recvChannel = new Channel(streamId, streamrWs, streamrHttp)
         recvChannel.on("message", (type, addressList) => {
             recvQueue.push([type, addressList])
         })

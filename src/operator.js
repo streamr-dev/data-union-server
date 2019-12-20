@@ -8,18 +8,19 @@ const MonoplasmaState = require("monoplasma/src/state")
 
 const MonoplasmaJson = require("../build/Monoplasma.json")
 
+const debug = require("debug")
+
 module.exports = class MonoplasmaOperator {
 
-    constructor(wallet, joinPartChannel, store, logFunc, errorFunc) {
+    constructor(wallet, joinPartChannel, store) {
         this.wallet = wallet
-        this.log = logFunc || (() => {})
-        this.error = errorFunc || console.error
-        this.watcher = new MonoplasmaWatcher(wallet.provider, joinPartChannel, store, logFunc, errorFunc)
+        this.watcher = new MonoplasmaWatcher(wallet.provider, joinPartChannel, store)
         this.lastSavedBlock = null
     }
 
     async start(config) {
         throwIfBadAddress(config.operatorAddress, "MonoplasmaOperator argument config.operatorAddress")
+        this.log = debug("CPS::operator::" + config.contractAddress)
 
         this.finalityWaitPeriodSeconds = config.finalityWaitPeriodSeconds || 1 // TODO: in production || 3600
         this.address = config.operatorAddress
@@ -33,6 +34,7 @@ module.exports = class MonoplasmaOperator {
         await this.watcher.start(config)
         this.lastPublishedBlock = (this.watcher.state.lastPublishedBlock && this.watcher.state.lastPublishedBlock.blockNumber) || 0
 
+        // TODO https://streamr.atlassian.net/browse/CPS-82 finalPlasmaStore should be instead just this.watcher.plasma.store
         const finalPlasmaStore = {
             saveBlock: async block => {
                 this.lastSavedBlock = block
@@ -58,6 +60,7 @@ module.exports = class MonoplasmaOperator {
     }
 
     // TODO: block publishing should be based on value-at-risk, that is, publish after so-and-so many tokens received
+    // see https://streamr.atlassian.net/browse/CPS-39
     async onTokensReceived(event) {
         const blockNumber = event.blockNumber
         if (+blockNumber >= +this.lastPublishedBlock + +this.minIntervalBlocks) {
@@ -67,6 +70,7 @@ module.exports = class MonoplasmaOperator {
         }
     }
 
+    // TODO: call it commit instead. Replace all mentions of "publish" with "commit".
     /**
      * Sync watcher to the given block and publish the state AFTER it into blockchain
      * @param {Number} rootchainBlockNumber to sync up to
@@ -82,6 +86,7 @@ module.exports = class MonoplasmaOperator {
         if (blockNumber <= this.lastPublishedBlock) { throw new Error(`Block #${this.lastPublishedBlock} has already been published, can't publish #${blockNumber}`) }
         this.lastPublishedBlock = blockNumber
 
+        // see https://streamr.atlassian.net/browse/CPS-20
         // TODO: separate finalPlasma currently is so much out of sync with watcher.plasma that proofs turn out wrong
         //       perhaps communitiesRouter should get the proofs from operator's finalPlasma?
         //       perhaps operator's finalPlasma should write to store, and not watcher.plasma?
@@ -91,12 +96,16 @@ module.exports = class MonoplasmaOperator {
 
         //await this.watcher.playbackUntilBlock(blockNumber, this.finalPlasma)
         //const hash = this.finalPlasma.getRootHash()
-        const hash = this.watcher.plasma.getRootHash()
+        const hash = this.watcher.plasma.getRootHash()  // TODO: remove, uncomment above
         const ipfsHash = ""     // TODO: upload this.finalPlasma to IPFS while waiting for finality
 
         const tx = await this.contract.commit(blockNumber, hash, ipfsHash)
+
+        // TODO https://streamr.atlassian.net/browse/CPS-82 should be instead:
+        // await this.finalPlasma.storeBlock(blockNumber) // TODO: give a timestamp
         await this.watcher.plasma.storeBlock(blockNumber)
-        await tx.wait(1)   // confirmations
+        const tr = await tx.wait(1)        // confirmations
+        debug(`Commit sent, receipt: ${JSON.stringify(tr)}`)
 
         // TODO: something causes events to be replayed many times, resulting in wrong balances. It could have something to do with the state cloning that happens here
         // replace watcher's MonoplasmaState with the final "true" state that was just committed to blockchain
@@ -106,7 +115,7 @@ module.exports = class MonoplasmaOperator {
         //this.watcher.setState(this.finalPlasma)
         //const currentBlock = await this.wallet.provider.getBlockNumber()
         //this.watcher.playbackUntilBlock(currentBlock)
-        this.watcher.channelPruneCache()
+        this.watcher.channelPruneCache()    // TODO: move inside watcher, maybe after playback
         //this.publishBlockInProgress = false
     }
 }

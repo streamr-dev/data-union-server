@@ -10,6 +10,8 @@ const bisectFindFirstIndex = require("./utils/bisectFindFirstIndex")
 const TokenJson = require("../build/ERC20Mintable.json")
 const MonoplasmaJson = require("../build/Monoplasma.json")
 
+const debug = require("debug")
+
 // TODO: this typedef is foobar. How to get the real thing with JSDoc?
 /** @typedef {number} BigNumber */
 
@@ -62,13 +64,11 @@ function summarizeBlock(block) {
  */
 module.exports = class MonoplasmaWatcher extends EventEmitter {
 
-    constructor(eth, joinPartChannel, store, logFunc, errorFunc) {
+    constructor(eth, joinPartChannel, store) {
         super()
         this.eth = eth
         this.channel = joinPartChannel
         this.store = store
-        this.log = logFunc || (() => {})
-        this.error = errorFunc || console.error
 
         // TODO: move messageCache to streamrChannel? I.e. require playback of old messages.
         this.messageCache = []
@@ -86,6 +86,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
      */
     async start(config) {
         await throwIfSetButNotContract(this.eth, config.contractAddress, "contractAddress from initial config")
+        this.log = debug("CPS::watcher::" + config.contractAddress)
 
         // TODO: this isn't even used; maybe should throw if it's different from what contract gives?
         throwIfSetButBadAddress(config.adminAddress, "adminAddress from initial config")
@@ -148,6 +149,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         // replay and cache messages until in sync
         // TODO: cache only starting from given block (that operator/validator have loaded state from store)
         this.channel.on("message", (type, addresses, meta) => {
+            this.log(`Message received: ${type} ${addresses}`)
             const addressList = addresses.map(utils.getAddress)
             const event = { type, addressList, timestamp: meta.messageId.timestamp }
             this.messageCache.push(event)
@@ -246,7 +248,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         }
         const toTimestamp = await this.getBlockTimestamp(toBlock)
 
-        this.log(`Retrieving from blocks ${fromBlock}...${toBlock} (t = ...${toTimestamp})`)
+        this.log(`Retrieving from blocks ${fromBlock}...${toBlock}`)
         const adminFeeFilter = Object.assign({}, this.adminFeeFilter,  { fromBlock, toBlock })
         const blockCreateFilter = Object.assign({}, this.blockCreateFilter, { fromBlock, toBlock })
         const tokenTransferFilter = Object.assign({}, this.tokenTransferFilter,  { fromBlock, toBlock })
@@ -268,11 +270,12 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             event.timestamp = await this.getBlockTimestamp(event.blockNumber)
         }
 
-        // find range in cache
+        this.log(`Getting messages between ${fromTimestamp}...${toTimestamp} from cache`)
         const fromIndex = bisectFindFirstIndex(this.messageCache, msg => msg.timestamp > fromTimestamp)
         const toIndex = bisectFindFirstIndex(this.messageCache, msg => msg.timestamp > toTimestamp)
         const messages = this.messageCache.slice(fromIndex, toIndex)
 
+        this.log(`Replaying ${events.length} events and ${messages.length} messages`)
         await replayOn(plasma, events, messages)
         plasma.currentBlock = toBlock
         plasma.currentTimestamp = toTimestamp
@@ -301,6 +304,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
      */
     async getBlockTimestamp(blockNumber) {
         if (!(blockNumber in this.blockTimestampCache)) {
+            this.log(`blockTimestampCache miss for block number ${blockNumber}`)
             const block = await this.eth.getBlock(blockNumber)
             this.blockTimestampCache[blockNumber] = block.timestamp * 1000
         }
