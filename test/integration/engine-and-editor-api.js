@@ -195,16 +195,16 @@ describe("Community product demo but through a running E&E instance", () => {
         const communityContract = await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, ADMIN_FEE, console.log, config.streamrWsUrl, config.streamrHttpUrl)
         const communityAddress = communityContract.address
 
-        console.log("1.6) Wait until Operator starts")
+        console.log(`1.6) Wait until Operator starts t=${Date.now()}`)
         let stats = { error: true }
         const statsTimeout = setTimeout(() => { throw new Error("Response from E&E: " + JSON.stringify(stats)) }, 100000)
         let sleepTime = 100
         while (stats.error) {
             await sleep(sleepTime *= 2)
             stats = await GET(`/communities/${communityAddress}/stats`).catch(() => ({error: true}))
+            console.log(`     Response t=${Date.now()}: ${JSON.stringify(stats)}`)
         }
         clearTimeout(statsTimeout)
-        console.log(`     Stats before adding: ${JSON.stringify(stats)}`)
 
         console.log("1.7) Set beneficiary in Product DB entry")
         product.beneficiaryAddress = communityAddress
@@ -274,7 +274,7 @@ describe("Community product demo but through a running E&E instance", () => {
 
         console.log("3.1) Wait for blocks to unfreeze...") //... and also that state updates.
         let member = memberBeforeRevenues
-        // TODO: what's the expected final withdrawableEarnings?
+        // wait until member.withdrawableEarnings exists && has increased
         while (member.withdrawableEarnings < 1 + memberBeforeRevenues.withdrawableEarnings) {
             await sleep(1000)
             member = await GET(`/communities/${communityAddress}/members/${address}`)
