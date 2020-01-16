@@ -8,7 +8,7 @@ COPY . /app
 RUN set -xe && \
     apk add python py-pip build-base && \
     apk add --no-cache bash git openssh && \
-    npm install && \
+    npm ci && \
     (./node_modules/.bin/etherlime opt-out || true) && \
     npm run build-contracts && \
     bash --version && ssh -V && npm -v && node -v
