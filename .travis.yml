@@ -20,24 +20,16 @@ jobs:
         - npm run lint
         - npm run unit-tests
     - stage: integration tests
-      env: # needed for create_user.js script that works around CORE-1859 (TODO: check if it's really needed anymore)
-        - STREAMR_WS_URL="ws://localhost:8890/api/v1/ws"
-        - STREAMR_HTTP_URL="http://localhost:8081/streamr-core/api/v1"
+      env:
+        - STREAMR_WS_URL="ws://localhost/api/v1/ws"
+        - STREAMR_HTTP_URL="http://localhost/api/v1"
         - STREAMR_NODE_ADDRESS="0xc0dBcc4e7a0e0BEF78Da67AC2CD5Ca2Dd3c4C165"
         - ETHEREUM_PRIVATE_KEY="0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF"
       script:
-        - sudo /etc/init.d/mysql stop
-        - git clone https://github.com/streamr-dev/streamr-docker-dev.git
-        - sudo ifconfig docker0 10.200.10.1/24
-        - $TRAVIS_BUILD_DIR/streamr-docker-dev/streamr-docker-dev/bin.sh start 1
-        - sleep 1m
+        - .travis_scripts/integration_test.sh
+      after_failure:
         - docker ps
-        - $TRAVIS_BUILD_DIR/streamr-docker-dev/streamr-docker-dev/bin.sh start engine-and-editor
-        - $TRAVIS_BUILD_DIR/streamr-docker-dev/streamr-docker-dev/bin.sh start ganache
-        - sleep 5m
-        - docker ps
-        - node ./scripts/create_user.js
-        - ./node_modules/.bin/mocha --exit test/integration/engine-and-editor-api.js
+        - docker logs streamr_dev_cp
     - stage: Build docker (Dev/Nightly)
       if: tag IS blank
       install: true
@@ -45,11 +37,11 @@ jobs:
         - docker build -t $OWNER/$IMAGE_NAME:local .
         - .travis_scripts/smoke_test.sh
       after_failure:
-        - docker ps;
-        - docker logs streamr_dev_cp;
+        - docker ps
+        - docker logs streamr_dev_cp
       deploy:
         - provider: script
-          script: bash .travis_scripts/deploy_docker.sh dev
+          script: .travis_scripts/deploy_docker.sh dev
     - stage: Build docker (Production)
       if: tag IS present
       install: true
@@ -58,4 +50,7 @@ jobs:
         - .travis_scripts/smoke_test.sh
       deploy:
         - provider: script
-          script: bash .travis_scripts/deploy_docker.sh production
+          script: .travis_scripts/deploy_docker.sh production
+      after_failure:
+        - docker ps
+        - docker logs streamr_dev_cp
