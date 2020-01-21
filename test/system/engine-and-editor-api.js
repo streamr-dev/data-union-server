@@ -30,7 +30,7 @@ const {
     OPERATOR_PRIVATE_KEY,
     TOKEN_ADDRESS,
     WEBSERVER_PORT,
-} = require("./CONFIG")
+} = require("../integration/CONFIG")
 
 /**
  * Same as community-product-demo.js except only through E&E APIs,
