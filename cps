@@ -15,9 +15,11 @@ export WEBSERVER_PORT=8085
 
 # both dev envs
 export TOKEN_ADDRESS=0xbAA81A0179015bE47Ad439566374F2Bae098686F
+
+export ETHEREUM_PRIVATE_KEY=5E98CCE00CFF5DEA6B454889F359A4EC06B9FA6B88E9D69B86DE8E1C81887DA0 # ganache 1
 #export ETHEREUM_PRIVATE_KEY=4059de411f15511a85ce332e7a428f36492ab4e87c7830099dadbf130f1896ae # ganache 3
 #export ETHEREUM_PRIVATE_KEY=beefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeef
-export ETHEREUM_PRIVATE_KEY=0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF
+#export ETHEREUM_PRIVATE_KEY=0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF
 
 # start_server
 export OPERATOR_PRIVATE_KEY=0x5e98cce00cff5dea6b454889f359a4ec06b9fa6b88e9d69b86de8e1c81887da0 # ganache 0
@@ -36,9 +38,9 @@ export DATA_TOKEN_AMOUNT=0.01
 
 #node scripts/watch_community.js
 #node scripts/start_server.js
-#node scripts/deploy_community.js
+node scripts/deploy_community.js
 #node scripts/add_secret.js
 #node scripts/join_community.js
 #node scripts/check_community.js
 #node scripts/send_tokens.js
-node scripts/create_user.js
+#node scripts/create_user.js

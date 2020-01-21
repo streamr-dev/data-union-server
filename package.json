@@ -5,7 +5,6 @@
   "main": "start_server.js",
   "scripts": {
     "start": "node ./scripts/start_server.js",
-    "postinstall": "./node_modules/.bin/etherlime opt-out || true",
     "lint": "./node_modules/.bin/eslint src test",
     "flatten": "./node_modules/.bin/etherlime --solcVersion=0.4.24 flatten CommunityProduct.sol",
     "build-contracts": "./node_modules/.bin/etherlime --solcVersion=0.4.24 compile",
@@ -24,7 +23,7 @@
     "@sentry/node": "^5.9.0",
     "bn.js": "4.11.8",
     "debug": "^4.1.1",
-    "etherlime": "^1.1.1",
+    "etherlime": "2.2.4",
     "ethers": "^4.0.27",
     "exit-hook": "^2.2.0",
     "ganache-cli": "^6.7.0",
