@@ -3,6 +3,8 @@ const {
     utils: { getAddress, BigNumber }
 } = require("ethers")
 
+const log = require("debug")("CPS::routers::communities")
+
 /** Convert Ethereum address into checksummed case */
 function parseAddress(address) {
     try {
@@ -13,8 +15,7 @@ function parseAddress(address) {
 }
 
 /** @type {(server: CommunityProductServer, logFunc: Function<String>) => express.Router} */
-module.exports = (server, logFunc) => {
-    const log = logFunc || process.env.QUIET ? () => {} : console.log
+module.exports = (server) => {
     const router = express.Router()
 
     router.get("/", (req, res) => {

@@ -1,10 +1,6 @@
 const BN = require("bn.js")
 
-const {
-    QUIET,
-} = process.env
-
-const log = QUIET ? () => {} : console.log
+const log = require("debug")("CPS::utils::events")
 
 async function replayOn(plasma, events, messages) {
     const merged = mergeEventsWithMessages(events, messages)

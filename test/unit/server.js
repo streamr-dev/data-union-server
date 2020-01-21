@@ -5,6 +5,8 @@ const os = require("os")
 const path = require("path")
 const { Wallet, providers: { Web3Provider } } = require("ethers")
 
+const log = require("debug")("CPS::test::unit::server")
+
 const ganache = require("ganache-core")
 
 const mockStore = require("monoplasma/test/utils/mockStore")
@@ -28,12 +30,6 @@ const startState = {
     }
 }
 
-const logs = []
-const log = (...args) => {
-    console.log(...args)
-    logs.push(args)
-}
-
 const CommunityProductServer = require("../../src/server")
 describe("CommunityProductServer", () => {
     let tokenAddress
@@ -48,7 +44,7 @@ describe("CommunityProductServer", () => {
         wallet = new Wallet(secretKey, provider)
         await provider.getNetwork()     // wait until ganache is up and ethers.js ready
 
-        console.log("Deploying test token...")
+        log("Deploying test token...")
         tokenAddress = await deployTestToken(wallet)
     })
 
@@ -102,10 +98,10 @@ describe("CommunityProductServer", () => {
         await server.start()
 
         const contract = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
-        console.log(`Deployed contract at ${contract.address}`)
+        log(`Deployed contract at ${contract.address}`)
 
         const contract2 = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
-        console.log(`Deployed contract at ${contract2.address}`)
+        log(`Deployed contract at ${contract2.address}`)
 
         await contract2.setOperator("0x0000000000000000000000000000000000000001")
 

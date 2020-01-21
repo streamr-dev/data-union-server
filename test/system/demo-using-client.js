@@ -2,6 +2,8 @@ const { spawn } = require("child_process")
 const fetch = require("node-fetch")
 const assert = require("assert")
 
+const log = require("debug")("CPS::test::system::streamr-client")
+
 const StreamrClient = require("streamr-client")
 
 const {
@@ -45,17 +47,17 @@ describe.skip("Community product demo but through a running E&E instance", () =>
     let operatorProcess
 
     before(() => {
-        console.log(`Creating store directory ${STORE_DIR}`)
+        log(`Creating store directory ${STORE_DIR}`)
         spawn("mkdir", ["-p", STORE_DIR])
     })
 
     after(() => {
-        console.log(`Cleaning up store directory ${STORE_DIR}`)
+        log(`Cleaning up store directory ${STORE_DIR}`)
         spawn("rm", ["-rf", STORE_DIR])
     })
 
     async function startServer() {
-        console.log("--- Running start_server.js ---")
+        log("--- Running start_server.js ---")
         operatorProcess = spawn(process.execPath, ["scripts/start_server.js"], {
             env: {
                 STREAMR_WS_URL,
@@ -69,11 +71,11 @@ describe.skip("Community product demo but through a running E&E instance", () =>
                 RESET: "yesplease",
             }
         })
-        operatorProcess.stdout.on("data", data => { console.log(`<server> ${data.toString().trim()}`) })
-        operatorProcess.stderr.on("data", data => { console.log(`server *** ERROR: ${data}`) })
-        operatorProcess.on("close", code => { console.log(`start_server.js exited with code ${code}`) })
+        operatorProcess.stdout.on("data", data => { log(`<server> ${data.toString().trim()}`) })
+        operatorProcess.stderr.on("data", data => { log(`server *** ERROR: ${data}`) })
+        operatorProcess.on("close", code => { log(`start_server.js exited with code ${code}`) })
         operatorProcess.on("error", err => {
-            console.log(`start_server.js ERROR: ${err}`)
+            log(`start_server.js ERROR: ${err}`)
             process.exit(1)
         })
 
@@ -107,21 +109,21 @@ describe.skip("Community product demo but through a running E&E instance", () =>
 
         const address = computeAddress(privateKey)
 
-        console.log("--- Server started, getting the operator config ---")
+        log("--- Server started, getting the operator config ---")
 
         // TODO: eliminate direct server communication (use /stats? Change EE?)
         // TODO: maybe just hard-code the correct config into CONFIG.js?
         const config = await fetch("http://localhost:8085/config").then(resp => resp.json())
-        console.log(config)
+        log(config)
 
-        console.log(`Moving 50 tokens to ${address} for testing...`)
+        log(`Moving 50 tokens to ${address} for testing...`)
         const operatorWallet = new Wallet(operatorPrivateKey, ganacheProvider)
         const operatorToken = new Contract(config.tokenAddress, ERC20Mintable.abi, operatorWallet)
-        console.log("check minter:", await operatorToken.isMinter(operatorWallet.address))
+        log("check minter:", await operatorToken.isMinter(operatorWallet.address))
         const transferTx = await operatorToken.mint(address, parseEther("50"))
         await transferTx.wait(1)
 
-        console.log("1) Create a new Community product")
+        log("1) Create a new Community product")
 
         const client = new StreamrClient({
             auth: { privateKey },
@@ -129,7 +131,7 @@ describe.skip("Community product demo but through a running E&E instance", () =>
             restUrl: STREAMR_HTTP_URL,
         })
 
-        console.log("1.1) Create a stream that's going to go into the product")
+        log("1.1) Create a stream that's going to go into the product")
         const streamJson = {
             "name": "Community Product server test stream " + Date.now(),
             "description": "PLEASE DELETE ME, I'm a Community Product server test stream",
@@ -141,9 +143,9 @@ describe.skip("Community product demo but through a running E&E instance", () =>
             }
         }
         const stream = await client.createStream(streamJson)
-        console.log(`     Response: ${JSON.stringify(stream)}`)
+        log(`     Response: ${JSON.stringify(stream)}`)
 
-        console.log("1.3) Create product in the database")
+        log("1.3) Create product in the database")
         const productJson = {
             "name": "Community Product server test product " + Date.now(),
             "description": "PLEASE DELETE ME, I'm a Community Product server test product",
@@ -160,18 +162,18 @@ describe.skip("Community product demo but through a running E&E instance", () =>
             "type": "COMMUNITY",
         }
         const productCreateResponse = await client.createProduct(productJson)
-        console.log(`     Response: ${JSON.stringify(productCreateResponse)}`)
+        log(`     Response: ${JSON.stringify(productCreateResponse)}`)
         const productId = productCreateResponse.id
         assert(productId)
 
-        console.log("1.4) Create joinPartStream")   // done inside deployCommunity below
-        console.log("1.5) Deploy CommunityProduct contract")
+        log("1.4) Create joinPartStream")   // done inside deployCommunity below
+        log("1.5) Deploy CommunityProduct contract")
         const wallet = new Wallet(privateKey, ganacheProvider)
         const nodeAddress = getAddress(STREAMR_NODE_ADDRESS)
-        const communityContract = await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, ADMIN_FEE, console.log, config.streamrWsUrl, config.streamrHttpUrl)
+        const communityContract = await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, ADMIN_FEE, config.streamrWsUrl, config.streamrHttpUrl)
         const communityAddress = communityContract.address
 
-        console.log("1.6) Wait until Operator starts")
+        log("1.6) Wait until Operator starts")
         let stats = { code: true }
         const statsTimeout = setTimeout(() => { throw new Error("Response from E&E: " + JSON.stringify(stats)) }, 100000)
         let sleepTime = 100
@@ -180,14 +182,14 @@ describe.skip("Community product demo but through a running E&E instance", () =>
             stats = await client.getCommunityStats(communityAddress)
         }
         clearTimeout(statsTimeout)
-        console.log(`     Stats before adding: ${JSON.stringify(stats)}`)
+        log(`     Stats before adding: ${JSON.stringify(stats)}`)
 
-        console.log("1.7) Set beneficiary in Product DB entry")
+        log("1.7) Set beneficiary in Product DB entry")
         productJson.beneficiaryAddress = communityAddress
         const putResponse = await client.updateProduct(productJson)
-        console.log(`     Response: ${JSON.stringify(putResponse)}`)
+        log(`     Response: ${JSON.stringify(putResponse)}`)
 
-        console.log("2) Add members")
+        log("2) Add members")
         const memberKeys = [privateKey,
             "0x0000000000000000000000000000000000000000000000000000000000000001",
             "0x0000000000000000000000000000000000000000000000000000000000000002",
@@ -200,11 +202,11 @@ describe.skip("Community product demo but through a running E&E instance", () =>
             "0x0000000000000000000000000000000000000000000000000000000000000009",
         ]
 
-        console.log("2.1) Add community secret")
+        log("2.1) Add community secret")
         const secretCreateResponse = await client.createSecret(communityAddress, "test", "PLEASE DELETE ME, I'm a Community Product server test secret")
-        console.log(`     Response: ${JSON.stringify(secretCreateResponse)}`)
+        log(`     Response: ${JSON.stringify(secretCreateResponse)}`)
 
-        console.log("2.2) Send JoinRequests")
+        log("2.2) Send JoinRequests")
         for (const privateKey of memberKeys) {
             const tempClient = new StreamrClient({
                 auth: { privateKey },
@@ -212,55 +214,55 @@ describe.skip("Community product demo but through a running E&E instance", () =>
                 restUrl: STREAMR_HTTP_URL,
             })
             const joinResponse = await tempClient.joinCommunity(communityAddress, "test")
-            console.log(`     Response: ${JSON.stringify(joinResponse)}`)
+            log(`     Response: ${JSON.stringify(joinResponse)}`)
         }
 
-        console.log("2.3) Wait until members have been added")
+        log("2.3) Wait until members have been added")
         const member9address = computeAddress(memberKeys[9])
         await client.hasJoined(communityAddress, member9address)
 
         // TODO: send revenue by purchasing the product on Marketplace
-        console.log("3) Send revenue in and check tokens were distributed")
+        log("3) Send revenue in and check tokens were distributed")
         const token = new Contract(config.tokenAddress, ERC20Mintable.abi, wallet)
         for (let i = 0; i < 5; i++) {
             const balance = await token.balanceOf(address)
-            console.log(`   Sending 10 tokens (out of remaining ${formatEther(balance)}) to CommunityProduct contract...`)
+            log(`   Sending 10 tokens (out of remaining ${formatEther(balance)}) to CommunityProduct contract...`)
 
             const transferTx = await token.transfer(communityAddress, parseEther("10"))
             await transferTx.wait(2)
 
             // check total revenue
             const res3 = await client.getCommunityStats(communityAddress)
-            console.log(`   Total revenue: ${formatEther(res3.totalEarnings)}`)
+            log(`   Total revenue: ${formatEther(res3.totalEarnings)}`)
         }
 
-        console.log("3.1) Wait for blocks to unfreeze...") //... and also that state updates.
+        log("3.1) Wait for blocks to unfreeze...") //... and also that state updates.
         const before = await client.getMemberStats(communityAddress)
         let member = { withdrawableEarnings: 0 }
         // TODO: what's the expected final withdrawableEarnings?
         while (member.withdrawableEarnings < 1 + before.withdrawableEarnings) {
             await sleep(1000)
             member = await client.getMemberStats(communityAddress)
-            console.log(JSON.stringify(member))
+            log(JSON.stringify(member))
         }
 
-        console.log("4) Withdraw tokens")
+        log("4) Withdraw tokens")
 
         const balanceBefore = await token.balanceOf(address)
-        console.log(`   Token balance before: ${formatEther(balanceBefore)}`)
+        log(`   Token balance before: ${formatEther(balanceBefore)}`)
 
         const contract = new Contract(communityAddress, CommunityProduct.abi, wallet)
         const withdrawTx = await contract.withdrawAll(member.withdrawableBlockNumber, member.withdrawableEarnings, member.proof)
         await withdrawTx.wait(1)
 
         const res4b = await client.getMemberStats(communityAddress)
-        console.log(JSON.stringify(res4b))
+        log(JSON.stringify(res4b))
 
         const balanceAfter = await token.balanceOf(address)
-        console.log(`   Token balance after: ${formatEther(balanceAfter)}`)
+        log(`   Token balance after: ${formatEther(balanceAfter)}`)
 
         const difference = balanceAfter.sub(balanceBefore)
-        console.log(`   Withdraw effect: ${formatEther(difference)}`)
+        log(`   Withdraw effect: ${formatEther(difference)}`)
 
         assert(difference.eq(parseEther("5")))
     })

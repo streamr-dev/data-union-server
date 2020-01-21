@@ -4,15 +4,14 @@
 const {
     Contract,
     Wallet,
-    utils,
-    providers: { JsonRpcProvider, Web3Provider }
+    providers: { Web3Provider }, //, JsonRpcProvider },
 } = require("ethers")
 const onProcessExit = require("exit-hook")
 
 const deployTestToken = require("../test/utils/deployTestToken")
 const sleep = require("../src/utils/sleep-promise")
 
-const startGanache = require("monoplasma/src/utils/startGanache")
+//const startGanache = require("monoplasma/src/utils/startGanache")
 const ganacheLib = require("ganache-core")
 
 const ganacheBlockIntervalSeconds = 0

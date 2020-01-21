@@ -2,6 +2,8 @@ const { spawn } = require("child_process")
 const fetch = require("node-fetch")
 const assert = require("assert")
 
+const log = require("debug")("CPS::test::system::localhost")
+
 const {
     Contract,
     utils: { parseEther, formatEther, getAddress },
@@ -35,19 +37,19 @@ describe("Community product demo", () => {
     let operatorProcess
 
     before(async () => {
-        console.log(`Creating store directory ${STORE_DIR}`)
+        log(`Creating store directory ${STORE_DIR}`)
         spawn("mkdir", ["-p", STORE_DIR])
         await sleep(100)
     })
 
     after(async () => {
-        console.log(`Cleaning up store directory ${STORE_DIR}`)
+        log(`Cleaning up store directory ${STORE_DIR}`)
         spawn("rm", ["-rf", STORE_DIR])
         await sleep(100)
     })
 
     async function startServer() {
-        console.log("--- Running start_server.js ---")
+        log("--- Running start_server.js ---")
         operatorProcess = spawn(process.execPath, ["scripts/start_server.js"], {
             env: {
                 STREAMR_WS_URL: streamrWs,
@@ -59,10 +61,10 @@ describe("Community product demo", () => {
                 RESET: "yesplease",
             }
         })
-        operatorProcess.stdout.on("data", data => { console.log(`<server> ${data.toString().trim()}`) })
-        operatorProcess.stderr.on("data", data => { console.log(`server *** ERROR: ${data}`) })
-        operatorProcess.on("close", code => { console.log(`start_server.js exited with code ${code}`) })
-        operatorProcess.on("error", err => { console.log(`start_server.js ERROR: ${err}`) })
+        operatorProcess.stdout.on("data", data => { log(`<server> ${data.toString().trim()}`) })
+        operatorProcess.stderr.on("data", data => { log(`server *** ERROR: ${data}`) })
+        operatorProcess.on("close", code => { log(`start_server.js exited with code ${code}`) })
+        operatorProcess.on("error", err => { log(`start_server.js ERROR: ${err}`) })
 
         const addressMatch = capture(operatorProcess.stdout, /<Ganache> \(.\) (0x[a-f0-9]{40}) \(~100 ETH\)/, 3)
         const privateKeyMatch = capture(operatorProcess.stdout, /<Ganache> \(.\) (0x[a-f0-9]{64})/, 3)
@@ -104,34 +106,34 @@ describe("Community product demo", () => {
         } = await startServer()
         //} = await connectToLocalGanache()
 
-        console.log("--- Server started, getting the operator config ---")
+        log("--- Server started, getting the operator config ---")
         const config = await fetch(`http://localhost:${WEBSERVER_PORT}/config`).then(resp => resp.json())
-        console.log(config)
+        log(config)
 
-        console.log(`Moving 50 tokens to ${address} for testing...`)
+        log(`Moving 50 tokens to ${address} for testing...`)
         const adminWallet = new Wallet(adminPrivateKey, ganacheProvider)
         const adminToken = new Contract(config.tokenAddress, ERC20Mintable.abi, adminWallet)
         const adminTransferTx = await adminToken.transfer(address, parseEther("50"))
         await adminTransferTx.wait(2)
 
-        console.log("1) Create a new Community product")
+        log("1) Create a new Community product")
 
-        console.log("1.1) Create joinPartStream")  // done in deployCommunity function below
-        console.log("1.2) Deploy CommunityProduct contract")
+        log("1.1) Create joinPartStream")  // done in deployCommunity function below
+        log("1.2) Deploy CommunityProduct contract")
         const wallet = new Wallet(privateKey, ganacheProvider)
         const nodeAddress = getAddress(streamrNodeAddress)
-        const communityContract = await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, ADMIN_FEE, console.log, config.streamrWsUrl, config.streamrHttpUrl)
+        const communityContract = await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, ADMIN_FEE, config.streamrWsUrl, config.streamrHttpUrl)
         const communityAddress = communityContract.address
 
-        console.log("1.3) Wait until Operator starts")
+        log("1.3) Wait until Operator starts")
         let stats = { error: true }
         while (stats.error) {
             await sleep(100)
             stats = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/stats`).then(resp => resp.json())
         }
-        console.log(`     Stats before adding: ${JSON.stringify(stats)}`)
+        log(`     Stats before adding: ${JSON.stringify(stats)}`)
 
-        console.log("2) Add members")
+        log("2) Add members")
         const userList = [address,
             "0xeabe498c90fb31f6932ab9da9c4997a6d9f18639",
             "0x4f623c9ef67b1d9a067a8043344fb80ae990c734",
@@ -154,49 +156,49 @@ describe("Community product demo", () => {
             members = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/members`).then(resp => resp.json())
         }
         const memberAddresses = members.map(m => m.address)
-        console.log(`     Members after adding: ${memberAddresses}`)
+        log(`     Members after adding: ${memberAddresses}`)
         const res2b = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/stats`).then(resp => resp.json())
-        console.log(`     Stats after adding: ${JSON.stringify(res2b)}`)
+        log(`     Stats after adding: ${JSON.stringify(res2b)}`)
         assert(memberAddresses.includes(address))
 
-        console.log("3) Send revenue in")
+        log("3) Send revenue in")
         const token = new Contract(config.tokenAddress, ERC20Mintable.abi, wallet)
         for (let i = 0; i < 5; i++) {
             const balance = await token.balanceOf(address)
-            console.log(`   Sending 10 tokens (out of remaining ${formatEther(balance)}) to CommunityProduct contract...`)
+            log(`   Sending 10 tokens (out of remaining ${formatEther(balance)}) to CommunityProduct contract...`)
 
             const transferTx = await token.transfer(communityAddress, parseEther("10"))
             await transferTx.wait(2)
 
             // check total revenue
             const res3 = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/stats`).then(resp => resp.json())
-            console.log(`   Total revenue: ${formatEther(res3.totalEarnings)}`)
+            log(`   Total revenue: ${formatEther(res3.totalEarnings)}`)
         }
 
-        console.log("   Waiting for blocks to unfreeze...") //... and also that state updates.
+        log("   Waiting for blocks to unfreeze...") //... and also that state updates.
         // TODO: this really should work with much lower sleep time
         //   I think there's a mismatch in the router between which withdrawableBlock is reported and what the proof from state is
         await sleep(10000)
 
-        console.log("4) Check tokens were distributed & withdraw")
+        log("4) Check tokens were distributed & withdraw")
         const res4 = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/members/${address}`).then(resp => resp.json())
-        console.log(JSON.stringify(res4))
+        log(JSON.stringify(res4))
 
         const balanceBefore = await token.balanceOf(address)
-        console.log(`   Token balance before: ${formatEther(balanceBefore)}`)
+        log(`   Token balance before: ${formatEther(balanceBefore)}`)
 
         const contract = new Contract(communityAddress, CommunityProduct.abi, wallet)
         const withdrawTx = await contract.withdrawAll(res4.withdrawableBlockNumber, res4.withdrawableEarnings, res4.proof)
         await withdrawTx.wait(2)
 
         const res4b = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/members/${address}`).then(resp => resp.json())
-        console.log(JSON.stringify(res4b))
+        log(JSON.stringify(res4b))
 
         const balanceAfter = await token.balanceOf(address)
-        console.log(`   Token balance after: ${formatEther(balanceAfter)}`)
+        log(`   Token balance after: ${formatEther(balanceAfter)}`)
 
         const difference = balanceAfter.sub(balanceBefore)
-        console.log(`   Withdraw effect: ${formatEther(difference)}`)
+        log(`   Withdraw effect: ${formatEther(difference)}`)
 
         assert.strictEqual(difference.toString(), parseEther("5").toString())   // incl admin fee?
     })

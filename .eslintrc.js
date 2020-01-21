@@ -28,7 +28,7 @@ module.exports = {
             "error",
             "never"
         ],
-        "no-console": "warn",
+        "no-console": "error",
         "keyword-spacing": "error",
         "func-call-spacing": "error",
         "space-infix-ops": "error"

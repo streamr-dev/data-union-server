@@ -1,16 +1,18 @@
+/* eslint-disable no-console */ // this test uses console to communicate with main runner
+
 const Channel = require("../../src/streamrChannel")
 
 const sleep = require("../../src/utils/sleep-promise")
 
 const privateKey = "0x5e98cce00cff5dea6b454889f359a4ec06b9fa6b88e9d69b86de8e1c81887da0"  // ganache 0
 
-const { streamrWs, streamrHttp } = require("./CONFIG")
+const { STREAMR_WS_URL, STREAMR_HTTP_URL } = require("./CONFIG")
 
 const streamId = process.env.__JOINPART_STREAM_ID
 
 async function start() {
     console.log("Starting server...")
-    const channel = new Channel(streamId, streamrWs, streamrHttp)
+    const channel = new Channel(streamId, STREAMR_WS_URL, STREAMR_HTTP_URL)
     await channel.startServer(privateKey)
     console.log("Stream ID", channel.stream.id)
 

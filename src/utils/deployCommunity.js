@@ -4,6 +4,8 @@ const {
 } = require("ethers")
 const StreamrClient = require("streamr-client")
 
+const log = require("debug")("CPS::utils::deployCommunity")
+
 const { throwIfBadAddress, throwIfNotContract } = require("./checkArguments")
 
 const CommunityJson = require("../../build/CommunityProduct")
@@ -17,9 +19,11 @@ const CommunityJson = require("../../build/CommunityProduct")
  * @param {EthereumAddress} tokenAddress
  * @param {Number} blockFreezePeriodSeconds security parameter against operator failure (optional, default: 0)
  * @param {Number} adminFee fraction of revenue that goes to product admin, 0...1 (optional, default: 0)
- * @param {Function} log
+ * @param {String} streamrWsUrl websocket API URL (optional, default: production mainnet)
+ * @param {String} streamrHttpUrl HTTP API URL (optional, default: production mainnet)
+ * @param {Number} gasPriceGwei (optional, default: ethers.js default, probably network recommendation)
  */
-async function deployCommunity(wallet, operatorAddress, tokenAddress, streamrNodeAddress, blockFreezePeriodSeconds = 0, adminFee = 0, log, streamrWsUrl, streamrHttpUrl, gasPriceGwei) {
+async function deployCommunity(wallet, operatorAddress, tokenAddress, streamrNodeAddress, blockFreezePeriodSeconds = 0, adminFee = 0, streamrWsUrl, streamrHttpUrl, gasPriceGwei) {
     throwIfBadAddress(operatorAddress, "deployCommunity function argument operatorAddress")
     throwIfBadAddress(streamrNodeAddress, "deployCommunity function argument streamrNodeAddress")
     await throwIfNotContract(wallet.provider, tokenAddress, "deployCommunity function argument tokenAddress")
@@ -29,7 +33,7 @@ async function deployCommunity(wallet, operatorAddress, tokenAddress, streamrNod
 
     const joinPartStreamName = `Join-Part-${wallet.address.slice(0, 10)}-${Date.now()}`
 
-    log && log(`Creating joinPartStream (name = ${joinPartStreamName})...`)
+    log(`Creating joinPartStream (name = ${joinPartStreamName})...`)
     const privateKey = wallet.privateKey
     const opts = { auth: { privateKey } }
     if (streamrWsUrl) { opts.url = streamrWsUrl }
@@ -39,19 +43,19 @@ async function deployCommunity(wallet, operatorAddress, tokenAddress, streamrNod
 
     // every watcher should be able to read joins and parts in order to sync the state
     const res1 = await stream.grantPermission("read", null)
-    log && log("Grant public read", JSON.stringify(res1))
+    log("Grant public read", JSON.stringify(res1))
 
     // streamrNode must be able to handle accepted JoinRequests
     const res2 = await stream.grantPermission("write", streamrNodeAddress)
-    log && log("Grant E&E write", JSON.stringify(res2))
+    log("Grant E&E write", JSON.stringify(res2))
 
     const options = {}
     if (gasPriceGwei) { options.gasPrice = parseUnits(gasPriceGwei, "gwei") }
 
-    log && log(`Deploying root chain contract (token @ ${tokenAddress}, blockFreezePeriodSeconds = ${blockFreezePeriodSeconds}, joinPartStream = ${stream.id}, adminFee = ${adminFee})...`)
+    log(`Deploying root chain contract (token @ ${tokenAddress}, blockFreezePeriodSeconds = ${blockFreezePeriodSeconds}, joinPartStream = ${stream.id}, adminFee = ${adminFee})...`)
     const deployer = new ContractFactory(CommunityJson.abi, CommunityJson.bytecode, wallet)
     const result = await deployer.deploy(operatorAddress, stream.id, tokenAddress, blockFreezePeriodSeconds, adminFeeBN, options)
-    log && log(`Will be deployed @ ${result.address}, follow deployment: https://etherscan.io/tx/${result.deployTransaction.hash}`)
+    log(`Will be deployed @ ${result.address}, follow deployment: https://etherscan.io/tx/${result.deployTransaction.hash}`)
     await result.deployed()
     return result
 }

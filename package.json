@@ -5,7 +5,7 @@
   "main": "start_server.js",
   "scripts": {
     "start": "node ./scripts/start_server.js",
-    "lint": "./node_modules/.bin/eslint src test",
+    "lint": "./node_modules/.bin/eslint src test scripts",
     "flatten": "./node_modules/.bin/etherlime --solcVersion=0.4.24 flatten CommunityProduct.sol",
     "build-contracts": "./node_modules/.bin/etherlime --solcVersion=0.4.24 compile",
     "unit-tests": "./node_modules/.bin/mocha test/unit --exit",

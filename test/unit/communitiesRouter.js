@@ -7,6 +7,8 @@ const http = require("http")
 const fetch = require("node-fetch")
 const { Wallet, ContractFactory, providers: { Web3Provider } } = require("ethers")
 
+const log = require("debug")("CPS::test::unit::communities-router")
+
 const CommunityJson = require("../../build/CommunityProduct")
 const TokenJson = require("../../build/TestToken")
 
@@ -16,7 +18,6 @@ const { until } = require("../utils/await-until")
 
 const MockStreamrChannel = require("../utils/mockStreamrChannel")
 const mockStore = require("monoplasma/test/utils/mockStore")
-const log = console.log  // () => {}
 const members = [
     { address: "0x2F428050ea2448ed2e4409bE47e1A50eBac0B2d2", earnings: "50" },
     { address: "0xb3428050ea2448ed2e4409be47e1a50ebac0b2d2", earnings: "20" },

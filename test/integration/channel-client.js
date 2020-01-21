@@ -1,16 +1,17 @@
-const Channel = require("../../src/streamrChannel")
+/* eslint-disable no-console */ // this test uses console to communicate with main runner
 
+const Channel = require("../../src/streamrChannel")
 const sleep = require("../../src/utils/sleep-promise")
 
-const privateKey = "0x1234567812345678123456781234567812354678123456781234567812345678"
-
-const { streamrWs, streamrHttp } = require("./CONFIG")
+const { STREAMR_WS_URL, STREAMR_HTTP_URL } = require("./CONFIG")
 
 const streamId = process.env.__JOINPART_STREAM_ID
 
+const privateKey = "0x1234567812345678123456781234567812354678123456781234567812345678"
+
 async function start() {
     console.log("Starting listener...")
-    const channel = new Channel(privateKey, streamId, streamrWs, streamrHttp)
+    const channel = new Channel(privateKey, streamId, STREAMR_WS_URL, STREAMR_HTTP_URL)
     await channel.listen()
     console.log("Stream ID", channel.stream.id)
 

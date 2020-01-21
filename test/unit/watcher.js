@@ -1,6 +1,8 @@
 const sinon = require("sinon")
 const assert = require("assert")
 
+const log = require("debug")("CPS::test::unit::watcher")
+
 const {
     Wallet,
     ContractFactory,
@@ -18,8 +20,6 @@ const sleep = require("../../src/utils/sleep-promise")
 
 const MockStreamrChannel = require("../utils/mockStreamrChannel")
 const mockStore = require("monoplasma/test/utils/mockStore")
-
-const log = console.log  // () => {}
 
 const members = [
     { address: "0x2F428050ea2448ed2e4409bE47e1A50eBac0B2d2", earnings: "50" },
@@ -140,24 +140,24 @@ describe("MonoplasmaWatcher", () => {
         this.timeout(10000)
         await community.setAdminFee(parseEther("0.5"))
         await sleep(1000)
-        console.log("Admin fee: " + watcher.plasma.adminFeeFraction)
+        log("Admin fee: " + watcher.plasma.adminFeeFraction)
 
-        console.log(JSON.stringify(watcher.plasma.getMembers()))
+        log(JSON.stringify(watcher.plasma.getMembers()))
 
         await token.transfer(community.address, 40) // -> 20/2 = 10 for members, 20 for admin
         await sleep(1000)
-        console.log(JSON.stringify(watcher.plasma.getMembers()))
+        log(JSON.stringify(watcher.plasma.getMembers()))
         const afterTransfer1 = await wallet.provider.getBlock()
         await new Promise(done => {
             watcher.on("join", done)
             joinPartChannel.publish("join", ["0x1234567812345678123456781234567812345678"])
         })
 
-        console.log(JSON.stringify(watcher.plasma.getMembers()))
+        log(JSON.stringify(watcher.plasma.getMembers()))
 
         await token.transfer(community.address, 30) // -> 15/3 = 5 for members, 15 for admin
         await sleep(1000)
-        console.log(JSON.stringify(watcher.plasma.getMembers()))
+        log(JSON.stringify(watcher.plasma.getMembers()))
         const afterTransfer2 = await wallet.provider.getBlock()
         await new Promise(done => {
             watcher.on("join", done)
@@ -166,7 +166,7 @@ describe("MonoplasmaWatcher", () => {
         await token.transfer(community.address, 40) // -> 20/4 = 5 for members, 20 for admin
 
         await sleep(1000)
-        console.log(JSON.stringify(watcher.plasma.getMembers()))
+        log(JSON.stringify(watcher.plasma.getMembers()))
         const expectedBalances = [
             { address: "0x2F428050ea2448ed2e4409bE47e1A50eBac0B2d2", earnings: "70" }, // 50 startBalance + 10 + 5 + 5
             { address: "0xb3428050ea2448ed2e4409be47e1a50ebac0b2d2", earnings: "40" }, // 20 startBalance + 10 + 5 + 5

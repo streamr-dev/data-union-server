@@ -168,11 +168,11 @@ async function start() {
             const adminFee = process.env.ADMIN_FEE || 0
 
             // deploy new communities
-            app.use("/admin/deploy", (req, res) => deployCommunity(wallet, wallet.address, tokenAddress, streamrNodeAddress, BLOCK_FREEZE_SECONDS || 1000, adminFee, log, config.streamrWsUrl, config.streamrHttpUrl).then(({contract: { address }}) => res.send({ address })).catch(error => res.status(500).send({error})))
+            app.use("/admin/deploy", (req, res) => deployCommunity(wallet, wallet.address, tokenAddress, streamrNodeAddress, BLOCK_FREEZE_SECONDS || 1000, adminFee, config.streamrWsUrl, config.streamrHttpUrl).then(({contract: { address }}) => res.send({ address })).catch(error => res.status(500).send({error})))
             app.use("/admin/addTo/:communityAddress", (req, res) => transfer(wallet, req.params.communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
 
             // deploy a test community and provide direct manipulation endpoints for it (useful for seeing if anything is happening)
-            const contract = await deployCommunity(wallet, wallet.address, tokenAddress, streamrNodeAddress, BLOCK_FREEZE_SECONDS || 1000, adminFee, log, config.streamrWsUrl, config.streamrHttpUrl)
+            const contract = await deployCommunity(wallet, wallet.address, tokenAddress, streamrNodeAddress, BLOCK_FREEZE_SECONDS || 1000, adminFee, config.streamrWsUrl, config.streamrHttpUrl)
             const communityAddress = contract.address
             app.use("/admin/addRevenue", (req, res) => transfer(wallet, communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
             app.use("/admin/setAdminFee", (req, res) => setFee(wallet, communityAddress, "0.3").then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
