@@ -37,7 +37,11 @@ const {
  * Same as community-product-demo.js except only using StreamrClient.
  * Only needs to run against streamr-ganache docker, so uses ETHEREUM_SERVER from CONFIG
  */
-describe("Community product demo but through a running E&E instance", () => {
+
+// NB: THIS TEST WON'T ACTUALLY RUN BEFORE STUFF IS ADDED TO streamr-javascript-client
+// TODO: add client.createProduct to streamr-javascript-client
+// TODO: add client.updateProduct to streamr-javascript-client
+describe.skip("Community product demo but through a running E&E instance", () => {
     let operatorProcess
 
     before(() => {
@@ -79,7 +83,6 @@ describe("Community product demo but through a running E&E instance", () => {
             ganacheProvider: new JsonRpcProvider(ETHEREUM_SERVER),
             operatorPrivateKey: OPERATOR_PRIVATE_KEY,
             privateKey: ADMIN_PRIVATE_KEY,
-            address: "0x4178baBE9E5148c6D5fd431cD72884B07Ad855a0",
         }
     }
 
@@ -89,7 +92,6 @@ describe("Community product demo but through a running E&E instance", () => {
             ganacheProvider: new JsonRpcProvider("http://localhost:8545"),
             operatorPrivateKey: "0x5e98cce00cff5dea6b454889f359a4ec06b9fa6b88e9d69b86de8e1c81887da0",  // ganache 0
             privateKey: "0xe5af7834455b7239881b85be89d905d6881dcb4751063897f12be1b0dd546bdb", // ganache 1
-            address: "0x4178baBE9E5148c6D5fd431cD72884B07Ad855a0",
         }
     }
 
@@ -100,13 +102,16 @@ describe("Community product demo but through a running E&E instance", () => {
             ganacheProvider,
             operatorPrivateKey,
             privateKey,
-            address,
         } = await startServer()
         //} = await connectToLocalGanache()
 
+        const address = computeAddress(privateKey)
+
         console.log("--- Server started, getting the operator config ---")
+
         // TODO: eliminate direct server communication (use /stats? Change EE?)
-        const config = await fetch(`http://localhost:${WEBSERVER_PORT}/config`).then(resp => resp.json())
+        // TODO: maybe just hard-code the correct config into CONFIG.js?
+        const config = await fetch("http://localhost:8085/config").then(resp => resp.json())
         console.log(config)
 
         console.log(`Moving 50 tokens to ${address} for testing...`)
@@ -123,34 +128,6 @@ describe("Community product demo but through a running E&E instance", () => {
             url: STREAMR_WS_URL,
             restUrl: STREAMR_HTTP_URL,
         })
-
-        /*
-        const sessionToken = await client.session.sessionTokenPromise
-        console.log("Session token: " + sessionToken)
-        assert(sessionToken)
-
-        // wrap fetch; with the Authorization header the noise is just too much...
-        async function GET(url) {
-            return fetch(STREAMR_HTTP_URL + url, {
-                headers: {
-                    "Authorization": `Bearer ${sessionToken}`
-                }
-            }).then(resp => resp.json())
-        }
-        async function POST(url, bodyObject, sessionTokenOverride, methodOverride) {
-            return fetch(STREAMR_HTTP_URL + url, {
-                method: methodOverride || "POST",
-                body: JSON.stringify(bodyObject),
-                headers: {
-                    "Authorization": `Bearer ${sessionTokenOverride || sessionToken}`,
-                    "Content-Type": "application/json",
-                }
-            }).then(resp => resp.json())
-        }
-        async function PUT(url, bodyObject) {
-            return POST(url, bodyObject, null, "PUT")
-        }
-        */
 
         console.log("1.1) Create a stream that's going to go into the product")
         const streamJson = {
@@ -182,7 +159,7 @@ describe("Community product demo but through a running E&E instance", () => {
             "minimumSubscriptionInSeconds": 0,
             "type": "COMMUNITY",
         }
-        const productCreateResponse = await POST("/products", productJson)
+        const productCreateResponse = await client.createProduct(productJson)
         console.log(`     Response: ${JSON.stringify(productCreateResponse)}`)
         const productId = productCreateResponse.id
         assert(productId)
@@ -200,14 +177,14 @@ describe("Community product demo but through a running E&E instance", () => {
         let sleepTime = 100
         while (stats.code) {
             await sleep(sleepTime *= 2)
-            stats = await GET(`/communities/${communityAddress}/stats`)
+            stats = await client.getCommunityStats(communityAddress)
         }
         clearTimeout(statsTimeout)
         console.log(`     Stats before adding: ${JSON.stringify(stats)}`)
 
         console.log("1.7) Set beneficiary in Product DB entry")
         productJson.beneficiaryAddress = communityAddress
-        const putResponse = await PUT(`/products/${productId}`, productJson)
+        const putResponse = await client.updateProduct(productJson)
         console.log(`     Response: ${JSON.stringify(putResponse)}`)
 
         console.log("2) Add members")
@@ -224,35 +201,23 @@ describe("Community product demo but through a running E&E instance", () => {
         ]
 
         console.log("2.1) Add community secret")
-        const secretCreateResponse = await POST(`/communities/${communityAddress}/secrets`, {
-            name: "PLEASE DELETE ME, I'm a Community Product server test secret",
-            secret: "test",
-        })
+        const secretCreateResponse = await client.createSecret(communityAddress, "test", "PLEASE DELETE ME, I'm a Community Product server test secret")
         console.log(`     Response: ${JSON.stringify(secretCreateResponse)}`)
 
         console.log("2.2) Send JoinRequests")
         for (const privateKey of memberKeys) {
-            const memberAddress = computeAddress(privateKey)
             const tempClient = new StreamrClient({
                 auth: { privateKey },
                 url: STREAMR_WS_URL,
                 restUrl: STREAMR_HTTP_URL,
             })
-            const joinResponse = await POST(`/communities/${communityAddress}/joinRequests`, {
-                memberAddress,
-                secret: "test",
-                metadata: { test: "PLEASE DELETE ME, I'm a Community Product server test joinRequest" },
-            }, await tempClient.session.sessionTokenPromise)
+            const joinResponse = await tempClient.joinCommunity(communityAddress, "test")
             console.log(`     Response: ${JSON.stringify(joinResponse)}`)
         }
 
         console.log("2.3) Wait until members have been added")
-        let members = []
-        sleepTime = 100
-        while (members.length < 1) {
-            await sleep(sleepTime *= 2)
-            members = await GET(`/communities/${communityAddress}/members`)
-        }
+        const member9address = computeAddress(memberKeys[9])
+        await client.hasJoined(communityAddress, member9address)
 
         // TODO: send revenue by purchasing the product on Marketplace
         console.log("3) Send revenue in and check tokens were distributed")
@@ -265,17 +230,17 @@ describe("Community product demo but through a running E&E instance", () => {
             await transferTx.wait(2)
 
             // check total revenue
-            const res3 = await GET(`/communities/${communityAddress}/stats`)
+            const res3 = await client.getCommunityStats(communityAddress)
             console.log(`   Total revenue: ${formatEther(res3.totalEarnings)}`)
         }
 
         console.log("3.1) Wait for blocks to unfreeze...") //... and also that state updates.
-        const before = await GET(`/communities/${communityAddress}/members/${address}`)
+        const before = await client.getMemberStats(communityAddress)
         let member = { withdrawableEarnings: 0 }
         // TODO: what's the expected final withdrawableEarnings?
         while (member.withdrawableEarnings < 1 + before.withdrawableEarnings) {
             await sleep(1000)
-            member = await GET(`/communities/${communityAddress}/members/${address}`)
+            member = await client.getMemberStats(communityAddress)
             console.log(JSON.stringify(member))
         }
 
@@ -288,7 +253,7 @@ describe("Community product demo but through a running E&E instance", () => {
         const withdrawTx = await contract.withdrawAll(member.withdrawableBlockNumber, member.withdrawableEarnings, member.proof)
         await withdrawTx.wait(1)
 
-        const res4b = await GET(`/communities/${communityAddress}/members/${address}`)
+        const res4b = await client.getMemberStats(communityAddress)
         console.log(JSON.stringify(res4b))
 
         const balanceAfter = await token.balanceOf(address)
