@@ -93,7 +93,7 @@ async function runDeployScript(ETHEREUM_SERVER, ETHEREUM_PRIVATE_KEY, OPERATOR_A
     }
 }
 
-describe("Deploy community script", () => {
+describe.skip("Deploy community script", () => {
     let processesToCleanUp = []
     afterEach(async () => {
         for (const p of processesToCleanUp) {
