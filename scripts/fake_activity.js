@@ -1,9 +1,10 @@
 const StreamrClient = require("streamr-client")
+const sleep = require("../src/utils/sleep-promise")
 
 const {
     getDefaultProvider,
     providers: { JsonRpcProvider },
-    utils: { computeAddress, formatEther },
+    utils: { formatEther, parseEther },
     Wallet,
     Contract,
 } = require("ethers")
@@ -35,20 +36,23 @@ const {
     QUIET,
 } = process.env
 
+const TICK_RATE_MS = 10 * 1000
+
 const log = QUIET ? () => {} : (...args) => {
-    console.log(...args)
+    console.log(`${new Date().toISOString()} -`, ...args)
 }
 const error = (e, ...args) => {
-    console.error(e.stack, ...args)
+    console.error(`${new Date().toISOString()} -`, e.stack, ...args)
     process.exit(1)
 }
 
 const { throwIfBadAddress, throwIfNotContract } = require("../src/utils/checkArguments")
 
-let communityAddress
 let token
 let wallet
-let client
+let lastJoin = Date.now()
+let lastTransfer = Date.now()
+
 async function start() {
     const provider =
         ETHEREUM_SERVER ? new JsonRpcProvider(ETHEREUM_SERVER) :
@@ -61,7 +65,7 @@ async function start() {
     log("Connected to Ethereum network: ", JSON.stringify(network))
 
     if (!SECRET) { throw new Error("Please specify env variable SECRET") }
-    communityAddress = await throwIfNotContract(provider, COMMUNITY_ADDRESS, "env variable COMMUNITY_ADDRESS")
+    await throwIfNotContract(provider, COMMUNITY_ADDRESS, "env variable COMMUNITY_ADDRESS")
     const tokenAddress = await throwIfNotContract(provider, TOKEN_ADDRESS, "env variable TOKEN_ADDRESS")
 
     const privateKey = ETHEREUM_PRIVATE_KEY.startsWith("0x") ? ETHEREUM_PRIVATE_KEY : "0x" + ETHEREUM_PRIVATE_KEY
@@ -70,33 +74,66 @@ async function start() {
 
     token = new Contract(tokenAddress, TokenJson.abi, wallet)
 
-    log("Connecting to Streamr...")
-    const opts = { auth: { privateKey } }
-    if (STREAMR_WS_URL) { opts.url = STREAMR_WS_URL }
-    if (STREAMR_HTTP_URL) { opts.restUrl = STREAMR_HTTP_URL }
-    client = new StreamrClient(opts)
-
-    const memberAddress = computeAddress(privateKey)
-    await join(memberAddress, SECRET)
-    await sendTokens()
-
-    log(`Network was ${JSON.stringify(network)}`)
+    while (true) {
+        tick()
+        await sleep(TICK_RATE_MS)
+    }
 }
 
-async function join(memberAddress, secret) {
+async function tick() {
+    // Handle member joins
+    const lastJoinDiff = Date.now() - lastJoin
+    const joinProbability = JOINS_PER_MINUTE_AVERAGE * (lastJoinDiff / (60 * 1000))
+
+    if (Math.random() < joinProbability) {
+        let secret = SECRET
+
+        // ~10% chance to leave secret out se we get a join request with state PENDING
+        if (Math.random() < 0.1) {
+            secret = undefined
+            log("Adding PENDING join request without SECRET")
+        }
+
+        await joinRandom(COMMUNITY_ADDRESS, secret)
+        lastJoin = Date.now()
+    }
+
+    // TODO: Handle member parts when StreamrClient supports them....
+    
+    // Handle buys
+    const lastTransferDiff = Date.now() - lastTransfer
+    const transferAmount = REVENUE_PER_MINUTE * (lastTransferDiff / (60 * 1000))
+
+    if (transferAmount > REVENUE_PER_TRANSFER) {
+        await sendTokens(COMMUNITY_ADDRESS, transferAmount)
+        lastTransfer = Date.now()
+    }
+}
+
+async function joinRandom(communityAddress, secret) {
     if (!communityAddress) { throw new Error("communityAddress not initialized") }
+
+    const newWallet = Wallet.createRandom()
+    const memberAddress = newWallet.address
     throwIfBadAddress(memberAddress, "join function argument memberAddress")
-    log(`Adding https://streamr.com/api/v1/communities/${communityAddress}/members/${memberAddress} ...`)
-    const res = await client.joinCommunity(communityAddress, memberAddress, secret)
-    log(JSON.stringify(res))
+
+    log("Creating StreamrClient with randomly created privateKey")
+    const opts = { auth: { privateKey: newWallet.privateKey } }
+    if (STREAMR_WS_URL) { opts.url = STREAMR_WS_URL }
+    if (STREAMR_HTTP_URL) { opts.restUrl = STREAMR_HTTP_URL }
+    const walletClient = new StreamrClient(opts)
+
+    log(`Adding member ${memberAddress} to community ${communityAddress}`)
+    const res = await walletClient.joinCommunity(communityAddress, memberAddress, secret)
     return res
 }
 
-async function sendTokens(dataWeiAmount) {
+async function sendTokens(communityAddress, dataAmount) {
+    const dataWeiAmount = parseEther(dataAmount.toString())
     const tx = await token.transfer(communityAddress, dataWeiAmount)
-    log(`Transferring ${formatEther(dataWeiAmount)} DATA from ${wallet.address} to ${communityAddress}...`)
+    log(`Transferring ${formatEther(dataWeiAmount)} DATA from ${wallet.address} to ${communityAddress}`)
     const tr = await tx.wait(1)
-    log(JSON.stringify(tr))
+    log(`TX completed with hash ${tr.transactionHash}`)
     return tr
 }
 
