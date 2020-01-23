@@ -2,7 +2,7 @@ const {
     Contract,
     getDefaultProvider,
     Wallet,
-    utils: { parseUnits, parseEther, formatEther, bigNumberify, BigNumber },
+    utils: { parseUnits, formatEther, BigNumber },
     providers: { JsonRpcProvider }
 } = require("ethers")
 
@@ -19,7 +19,6 @@ const {
     ETHEREUM_NETWORK,           // use ethers.js default servers
     ETHEREUM_PRIVATE_KEY,
 
-    TOKEN_ADDRESS,
     COMMUNITY_ADDRESS,
     GAS_PRICE_GWEI,
 

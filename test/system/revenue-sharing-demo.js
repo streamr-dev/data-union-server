@@ -2,6 +2,8 @@ const { spawn } = require("child_process")
 const fetch = require("node-fetch")
 const assert = require("assert")
 
+const log = require("debug")("CPS::test::system::operator-demo")
+
 const {
     Contract,
     utils: { parseEther, formatEther },
@@ -23,23 +25,25 @@ const BLOCK_FREEZE_SECONDS = 1
 
 const FileStore = require("monoplasma/src/fileStore")
 
+// this is the oldest demo, presented in EthDenver 2019
+// only one operator is run (no server.js), so only one community is being operated
 describe("Revenue sharing demo", () => {
     let operatorProcess
 
     before(() => {
-        console.log(`Creating store directory ${STORE_DIR}`)
+        log(`Creating store directory ${STORE_DIR}`)
         spawn("mkdir", ["-p", STORE_DIR])
     })
 
     after(() => {
-        console.log(`Cleaning up store directory ${STORE_DIR}`)
+        log(`Cleaning up store directory ${STORE_DIR}`)
         spawn("rm", ["-rf", STORE_DIR])
     })
 
     // TODO: fix start_operator.js, then fix this test (copy relevant improvements from community-product-demo first)
     it.skip("should get through the happy path", async function () {
         this.timeout(30000)
-        console.log("--- Running start_operator.js ---")
+        log("--- Running start_operator.js ---")
         operatorProcess = spawn(process.execPath, ["start_operator.js"], {
             env: {
                 STORE_DIR,
@@ -50,10 +54,10 @@ describe("Revenue sharing demo", () => {
                 RESET: "yesplease",
             }
         })
-        operatorProcess.stdout.on("data", data => { console.log(`<op> ${data.toString().trim()}`) })
-        operatorProcess.stderr.on("data", data => { console.log(`op *** ERROR: ${data}`) })
-        operatorProcess.on("close", code => { console.log(`start_operator.js exited with code ${code}`) })
-        operatorProcess.on("error", err => { console.log(`start_operator.js ERROR: ${err}`) })
+        operatorProcess.stdout.on("data", data => { log(`<op> ${data.toString().trim()}`) })
+        operatorProcess.stderr.on("data", data => { log(`op *** ERROR: ${data}`) })
+        operatorProcess.on("close", code => { log(`start_operator.js exited with code ${code}`) })
+        operatorProcess.on("error", err => { log(`start_operator.js ERROR: ${err}`) })
 
         const addressMatch = capture(operatorProcess.stdout, /<Ganache> \(.\) (0x[a-f0-9]{40}) \(~100 ETH\)/, 3)
         const privateKeyMatch = capture(operatorProcess.stdout, /<Ganache> \(.\) (0x[a-f0-9]{64})/, 3)
@@ -67,17 +71,17 @@ describe("Revenue sharing demo", () => {
         const wallet = new Wallet(privateKey, ganacheProvider)
 
         // TODO: get config from somewhere else
-        console.log("--- Operator started, getting the init state ---")
+        log("--- Operator started, getting the init state ---")
         const fileStore = new FileStore()
         const state = await fileStore.loadState()
 
-        console.log("state", state)
+        log("state", state)
         const token = new Contract(state.tokenAddress, ERC20Mintable.abi, wallet)
         const contract = new Contract(state.contractAddress, MonoplasmaJson.abi, wallet)
 
-        console.log(contract.contract.address)
+        log(contract.contract.address)
 
-        console.log("1) click 'Add users' button")
+        log("1) click 'Add users' button")
         const userList = [from,
             "0xeabe498c90fb31f6932ab9da9c4997a6d9f18639",
             "0x4f623c9ef67b1d9a067a8043344fb80ae990c734",
@@ -94,15 +98,15 @@ describe("Revenue sharing demo", () => {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(userList),
         }).then(resp => resp.json())
-        console.log(`   Server response: ${JSON.stringify(res1)}`)
+        log(`   Server response: ${JSON.stringify(res1)}`)
 
-        console.log("   check that there are new users in community")
+        log("   check that there are new users in community")
         const res1b = await fetch(`http://localhost:${WEBSERVER_PORT}/api/status`).then(resp => resp.json())
-        console.log(`      Status: ${JSON.stringify(res1b)}`)
+        log(`      Status: ${JSON.stringify(res1b)}`)
 
-        console.log("2) click 'Add revenue' button a couple times")
+        log("2) click 'Add revenue' button a couple times")
         for (let i = 0; i < 5; i++) {
-            console.log("   Sending 10 tokens to Monoplasma contract...")
+            log("   Sending 10 tokens to Monoplasma contract...")
             await token.transfer(contract.contract.address, parseEther("10"))
 
             // TODO: things will break if revenue is added too fast. You can remove the below row to try and fix it.
@@ -110,28 +114,28 @@ describe("Revenue sharing demo", () => {
 
             // check total revenue
             const res2 = await fetch(`http://localhost:${WEBSERVER_PORT}/api/status`).then(resp => resp.json())
-            console.log(`   Total revenue: ${formatEther(res2.totalEarnings)}`)
+            log(`   Total revenue: ${formatEther(res2.totalEarnings)}`)
         }
 
-        console.log("   Waiting for blocks to unfreeze...")
+        log("   Waiting for blocks to unfreeze...")
         await sleep(2000)
 
-        console.log("3) click 'View' button")
+        log("3) click 'View' button")
         const res3 = await fetch(`http://localhost:${WEBSERVER_PORT}/api/members/${from}`).then(resp => resp.json())
-        console.log(res3)
+        log(res3)
 
         const balanceBefore = await token.balanceOf(from)
-        console.log(`   Token balance before: ${formatEther(balanceBefore)}`)
+        log(`   Token balance before: ${formatEther(balanceBefore)}`)
 
-        console.log("4) click 'Withdraw' button")
+        log("4) click 'Withdraw' button")
         await contract.withdrawAll(res3.withdrawableBlockNumber, res3.withdrawableEarnings, res3.proof)
 
         // check that we got the tokens
         const balanceAfter = await token.balanceOf(from)
-        console.log(`   Token balance after: ${formatEther(balanceAfter)}`)
+        log(`   Token balance after: ${formatEther(balanceAfter)}`)
 
         const difference = balanceAfter.sub(balanceBefore)
-        console.log(`   Withdraw effect: ${formatEther(difference)}`)
+        log(`   Withdraw effect: ${formatEther(difference)}`)
 
         assert(difference.eq(parseEther("5")))
     })

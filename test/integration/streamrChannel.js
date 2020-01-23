@@ -11,7 +11,7 @@ const privateKey = "0x5e98cce00cff5dea6b454889f359a4ec06b9fa6b88e9d69b86de8e1c81
 
 const { streamrWs, streamrHttp } = require("./CONFIG")
 
-describe("streamrChannel", () => {
+describe.skip("streamrChannel", () => {
     let sendChannel
     let streamId
     before(async function () {

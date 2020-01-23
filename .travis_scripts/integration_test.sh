@@ -22,5 +22,4 @@ done
 
 docker ps
 node ./scripts/create_user.js
-./node_modules/.bin/mocha --exit test/integration/engine-and-editor-api.js
-
+./node_modules/.bin/mocha --exit test/integration

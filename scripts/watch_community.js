@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 const fs = require("mz/fs")
-const path = require("path")
 const express = require("express")
 const cors = require("cors")
 const bodyParser = require("body-parser")
@@ -9,7 +8,6 @@ const bodyParser = require("body-parser")
 const {
     Contract,
     getDefaultProvider,
-    utils: { getAddress, parseUnits },
     providers: { JsonRpcProvider },
 } = require("ethers")
 
@@ -17,7 +15,7 @@ const CommunityProductJson = require("../build/CommunityProduct.json")
 
 const FileStore = require("monoplasma/src/fileStore")
 const MonoplasmaWatcher = require("../src/watcher")
-const { throwIfBadAddress, throwIfSetButNotContract, throwIfNotContract } = require("../src/utils/checkArguments")
+const { throwIfNotContract } = require("../src/utils/checkArguments")
 
 //const getCommunitiesRouter = require("../src/routers/communities")
 const getMemberRouter = require("monoplasma/src/routers/member")

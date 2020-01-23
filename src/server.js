@@ -34,8 +34,8 @@ module.exports = class CommunityProductServer {
 
         this.wallet = wallet
         this.eth = wallet.provider
-        this.log = log || console.log
-        this.error = error || console.error
+        this.log = log || require("debug")("CPS::server")   // TODO: don't pass log func in constructor
+        this.error = error || console.error // eslint-disable-line no-console
         this.communities = {}       // mapping: Ethereum address => Community object
         this.storeDir = storeDir
         this.operatorConfig = operatorConfig || {}

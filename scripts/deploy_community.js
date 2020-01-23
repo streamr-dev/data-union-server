@@ -63,7 +63,7 @@ async function start() {
     log("  Token symbol: ", await token.symbol())
     log("  Token decimals: ", await token.decimals())
 
-    const contract = await deployCommunity(wallet, operatorAddress, tokenAddress, streamrNodeAddress, blockFreezeSeconds, adminFee, log, STREAMR_WS_URL, STREAMR_HTTP_URL, GAS_PRICE_GWEI)
+    const contract = await deployCommunity(wallet, operatorAddress, tokenAddress, streamrNodeAddress, blockFreezeSeconds, adminFee, STREAMR_WS_URL, STREAMR_HTTP_URL, GAS_PRICE_GWEI)
     const joinPartStreamId = await contract.joinPartStream()
 
     log(`Deployed community contract at ${contract.address}`)

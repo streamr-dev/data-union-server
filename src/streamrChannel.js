@@ -65,6 +65,8 @@ module.exports = class StreamrChannel extends EventEmitter {
         this.client = new StreamrClient(this.clientOptions)
         this.stream = await this.client.getStream(this.joinPartStreamId) // will throw if joinPartStreamId is bad
 
+        // TODO: throw if client doesn't have write permission to the stream
+
         debug(`Writing to stream ${JSON.stringify(this.stream.toObject())}`)
         this.messageNumber = +Date.now()
         this.mode = State.SERVER

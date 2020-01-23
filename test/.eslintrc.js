@@ -8,6 +8,6 @@ module.exports = {
         afterEach: "readonly",
     },
     rules: {
-        "no-console": 0,
+        "no-console": "warn",
     },
 }

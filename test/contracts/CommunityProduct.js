@@ -1,5 +1,7 @@
 /*global accounts assert utils */
 
+const log = require("debug")("CPS::test::contracts::CommunityProduct")
+
 const etherlime = require("etherlime")
 const CommunityProduct = require("../../build/CommunityProduct.json")
 const TestToken = require("../../build/TestToken.json")
@@ -23,7 +25,7 @@ describe("CommunityProduct", () => {
         const tokenAddress = token.contract.address
         const blockFreezePeriodSeconds = 5
         const operatorAddress = operator.signer.signingKey.address
-        console.log(operatorAddress, joinPartStreamId, syncStreamId, tokenAddress, blockFreezePeriodSeconds)
+        log("Deploy arguments:", operatorAddress, joinPartStreamId, syncStreamId, tokenAddress, blockFreezePeriodSeconds)
         community = await deployer.deploy(CommunityProduct, false, operatorAddress, joinPartStreamId, syncStreamId, tokenAddress, blockFreezePeriodSeconds)
     })
 

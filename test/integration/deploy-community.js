@@ -2,6 +2,8 @@ const fetch = require("node-fetch")
 const { spawn } = require("child_process")
 const assert = require("assert")
 
+const log = require("debug")("CPS::test::integration::deploy-community-script")
+
 const {
     Contract,
     utils: { getAddress },
@@ -25,7 +27,7 @@ const BLOCK_FREEZE_SECONDS = 1
 const ADMIN_FEE = 0.2
 
 async function startServer() {
-    console.log("--- Running start_server.js ---")
+    log("--- Running start_server.js ---")
     const serverProcess = spawn(process.execPath, ["scripts/start_server.js"], {
         env: {
             STREAMR_WS_URL: streamrWs,
@@ -37,10 +39,10 @@ async function startServer() {
             RESET: "yesplease",
         }
     })
-    serverProcess.stdout.on("data", data => { console.log(`<server> ${data.toString().trim()}`) })
-    serverProcess.stderr.on("data", data => { console.log(`server *** ERROR: ${data}`) })
-    serverProcess.on("close", code => { console.log(`start_server.js exited with code ${code}`) })
-    serverProcess.on("error", err => { console.log(`start_server.js ERROR: ${err}`) })
+    serverProcess.stdout.on("data", data => { log(`<server> ${data.toString().trim()}`) })
+    serverProcess.stderr.on("data", data => { log(`server *** ERROR: ${data}`) })
+    serverProcess.on("close", code => { log(`start_server.js exited with code ${code}`) })
+    serverProcess.on("error", err => { log(`start_server.js ERROR: ${err}`) })
 
     const privateKeyMatch = capture(serverProcess.stdout, /<Ganache> \(.\) (0x[a-f0-9]{64})/, 9)
     const ganacheUrlMatch = untilStreamMatches(serverProcess.stdout, /Listening on (.*)/)
@@ -57,7 +59,7 @@ async function startServer() {
 }
 
 async function runDeployScript(ETHEREUM_SERVER, ETHEREUM_PRIVATE_KEY, OPERATOR_ADDRESS, TOKEN_ADDRESS, STREAMR_NODE_ADDRESS, STREAMR_WS_URL, STREAMR_HTTP_URL) {
-    console.log("--- Running deploy_community.js ---")
+    log("--- Running deploy_community.js ---")
     const deployProcess = spawn(process.execPath, ["scripts/deploy_community.js"], {
         env: {
             ETHEREUM_SERVER,            // explicitly specify server address
@@ -72,10 +74,10 @@ async function runDeployScript(ETHEREUM_SERVER, ETHEREUM_PRIVATE_KEY, OPERATOR_A
             ADMIN_FEE,
         }
     })
-    deployProcess.stdout.on("data", data => { console.log(`<deploy> ${data.toString().trim()}`) })
-    deployProcess.stderr.on("data", data => { console.log(`deploy *** ERROR: ${data}`) })
-    deployProcess.on("close", code => { console.log(`deploy_community.js exited with code ${code}`) })
-    deployProcess.on("error", err => { console.log(`deploy_community.js ERROR: ${err}`) })
+    deployProcess.stdout.on("data", data => { log(`<deploy> ${data.toString().trim()}`) })
+    deployProcess.stderr.on("data", data => { log(`deploy *** ERROR: ${data}`) })
+    deployProcess.on("close", code => { log(`deploy_community.js exited with code ${code}`) })
+    deployProcess.on("error", err => { log(`deploy_community.js ERROR: ${err}`) })
 
     const addressMatch = untilStreamMatches(deployProcess.stdout, /Deployed community contract at (.*)/)
     const streamIdMatch = untilStreamMatches(deployProcess.stdout, /JoinPartStream ID: (.*)/)
@@ -91,7 +93,7 @@ async function runDeployScript(ETHEREUM_SERVER, ETHEREUM_PRIVATE_KEY, OPERATOR_A
     }
 }
 
-describe("Deploy community script", () => {
+describe.skip("Deploy community script", () => {
     let processesToCleanUp = []
     afterEach(async () => {
         for (const p of processesToCleanUp) {
@@ -109,9 +111,9 @@ describe("Deploy community script", () => {
         } = await startServer()
         processesToCleanUp.push(serverProcess)
 
-        console.log("--- Server started, getting the operator config ---")
+        log("--- Server started, getting the operator config ---")
         const config = await fetch(`http://localhost:${WEBSERVER_PORT}/config`).then(resp => resp.json())
-        console.log(config)
+        log(config)
 
         const nodeAddress = getAddress(streamrNodeAddress)
         const {
@@ -134,7 +136,7 @@ describe("Deploy community script", () => {
         const freeze = await communityContract.blockFreezeSeconds()
         assert.strictEqual(freeze.toString(), BLOCK_FREEZE_SECONDS.toString())
 
-        console.log("Waiting for the operator to notice...")
+        log("Waiting for the operator to notice...")
         let stats = { error: true }
         while (stats.error) {
             await sleep(100)
@@ -155,15 +157,15 @@ describe("Deploy community script", () => {
         } = await startServer()
         processesToCleanUp.push(serverProcess)
 
-        console.log("--- Server started, getting the operator config ---")
+        log("--- Server started, getting the operator config ---")
         const config = await fetch(`http://localhost:${WEBSERVER_PORT}/config`).then(resp => resp.json())
-        console.log(config)
+        log(config)
 
         const provider = new JsonRpcProvider(providerUrl)
         const wallet = new Wallet(keys[3], provider)
 
         const nodeAddress = getAddress(streamrNodeAddress)
-        const communityContract = await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, ADMIN_FEE, console.log, config.streamrWsUrl, config.streamrHttpUrl)
+        const communityContract = await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, ADMIN_FEE, config.streamrWsUrl, config.streamrHttpUrl)
 
         const freeze = await communityContract.blockFreezeSeconds()
         assert.strictEqual(freeze.toString(), BLOCK_FREEZE_SECONDS.toString())
