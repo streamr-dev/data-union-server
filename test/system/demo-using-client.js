@@ -38,6 +38,8 @@ const {
 /**
  * Same as community-product-demo.js except only using StreamrClient.
  * Only needs to run against streamr-ganache docker, so uses ETHEREUM_SERVER from CONFIG
+ *
+ * Point of view is of external CPS integrator that depends on streamr-client-javascript, e.g. Swash team
  */
 
 // NB: THIS TEST WON'T ACTUALLY RUN BEFORE STUFF IS ADDED TO streamr-javascript-client
