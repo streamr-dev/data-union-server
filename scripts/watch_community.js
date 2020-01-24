@@ -25,7 +25,7 @@ const {
     ETHEREUM_SERVER,            // explicitly specify server address
     ETHEREUM_NETWORK,           // use ethers.js default servers
 
-    //COMMUNITY_ADDRESS,
+    COMMUNITY_ADDRESS,
 
     STREAMR_WS_URL,
     STREAMR_HTTP_URL,
@@ -36,8 +36,6 @@ const {
     WEBSERVER_PORT,
     QUIET,
 } = process.env
-
-const COMMUNITY_ADDRESS = "0xF24197f71fC9b2F4F4c24ecE461fB0Ff7C91FD23"
 
 const log = QUIET ? () => {} : console.log
 const error = (e, ...args) => {
