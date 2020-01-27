@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+require("dotenv/config")
+
 const fs = require("mz/fs")
 const path = require("path")
 const express = require("express")

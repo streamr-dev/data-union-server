@@ -1,3 +1,5 @@
+require("dotenv/config")
+//
 // testing how ethers.js does getPastEvents
 //   and how to make it work reliably with Ganache
 

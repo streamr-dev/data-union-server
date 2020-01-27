@@ -25,6 +25,7 @@
     "body-parser": "1.19.0",
     "cors": "2.8.5",
     "debug": "4.1.1",
+    "dotenv": "8.2.0",
     "etherlime": "2.2.4",
     "ethers": "4.0.43",
     "exit-hook": "2.2.0",
