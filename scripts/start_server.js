@@ -4,6 +4,7 @@ const fs = require("mz/fs")
 const express = require("express")
 const cors = require("cors")
 const bodyParser = require("body-parser")
+const morgan = require("morgan")
 const onProcessExit = require("exit-hook")
 
 const {
@@ -156,8 +157,10 @@ async function start() {
         const port = WEBSERVER_PORT
         const serverURL = `http://localhost:${port}`
         const app = express()
+        app.use(morgan("combined"))
         app.use(cors())
         app.use(bodyParser.json({limit: "50mb"}))
+
         app.get("/config", (req, res) => { res.send(config) }) // TODO: remove
         app.use("/communities", getCommunitiesRouter(server))
         app.listen(port, () => log(`Web server started at ${serverURL}`))
