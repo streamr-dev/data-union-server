@@ -15,7 +15,6 @@ const {
 
 const sleep = require("../../src/utils/sleep-promise")
 const { untilStreamContains } = require("../utils/await-until")
-const deployCommunity = require("../../src/utils/deployCommunity")
 
 const ERC20Mintable = require("../../build/ERC20Mintable.json")
 const CommunityProduct = require("../../build/CommunityProduct.json")
@@ -38,6 +37,8 @@ const {
 /**
  * Same as community-product-demo.js except only using StreamrClient.
  * Only needs to run against streamr-ganache docker, so uses ETHEREUM_SERVER from CONFIG
+ *
+ * Point of view is of external CPS integrator that depends on streamr-client-javascript, e.g. Swash team
  */
 
 // NB: THIS TEST WON'T ACTUALLY RUN BEFORE STUFF IS ADDED TO streamr-javascript-client
@@ -123,14 +124,17 @@ describe.skip("Community product demo but through a running E&E instance", () =>
         const transferTx = await operatorToken.mint(address, parseEther("50"))
         await transferTx.wait(1)
 
-        log("1) Create a new Community product")
-
+        log(`Connect to Streamr as ${address}`)
         const client = new StreamrClient({
             auth: { privateKey },
             url: STREAMR_WS_URL,
             restUrl: STREAMR_HTTP_URL,
+            streamrNodeAddress: getAddress(STREAMR_NODE_ADDRESS),
+            streamrOperatorAddress: computeAddress(operatorPrivateKey),
+            tokenAddress: TOKEN_ADDRESS,
         })
 
+        log("1) Create a new Community product")
         log("1.1) Create a stream that's going to go into the product")
         const streamJson = {
             "name": "Community Product server test stream " + Date.now(),
@@ -166,26 +170,18 @@ describe.skip("Community product demo but through a running E&E instance", () =>
         const productId = productCreateResponse.id
         assert(productId)
 
-        log("1.4) Create joinPartStream")   // done inside deployCommunity below
+        log("1.4) Create joinPartStream")       // done inside deployCommunity below
         log("1.5) Deploy CommunityProduct contract")
-        const wallet = new Wallet(privateKey, ganacheProvider)
-        const nodeAddress = getAddress(STREAMR_NODE_ADDRESS)
-        const communityContract = await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, ADMIN_FEE, config.streamrWsUrl, config.streamrHttpUrl)
-        const communityAddress = communityContract.address
+        const community = await client.deployCommunity({
+            adminFee: ADMIN_FEE,
+            blockFreezePeriodSeconds: BLOCK_FREEZE_SECONDS,
+        })
 
         log("1.6) Wait until Operator starts")
-        let stats = { code: true }
-        const statsTimeout = setTimeout(() => { throw new Error("Response from E&E: " + JSON.stringify(stats)) }, 100000)
-        let sleepTime = 100
-        while (stats.code) {
-            await sleep(sleepTime *= 2)
-            stats = await client.getCommunityStats(communityAddress)
-        }
-        clearTimeout(statsTimeout)
-        log(`     Stats before adding: ${JSON.stringify(stats)}`)
+        await community.isReady()
 
         log("1.7) Set beneficiary in Product DB entry")
-        productJson.beneficiaryAddress = communityAddress
+        productJson.beneficiaryAddress = community.address
         const putResponse = await client.updateProduct(productJson)
         log(`     Response: ${JSON.stringify(putResponse)}`)
 
@@ -203,7 +199,7 @@ describe.skip("Community product demo but through a running E&E instance", () =>
         ]
 
         log("2.1) Add community secret")
-        const secretCreateResponse = await client.createSecret(communityAddress, "test", "PLEASE DELETE ME, I'm a Community Product server test secret")
+        const secretCreateResponse = await client.createSecret(community.address, "test", "PLEASE DELETE ME, I'm a Community Product server test secret")
         log(`     Response: ${JSON.stringify(secretCreateResponse)}`)
 
         log("2.2) Send JoinRequests")
@@ -213,36 +209,37 @@ describe.skip("Community product demo but through a running E&E instance", () =>
                 url: STREAMR_WS_URL,
                 restUrl: STREAMR_HTTP_URL,
             })
-            const joinResponse = await tempClient.joinCommunity(communityAddress, "test")
+            const joinResponse = await tempClient.joinCommunity(community.address, "test")
             log(`     Response: ${JSON.stringify(joinResponse)}`)
         }
 
         log("2.3) Wait until members have been added")
         const member9address = computeAddress(memberKeys[9])
-        await client.hasJoined(communityAddress, member9address)
+        await client.hasJoined(community.address, member9address)
 
         // TODO: send revenue by purchasing the product on Marketplace
         log("3) Send revenue in and check tokens were distributed")
+        const wallet = new Wallet(privateKey, ganacheProvider)
         const token = new Contract(config.tokenAddress, ERC20Mintable.abi, wallet)
         for (let i = 0; i < 5; i++) {
             const balance = await token.balanceOf(address)
             log(`   Sending 10 tokens (out of remaining ${formatEther(balance)}) to CommunityProduct contract...`)
 
-            const transferTx = await token.transfer(communityAddress, parseEther("10"))
+            const transferTx = await token.transfer(community.address, parseEther("10"))
             await transferTx.wait(2)
 
             // check total revenue
-            const res3 = await client.getCommunityStats(communityAddress)
+            const res3 = await client.getCommunityStats(community.address)
             log(`   Total revenue: ${formatEther(res3.totalEarnings)}`)
         }
 
         log("3.1) Wait for blocks to unfreeze...") //... and also that state updates.
-        const before = await client.getMemberStats(communityAddress)
+        const before = await client.getMemberStats(community.address)
         let member = { withdrawableEarnings: 0 }
         // TODO: what's the expected final withdrawableEarnings?
         while (member.withdrawableEarnings < 1 + before.withdrawableEarnings) {
             await sleep(1000)
-            member = await client.getMemberStats(communityAddress)
+            member = await client.getMemberStats(community.address)
             log(JSON.stringify(member))
         }
 
@@ -251,11 +248,11 @@ describe.skip("Community product demo but through a running E&E instance", () =>
         const balanceBefore = await token.balanceOf(address)
         log(`   Token balance before: ${formatEther(balanceBefore)}`)
 
-        const contract = new Contract(communityAddress, CommunityProduct.abi, wallet)
+        const contract = new Contract(community.address, CommunityProduct.abi, wallet)
         const withdrawTx = await contract.withdrawAll(member.withdrawableBlockNumber, member.withdrawableEarnings, member.proof)
         await withdrawTx.wait(1)
 
-        const res4b = await client.getMemberStats(communityAddress)
+        const res4b = await client.getMemberStats(community.address)
         log(JSON.stringify(res4b))
 
         const balanceAfter = await token.balanceOf(address)

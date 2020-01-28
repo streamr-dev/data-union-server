@@ -9,7 +9,7 @@ const {
     utils,
     getDefaultProvider,
     Wallet,
-    utils: { getAddress, parseEther },
+    utils: { parseEther },
     providers: { JsonRpcProvider }
 } = require("ethers")
 
@@ -17,8 +17,6 @@ const Channel = require("../src/streamrChannel")
 const { throwIfNotContract, throwIfBadAddress } = require("../src/utils/checkArguments")
 const deployCommunity = require("../src/utils/deployCommunity")
 const sleep = require("../src/utils/sleep-promise")
-
-const deployTestToken = require("../test/utils/deployTestToken")
 
 const CommunityProductServer = require("../src/server")
 const getCommunitiesRouter = require("../src/routers/communities")
@@ -46,13 +44,6 @@ const {
     SENTRY_TOKEN,
 
     DEVELOPER_MODE, // TODO: remove
-
-    // these will be used  1) for demo token  2) if TOKEN_ADDRESS doesn't support name() and symbol()
-    TOKEN_SYMBOL, // TODO: remove
-    TOKEN_NAME, // TODO: remove
-
-    // if ETHEREUM_SERVER isn't specified, start a local Ethereum simulator (Ganache) in given port
-    GANACHE_PORT, // TODO: remove
 } = process.env
 
 let Sentry
@@ -104,37 +95,21 @@ async function start() {
     const provider =
         ETHEREUM_SERVER ? new JsonRpcProvider(ETHEREUM_SERVER) :
         ETHEREUM_NETWORK ? getDefaultProvider(ETHEREUM_NETWORK) : null
-
-    let wallet
-    if (provider) {
-        const network = await provider.getNetwork().catch(e => {
-            throw new Error(`Connecting to Ethereum failed, env ETHEREUM_SERVER=${ETHEREUM_SERVER} ETHEREUM_NETWORK=${ETHEREUM_NETWORK}`, e)
-        })
-        log("Connected to Ethereum network: ", JSON.stringify(network))
-
-        if (!OPERATOR_PRIVATE_KEY) { throw new Error("env OPERATOR_PRIVATE_KEY required to operate Monoplasma, for 'commit' transactions.") }
-        const privateKey = OPERATOR_PRIVATE_KEY.startsWith("0x") ? OPERATOR_PRIVATE_KEY : "0x" + OPERATOR_PRIVATE_KEY
-        if (privateKey.length !== 66) { throw new Error("Malformed private key, must be 64 hex digits long (optionally prefixed with '0x')") }
-        wallet = new Wallet(privateKey, provider)
-    } else {
-        log("No env ETHEREUM_SERVER or ETHEREUM_NETWORK provided, starting Ethereum simulator...")
-        const ganachePort = GANACHE_PORT || 8545
-        const ganacheLog = msg => { log(" <Ganache> " + msg) }
-        ganache = await require("monoplasma/src/utils/startGanache")(ganachePort, ganacheLog, error, 4)
-        const ganacheProvider = new JsonRpcProvider(ganache.httpUrl)
-        wallet = new Wallet(ganache.privateKeys[0], ganacheProvider)   // use account 0: 0xa3d1f77acff0060f7213d7bf3c7fec78df847de1
+    if (!provider) {
+        throw new Error("Please provide either ETHEREUM_SERVER or ETHEREUM_NETWORK environment variable")
     }
 
-    let tokenAddress
-    if (TOKEN_ADDRESS) {
-        tokenAddress = getAddress(TOKEN_ADDRESS)
-        await throwIfNotContract(wallet.provider, tokenAddress, "Environment variable TOKEN_ADDRESS")
-    } else {
-        tokenAddress = await deployTestToken(wallet, TOKEN_NAME, TOKEN_SYMBOL, log)
-    }
+    const network = await provider.getNetwork().catch(e => {
+        throw new Error(`Connecting to Ethereum failed, env ETHEREUM_SERVER=${ETHEREUM_SERVER} ETHEREUM_NETWORK=${ETHEREUM_NETWORK}`, e)
+    })
+    log("Connected to Ethereum network: ", JSON.stringify(network))
 
-    // TODO: load server state, find communities from store
-    // TODO: getLogs from blockchain to find communities?
+    if (!OPERATOR_PRIVATE_KEY) { throw new Error("env OPERATOR_PRIVATE_KEY required to operate Monoplasma, for 'commit' transactions.") }
+    const privateKey = OPERATOR_PRIVATE_KEY.startsWith("0x") ? OPERATOR_PRIVATE_KEY : "0x" + OPERATOR_PRIVATE_KEY
+    if (privateKey.length !== 66) { throw new Error("Malformed private key, must be 64 hex digits long (optionally prefixed with '0x')") }
+    const wallet = new Wallet(privateKey, provider)
+
+    const tokenAddress = await throwIfNotContract(provider, TOKEN_ADDRESS, "environment variable TOKEN_ADDRESS")
 
     const operatorAddress = wallet.address
     log(`Starting community products server with operator address ${operatorAddress}...`)
@@ -160,6 +135,7 @@ async function start() {
         app.use("/communities", getCommunitiesRouter(server))
         app.listen(port, () => log(`Web server started at ${serverURL}`))
 
+        // TODO: remove after 0.2 refactor is done
         if (DEVELOPER_MODE) {
             await sleep(200)
 

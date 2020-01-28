@@ -38,6 +38,8 @@ const {
  * Same as community-product-demo.js except only through E&E APIs,
  *   "more end-to-end" because it won't poke the stream and server directly, only talks to E&E
  * Only needs to run against streamr-ganache docker, so uses ETHEREUM_SERVER from CONFIG
+ *
+ * Point of view is of Streamr frontend developer, working on e.g. Marketplace
  */
 describe("Community product demo but through a running E&E instance", () => {
     let operatorProcess
@@ -108,6 +110,7 @@ describe("Community product demo but through a running E&E instance", () => {
 
         log("--- Server started, getting the operator config ---")
         // TODO: eliminate direct server communication (use /stats? Change EE?)
+        // TODO: maybe get configs from CONFIG.js
         const config = await fetch(`http://localhost:${WEBSERVER_PORT}/config`).then(resp => resp.json())
         log(config)
 

@@ -32,6 +32,8 @@ const { streamrWs, streamrHttp, streamrNodeAddress } = require("../integration/C
  * This test is an "integration test" but the setup should still be such that it could be independently run
  *   against production simply by not providing STREAMR_WS_URL and STREAMR_HTTP_URL (that will point to dev
  *   docker in Travis test), hence spin up an "internal" ganache for the test
+ *
+ * Point of view is of CPS developer
  */
 describe("Community product demo", () => {
     let operatorProcess
