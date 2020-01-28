@@ -1,6 +1,8 @@
 // testing how ethers.js does getPastEvents
 //   and how to make it work reliably with Ganache
 
+require("dotenv/config")
+
 const {
     Contract,
     Wallet,

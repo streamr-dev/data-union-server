@@ -1,3 +1,5 @@
+require("dotenv/config")
+
 const StreamrClient = require("streamr-client")
 new StreamrClient({
     retryResendAfter: 1000,
