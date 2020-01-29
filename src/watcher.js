@@ -2,7 +2,7 @@ const EventEmitter = require("events")
 
 const { Contract, utils } = require("ethers")
 
-const MonoplasmaState = require("monoplasma/src/state")
+const MonoplasmaState = require("./state")
 const { replayOn, mergeEventLists } = require("./utils/events")
 const { throwIfSetButNotContract, throwIfSetButBadAddress } = require("./utils/checkArguments")
 const bisectFindFirstIndex = require("./utils/bisectFindFirstIndex")
