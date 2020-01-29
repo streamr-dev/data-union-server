@@ -276,7 +276,7 @@ module.exports = class MonoplasmaState {
         const activeMembers = this.members.filter(m => m.isActive())
         const activeCount = activeMembers.length
         if (activeCount === 0) {
-            console.warn(`No active members in community! Allocating ${amount} to admin account ${this.adminMember.address}`)
+            //console.warn(`No active members in community! Allocating ${amount} to admin account ${this.adminMember.address}`)
             this.adminMember.addRevenue(amount)
         } else {
             const amountBN = new BN(amount)
