@@ -2,11 +2,11 @@ const BN = require("bn.js")
 const {utils: { isAddress }} = require("web3")
 
 module.exports = class MonoplasmaMember {
-    constructor(name, address, earnings) {
+    constructor(name, address, earnings, active) {
         this.name = name || ""
         this.address = MonoplasmaMember.validateAddress(address)
         this.earnings = earnings ? new BN(earnings) : new BN(0)
-        this.active = true
+        this.active = active || true
     }
 
     getEarningsAsString() {
@@ -36,6 +36,7 @@ module.exports = class MonoplasmaMember {
         const obj = {
             address: this.address,
             earnings: this.earnings.toString(10),
+            active: this.active
         }
         if (this.name) {
             obj.name = this.name
@@ -44,7 +45,7 @@ module.exports = class MonoplasmaMember {
     }
 
     static fromObject(obj) {
-        return new MonoplasmaMember(obj.name, obj.address, obj.earnings)
+        return new MonoplasmaMember(obj.name, obj.address, obj.earnings, obj.active)
     }
 
     /** Produces a hashable string representation in hex form (starts with "0x") */
