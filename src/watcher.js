@@ -103,6 +103,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             this.state.lastObservedBlockNumber = blockNumber
         })
 
+        // this.state should be broken up into state.js, and rest called this.config
         this.log("Initializing Monoplasma state...")
         const savedState = config.reset ? {} : await this.store.loadState()
         this.state = Object.assign({
@@ -138,6 +139,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             lastBlock = await this.store.loadBlock(lastPublishedBlockNumber)
         }
 
+        // TODO: this.plasma should be called this.realtimeState
         this.log(`Starting from block ${lastBlock.blockNumber} (t=${lastBlock.timestamp}, ${new Date((lastBlock.timestamp || 0) * 1000).toISOString()}) with ${lastBlock.members.length} members`)
         this.plasma = new MonoplasmaState(this.state.blockFreezeSeconds, lastBlock.members, this.store, this.state.adminAddress, this.state.adminFee, lastBlock.blockNumber, lastBlock.timestamp)
 
