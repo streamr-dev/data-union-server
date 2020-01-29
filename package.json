@@ -10,6 +10,7 @@
     "build-contracts": "etherlime --solcVersion=0.4.24 compile",
     "unit-tests": "mocha test/unit --exit",
     "integration-tests": "mocha test/integration --exit",
+    "system-tests": "mocha test/system/engine-and-editor-api.js --exit",
     "contract-tests": "npm run build-contracts && etherlime test --solcVersion=0.4.24 test/contracts",
     "test": "npm run unit-tests && npm run integration-tests && npm run contract-tests"
   },
