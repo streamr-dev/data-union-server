@@ -1,9 +1,9 @@
 const MonoplasmaMember = require("./member")
-const MerkleTree = require("./merkletree")
+const MerkleTree = require("monoplasma/src/merkletree")
 const BN = require("bn.js")
 const toBN = require("number-to-bn")
 const {utils: { toWei }} = require("web3")
-const now = require("./utils/now")
+const now = require("monoplasma/src/utils/now")
 const { throwIfBadAddress } = require("./utils/checkArguments")
 
 /**
@@ -47,7 +47,7 @@ module.exports = class MonoplasmaState {
         this.currentTimestamp = initialTimestamp
 
         /** @property {Array<MonoplasmaMember>} members */
-        this.members = initialMembers.map(m => new MonoplasmaMember(undefined, m.address, m.earnings))
+        this.members = initialMembers.map(m => new MonoplasmaMember(m.name, m.address, m.earnings, m.active))
         /** @property {MerkleTree} tree The MerkleTree for calculating the hashes */
         this.tree = new MerkleTree(this.members)
         /** @property {string}  adminAddress the owner address who receives the admin fee and the default payee if no memebers */
@@ -308,6 +308,7 @@ module.exports = class MonoplasmaState {
             if (!m) { throw new Error(`Bad index ${i}`) }   // TODO: remove in production; this means updating indexOf has been botched
             m.setActive(true)
         }
+        //console.log(`addMember ${i} ${address} ${name} ${isNewAddress}`)
         // tree.update(members)     // no need for update since no revenue allocated
         return isNewAddress
     }
