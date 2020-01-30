@@ -72,12 +72,18 @@ module.exports = class CommunityProductServer {
 
         const logs = await this.eth.getLogs(filter)
 
+        const total = logs.length
+        this.log(`Playing back ${total} operator change events...`)
+        const startAllTime = Date.now()
+
         // TODO: we should also catch all OperatorChanged from communities that we we've operated
         //    so that we can detect if we've been swapped out
-
-        for (let log of logs) {
+        for (let i = 0; i < total; i++) {
+            const startEventTime = Date.now()
+            const log = logs[i]
             let event = operatorChangedInterface.parseLog(log)
-            this.log("Playing back past OperatorChanged event: " + JSON.stringify(event))
+            const num = i + 1
+            this.log(`Playing back past OperatorChanged event ${num} of ${total}: ` + JSON.stringify(event))
             const contractAddress = getAddress(log.address)
             await this.onOperatorChangedEventAt(contractAddress).catch(err => {
                 // TODO: while developing, 404 for joinPartStream could just mean
@@ -92,7 +98,9 @@ module.exports = class CommunityProductServer {
                 // at any rate, we should not just catch it and keep chugging
                 throw err
             })
+            this.log(`Event ${num} of ${total} processed in ${Date.now() - startEventTime}ms, ${Math.round((num / total) * 100)}% complete.`)
         }
+        this.log(`Finished playback of ${total} operator change events in ${Date.now() - startAllTime}ms.`)
     }
 
     /**
