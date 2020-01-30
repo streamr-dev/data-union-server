@@ -27,6 +27,7 @@ jobs:
         - ETHEREUM_PRIVATE_KEY="0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF"
       script:
         - .travis_scripts/integration_test.sh
+        - npm run system-tests
       after_failure:
         - docker ps
         - docker logs streamr_dev_cp
