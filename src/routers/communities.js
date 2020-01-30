@@ -3,7 +3,7 @@ const {
     utils: { getAddress, BigNumber }
 } = require("ethers")
 
-const log = require("debug")("CPS::routers::communities")
+const log = require("debug")("Streamr::CPS::routers::communities")
 
 /** Convert Ethereum address into checksummed case */
 function parseAddress(address) {

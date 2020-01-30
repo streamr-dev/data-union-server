@@ -20,7 +20,7 @@ module.exports = class MonoplasmaOperator {
 
     async start(config) {
         throwIfBadAddress(config.operatorAddress, "MonoplasmaOperator argument config.operatorAddress")
-        this.log = debug("CPS::operator::" + config.contractAddress)
+        this.log = debug("Streamr::CPS::operator::" + config.contractAddress)
 
         this.finalityWaitPeriodSeconds = config.finalityWaitPeriodSeconds || 1 // TODO: in production || 3600
         this.address = config.operatorAddress
@@ -105,7 +105,7 @@ module.exports = class MonoplasmaOperator {
         // await this.finalPlasma.storeBlock(blockNumber) // TODO: give a timestamp
         await this.watcher.plasma.storeBlock(blockNumber)
         const tr = await tx.wait(1)        // confirmations
-        debug(`Commit sent, receipt: ${JSON.stringify(tr)}`)
+        this.log(`Commit sent, receipt: ${JSON.stringify(tr)}`)
 
         // TODO: something causes events to be replayed many times, resulting in wrong balances. It could have something to do with the state cloning that happens here
         // replace watcher's MonoplasmaState with the final "true" state that was just committed to blockchain

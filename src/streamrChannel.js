@@ -1,7 +1,7 @@
 const EventEmitter = require("events")
 const StreamrClient = require("streamr-client")
 const { utils: { computeAddress } } = require("ethers")
-const debug = require("debug")("CPS::StreamrChannel")
+const log = require("debug")("Streamr::CPS::StreamrChannel")
 
 /**
  * @typedef {string} State
@@ -59,7 +59,7 @@ module.exports = class StreamrChannel extends EventEmitter {
         if (this.mode) { return Promise.reject(new Error(`Already started as ${this.mode}`))}
         if (!privateKey) { throw new Error("Must supply a private key to startServer") }
         this.ethereumAddress = computeAddress(privateKey)
-        debug(`Starting server as ${this.ethereumAddress}`)
+        log(`Starting server as ${this.ethereumAddress}`)
 
         this.clientOptions.auth = { privateKey }
         this.client = new StreamrClient(this.clientOptions)
@@ -67,7 +67,7 @@ module.exports = class StreamrChannel extends EventEmitter {
 
         // TODO: throw if client doesn't have write permission to the stream
 
-        debug(`Writing to stream ${JSON.stringify(this.stream.toObject())}`)
+        log(`Writing to stream ${JSON.stringify(this.stream.toObject())}`)
         this.messageNumber = +Date.now()
         this.mode = State.SERVER
     }
@@ -107,7 +107,7 @@ module.exports = class StreamrChannel extends EventEmitter {
             self.emit("message", msg.type, msg.addresses, meta)
         }
 
-        debug(`Starting playback of ${this.stream.id}`)
+        log(`Starting playback of ${this.stream.id}`)
         const playbackSub = await this.client.resend({
             stream: this.stream.id,
             resend: {
@@ -123,7 +123,7 @@ module.exports = class StreamrChannel extends EventEmitter {
             stream: this.stream.id
         }, (msg, meta) => {
             const len = queue.push({msg, meta})
-            debug(`Got message ${JSON.stringify(msg)}, queue length = ${len}}`)
+            log(`Got message ${JSON.stringify(msg)}, queue length = ${len}}`)
         })
 
         playbackSub.on("error", this.emit.bind(this, "error"))
@@ -134,13 +134,13 @@ module.exports = class StreamrChannel extends EventEmitter {
             playbackSub.on("no_resend", done)
             setTimeout(fail, playbackTimeoutMs)
         })
-        debug(`Playback of ${this.stream.id} done`)
+        log(`Playback of ${this.stream.id} done`)
 
         // TODO: remove this hack and just emit messages directly from realtime stream
         this.consumerInterval = setInterval(() => {
             if (queue.length < 1) { return }
             const {msg, meta} = queue.shift()
-            debug(`Sending message ${JSON.stringify(msg)}, queue length = ${queue.length}}`)
+            log(`Sending message ${JSON.stringify(msg)}, queue length = ${queue.length}}`)
             emitMessage(msg, meta)
         }, 100)
 

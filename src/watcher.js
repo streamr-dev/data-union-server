@@ -10,7 +10,7 @@ const bisectFindFirstIndex = require("./utils/bisectFindFirstIndex")
 const TokenJson = require("../build/ERC20Mintable.json")
 const MonoplasmaJson = require("../build/Monoplasma.json")
 
-const debug = require("debug")
+const log = require("debug")("Streamr::CPS::watcher")
 
 // TODO: this typedef is foobar. How to get the real thing with JSDoc?
 /** @typedef {number} BigNumber */
@@ -86,7 +86,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
      */
     async start(config) {
         await throwIfSetButNotContract(this.eth, config.contractAddress, "contractAddress from initial config")
-        this.log = debug("CPS::watcher::" + config.contractAddress)
+        this.log = log.extend(config.contractAddress)
 
         // TODO: this isn't even used; maybe should throw if it's different from what contract gives?
         throwIfSetButBadAddress(config.adminAddress, "adminAddress from initial config")

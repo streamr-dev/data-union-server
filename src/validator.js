@@ -21,7 +21,7 @@ module.exports = class MonoplasmaValidator {
 
     async start(config) {
         throwIfBadAddress(config.operatorAddress, "MonoplasmaOperator argument config.operatorAddress")
-        this.log = debug("CPS::validator::" + config.contractAddress)
+        this.log = debug("Streamr::CPS::validator::" + config.contractAddress)
 
         this.contract = new Contract(config.contractAddress, MonoplasmaJson.abi, this.wallet)
         await this.watcher.start(config)

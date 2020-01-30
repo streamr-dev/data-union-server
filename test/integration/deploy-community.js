@@ -2,7 +2,7 @@ const fetch = require("node-fetch")
 const { spawn } = require("child_process")
 const assert = require("assert")
 
-const log = require("debug")("CPS::test::integration::deploy-community-script")
+const log = require("debug")("Streamr::CPS::test::integration::deploy-community-script")
 
 const {
     Contract,
