@@ -21,8 +21,8 @@
     "npm": ">= 6.4.1"
   },
   "dependencies": {
-    "@sentry/node": "5.11.1",
-    "bn.js": "4.11.8",
+    "@sentry/node": "5.11.2",
+    "bn.js": "5.1.1",
     "body-parser": "1.19.0",
     "cors": "2.8.5",
     "debug": "4.1.1",
@@ -31,18 +31,18 @@
     "ethers": "4.0.43",
     "exit-hook": "2.2.0",
     "express": "4.17.1",
-    "ganache-cli": "6.7.0",
+    "ganache-cli": "6.8.2",
     "monoplasma": "0.1.10",
     "morgan": "1.9.1",
     "mz": "2.7.0",
-    "streamr-client": "2.2.7"
+    "streamr-client": "3.0.1"
   },
   "devDependencies": {
-    "eslint": "5.16.0",
-    "ganache-core": "2.8.0",
-    "husky": "3.0.5",
-    "mocha": "6.2.2",
+    "eslint": "6.8.0",
+    "ganache-core": "2.9.2",
+    "husky": "4.2.1",
+    "mocha": "7.0.1",
     "node-fetch": "2.6.0",
-    "sinon": "7.3.2"
+    "sinon": "8.1.1"
   }
 }
