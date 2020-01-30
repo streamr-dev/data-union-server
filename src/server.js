@@ -58,8 +58,14 @@ module.exports = class CommunityProductServer {
     }
 
     async stop() {
-        this.eth.removeAllListeners({ topics: [operatorChangedEventTopic] })
         // TODO: hand over operators to another server?
+        const communities = this.communities
+        this.communities = {}
+        this.communityIsRunningPromises = {}
+        this.eth.removeAllListeners({ topics: [operatorChangedEventTopic] })
+        await Promise.all(Object.values(communities).map((community) => (
+            community.operator.shutdown()
+        )))
     }
 
     async playbackPastOperatorChangedEvents() {
@@ -121,7 +127,8 @@ module.exports = class CommunityProductServer {
                     eventDetectedAt: Date.now(),
                 }
 
-                void this.communityIsRunning(address) // create the promise to prevent later (duplicate) creation
+                // create the promise to prevent later (duplicate) creation
+                const isRunningPromise = this.communityIsRunning(address)
                 try {
                     const result = await this.startOperating(address)
                     this.communityIsRunningPromises[address].setRunning(result)
@@ -134,6 +141,8 @@ module.exports = class CommunityProductServer {
                     }
                     this.communityIsRunningPromises[address].setFailed(error)
                 }
+                // forward community start success/failure
+                return isRunningPromise
             } else {
                 this.log(`Detected a community for operator ${newOperatorAddress}, ignoring.`)
             }
