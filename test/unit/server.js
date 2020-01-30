@@ -74,6 +74,7 @@ describe("CommunityProductServer", () => {
         // give ethers.js time to poll and notice the block, also for server to react
         await sleep(ganacheBlockIntervalSeconds * 1000)
 
+        // Note: this test must run first for the below position-sensitive assertions to pass
         assert(server.onOperatorChangedEventAt.calledOnce)
         assert.strictEqual(contractAddress, server.onOperatorChangedEventAt.getCall(0).args[0])
 
@@ -85,6 +86,34 @@ describe("CommunityProductServer", () => {
         assert(server.communities[contractAddress])
 
         await server.stop()
+    })
+
+    it("stops operators when server is stopped", async function () {
+        this.timeout(10000)
+
+        log("Starting CommunityProductServer...")
+        const storeDir = path.join(os.tmpdir(), `communitiesRouter-test2-${+new Date()}`)
+        const config = {
+            tokenAddress,
+            operatorAddress: wallet.address,
+        }
+        const server = new CommunityProductServer(wallet, storeDir, config, log, log)
+        server.getStoreFor = () => mockStore(startState, initialBlock, log)
+        server.getChannelFor = () => new MockStreamrChannel("dummy-stream-id")
+        await server.start()
+        const contract = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
+        await server.communityIsRunning(contract.address)
+
+        // give ethers.js time to poll and notice the block, also for server to react
+        await sleep(ganacheBlockIntervalSeconds * 1000)
+
+        const { communities } = server
+        assert(Object.keys(communities), "has at least 1 community")
+
+        await server.stop()
+        Object.values(communities).forEach((community) => {
+            assert.ok(community.operator.watcher.channel.isClosed())
+        })
     })
 
     it("resumed operating communities it's operated before (e.g. a crash)", async function () {

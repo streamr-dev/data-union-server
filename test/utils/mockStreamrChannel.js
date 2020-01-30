@@ -26,6 +26,7 @@ module.exports = class MockStreamrChannel {
         })
         this.mode = "client"
     }
+    isClosed() { return this.mode === "" }
     close() { this.mode = "" }
     publish(type, ...args) {
         this.publishAt(Date.now(), type, ...args)

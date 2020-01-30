@@ -64,7 +64,7 @@ module.exports = class CommunityProductServer {
         this.communityIsRunningPromises = {}
         this.eth.removeAllListeners({ topics: [operatorChangedEventTopic] })
         await Promise.all(Object.values(communities).map((community) => (
-            community.operator.shutdown()
+            community.operator && community.operator.shutdown()
         )))
     }
 
