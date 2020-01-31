@@ -31,7 +31,8 @@ const startState = {
 }
 
 const CommunityProductServer = require("../../src/server")
-describe("CommunityProductServer", () => {
+describe("CommunityProductServer", function () {
+    this.timeout(10000)
     let tokenAddress
     let wallet
 
@@ -53,8 +54,6 @@ describe("CommunityProductServer", () => {
     })
 
     it("notices creation of a new CommunityProduct and starts Operator", async function () {
-        this.timeout(100000)
-
         log("Starting CommunityProductServer...")
         const storeDir = path.join(os.tmpdir(), `communitiesRouter-test2-${+new Date()}`)
         const config = {
@@ -89,8 +88,6 @@ describe("CommunityProductServer", () => {
     })
 
     it("stops operators when server is stopped", async function () {
-        this.timeout(10000)
-
         log("Starting CommunityProductServer...")
         const storeDir = path.join(os.tmpdir(), `communitiesRouter-test2-${+new Date()}`)
         const config = {
@@ -119,8 +116,6 @@ describe("CommunityProductServer", () => {
     })
 
     it("resumed operating communities it's operated before (e.g. a crash)", async function () {
-        this.timeout(10000)
-
         log("Starting CommunityProductServer...")
         const storeDir = path.join(os.tmpdir(), `communitiesRouter-test1-${+new Date()}`)
         const config = {
@@ -150,8 +145,6 @@ describe("CommunityProductServer", () => {
     })
 
     it("will not fail to start if there is an error playing back a community", async function () {
-        this.timeout(10000)
-
         log("Starting CommunityProductServer...")
         const storeDir = path.join(os.tmpdir(), `communitiesRouter-test1-${+new Date()}`)
         const config = {
@@ -186,7 +179,6 @@ describe("CommunityProductServer", () => {
     })
 
     it("will fail to start if there is an error playing back all communities", async function () {
-        this.timeout(10000)
         const storeDir = path.join(os.tmpdir(), `communitiesRouter-test1-${+new Date()}`)
         const config = {
             tokenAddress,
