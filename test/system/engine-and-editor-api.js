@@ -71,7 +71,10 @@ describe("Community product demo but through a running E&E instance", () => {
         })
         operatorProcess.stdout.on("data", data => { log(`<server> ${data.toString().trim()}`) })
         operatorProcess.stderr.on("data", data => { log(`server *** ERROR: ${data}`) })
-        operatorProcess.on("close", code => { log(`start_server.js exited with code ${code}`) })
+        operatorProcess.on("close", code => {
+            log(`start_server.js exited with code ${code}`)
+            process.exit(code)
+        })
         operatorProcess.on("error", err => {
             log(`start_server.js ERROR: ${err}`)
             process.exit(1)
