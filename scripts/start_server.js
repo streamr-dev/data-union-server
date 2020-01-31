@@ -77,7 +77,7 @@ const error = (e, ...args) => {
     if (sentryClient) {
         sentryClient.close(2000).then(() => process.exit(1))
     } else {
-        process.exit(1)
+        process.exitCode = 1
     }
 }
 

@@ -76,7 +76,7 @@ describe("Community product demo but through a running E&E instance", () => {
         })
         operatorProcess.on("error", err => {
             log(`start_server.js ERROR: ${err}`)
-            process.exit(1)
+            process.exitCode = 1
         })
 
         await untilStreamContains(operatorProcess.stdout, "[DONE]")
