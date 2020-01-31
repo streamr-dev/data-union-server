@@ -84,6 +84,7 @@ module.exports = class CommunityProductServer {
 
         // TODO: we should also catch all OperatorChanged from communities that we we've operated
         //    so that we can detect if we've been swapped out
+        let numErrors = 0
         for (let i = 0; i < total; i++) {
             const startEventTime = Date.now()
             const log = logs[i]
@@ -100,13 +101,16 @@ module.exports = class CommunityProductServer {
                 //   Streamr might have lost joinPartStreams, and they should be re-created from
                 //   the last valid monoplasma members lists if such are available (IPFS sharing anyone?)
                 this.error(err.stack)
-
-                // at any rate, we should not just catch it and keep chugging
-                throw err
+                // keep chugging, only give up if all fail
+                numErrors++
             })
             this.log(`Event ${num} of ${total} processed in ${Date.now() - startEventTime}ms, ${Math.round((num / total) * 100)}% complete.`)
         }
         this.log(`Finished playback of ${total} operator change events in ${Date.now() - startAllTime}ms.`)
+        if (numErrors && numErrors === total) {
+            // kill if all operators errored
+            throw new Error(`All ${total} operator changed events failed to process. Shutting down.`)
+        }
     }
 
     /**

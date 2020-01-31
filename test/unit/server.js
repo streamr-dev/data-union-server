@@ -111,6 +111,8 @@ describe("CommunityProductServer", () => {
         assert(Object.keys(communities), "has at least 1 community")
 
         await server.stop()
+
+        assert.equal(Object.keys(server.communities).length, 0, "server.communities is empty after stop")
         Object.values(communities).forEach((community) => {
             assert.ok(community.operator.watcher.channel.isClosed())
         })
@@ -147,7 +149,7 @@ describe("CommunityProductServer", () => {
         assert(!server.communities[contract2.address])
     })
 
-    it("will fail to start if there is an error playing back a community", async function () {
+    it("will not fail to start if there is an error playing back a community", async function () {
         this.timeout(10000)
 
         log("Starting CommunityProductServer...")
@@ -164,22 +166,50 @@ describe("CommunityProductServer", () => {
 
         const contract = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
         log(`Deployed contract at ${contract.address}`)
+
+        const contract2 = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
+        log(`Deployed contract at ${contract2.address}`)
+
         await server.communityIsRunning(contract.address)
-        log(`Community at ${contract.address} is running`)
+        await server.communityIsRunning(contract2.address)
+        log("Communities running")
 
         await server.stop()
         await sleep(ganacheBlockIntervalSeconds * 1000)
 
-        // force community startup to fail when getting channel
-        const expectedErr = new Error("expected fail")
+        // force one community startup to fail when getting channel
         server.getChannelFor.withArgs(contract.address).callsFake(async function () {
-            throw expectedErr
+            throw new Error("expected fail")
         })
-        try {
-            await server.start()
-            throw new Error("should not get here")
-        } catch (err) {
-            assert.strictEqual(err, expectedErr)
+        await assert.doesNotReject(() => server.start())
+        await server.stop()
+    })
+
+    it("will fail to start if there is an error playing back all communities", async function () {
+        this.timeout(10000)
+        const storeDir = path.join(os.tmpdir(), `communitiesRouter-test1-${+new Date()}`)
+        const config = {
+            tokenAddress,
+            operatorAddress: wallet.address,
         }
+        const server = new CommunityProductServer(wallet, storeDir, config, log, log)
+        sinon.stub(server, "getStoreFor").callsFake(() => mockStore(startState, initialBlock, log))
+        sinon.stub(server, "getChannelFor").callsFake(() => new MockStreamrChannel("dummy-stream-id"))
+
+        await server.start()
+
+        const contract = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
+        log(`Deployed contract at ${contract.address}`)
+
+        const contract2 = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
+        log(`Deployed contract at ${contract2.address}`)
+
+        await server.stop()
+        await sleep(ganacheBlockIntervalSeconds * 1000)
+
+        server.getChannelFor.callsFake(async function () {
+            throw new Error("expected fail")
+        })
+        assert.rejects(() => server.start())
     })
 })
