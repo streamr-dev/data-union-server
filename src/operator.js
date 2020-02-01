@@ -32,7 +32,7 @@ module.exports = class MonoplasmaOperator {
         //this.tokensNotCommitted = 0    // TODO: bignumber
 
         await this.watcher.start(config)
-        this.lastPublishedBlock = (this.watcher.state.lastPublishedBlock && this.watcher.state.lastPublishedBlock.blockNumber) || 0
+        //this.lastPublishedBlock = (this.watcher.state.lastPublishedBlock && this.watcher.state.lastPublishedBlock.blockNumber) || 0
 
         // TODO https://streamr.atlassian.net/browse/CPS-82 finalPlasmaStore should be instead just this.watcher.plasma.store
         const finalPlasmaStore = {
@@ -59,14 +59,22 @@ module.exports = class MonoplasmaOperator {
         this.watcher.stop()
     }
 
+    async lastPublishedBlock(){
+        const lb = await this.watcher.plasma.store.getLatestBlock()
+        if(lb == undefined) 
+            return undefined
+        return lb.blockNumber
+    }
+
     // TODO: block publishing should be based on value-at-risk, that is, publish after so-and-so many tokens received
     // see https://streamr.atlassian.net/browse/CPS-39
     async onTokensReceived(event) {
+        const last = await this.lastPublishedBlock()
         const blockNumber = event.blockNumber
-        if (+blockNumber >= +this.lastPublishedBlock + +this.minIntervalBlocks) {
+        if (last == undefined || +blockNumber >= last + +this.minIntervalBlocks) {
             await this.publishBlock(blockNumber)
         } else {
-            this.log(`Skipped publishing at ${blockNumber}, last publish at ${this.lastPublishedBlock} (this.minIntervalBlocks = ${this.minIntervalBlocks})`)
+            this.log(`Skipped publishing at ${blockNumber}, last publish at ${last} (this.minIntervalBlocks = ${this.minIntervalBlocks})`)
         }
     }
 
@@ -83,8 +91,8 @@ module.exports = class MonoplasmaOperator {
 
         await sleep(0)          // ensure lastObservedBlockNumber is updated since this likely happens as a response to event
         const blockNumber = rootchainBlockNumber || this.watcher.state.lastObservedBlockNumber
-        if (blockNumber <= this.lastPublishedBlock) { throw new Error(`Block #${this.lastPublishedBlock} has already been published, can't publish #${blockNumber}`) }
-        this.lastPublishedBlock = blockNumber
+ //       if (blockNumber <= this.lastPublishedBlock) { throw new Error(`Block #${this.lastPublishedBlock} has already been published, can't publish #${blockNumber}`) }
+//        this.lastPublishedBlock = blockNumber
 
         // see https://streamr.atlassian.net/browse/CPS-20
         // TODO: separate finalPlasma currently is so much out of sync with watcher.plasma that proofs turn out wrong
@@ -100,11 +108,14 @@ module.exports = class MonoplasmaOperator {
         const ipfsHash = ""     // TODO: upload this.finalPlasma to IPFS while waiting for finality
 
         const tx = await this.contract.commit(blockNumber, hash, ipfsHash)
-
+        const tr = await tx.wait(1)        // confirmations
+        
         // TODO https://streamr.atlassian.net/browse/CPS-82 should be instead:
         // await this.finalPlasma.storeBlock(blockNumber) // TODO: give a timestamp
+        // this.watcher.state.lastPublishedBlock = {blockNumber: blockNumber}
         await this.watcher.plasma.storeBlock(blockNumber)
-        const tr = await tx.wait(1)        // confirmations
+        await this.watcher.saveState()
+        
         debug(`Commit sent, receipt: ${JSON.stringify(tr)}`)
 
         // TODO: something causes events to be replayed many times, resulting in wrong balances. It could have something to do with the state cloning that happens here

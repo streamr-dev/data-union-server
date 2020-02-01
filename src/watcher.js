@@ -122,12 +122,13 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         this.blockCreateFilter = this.contract.filters.BlockCreated()
         this.tokenTransferFilter = this.token.filters.Transfer(null, this.contract.address)
 
-        let lastPublishedBlockNumber = this.state.lastPublishedBlock && this.state.lastPublishedBlock.blockNumber
+//        let lastPublishedBlockNumber = this.state.lastPublishedBlock && this.state.lastPublishedBlock.blockNumber
         let lastBlock = {
             members: [],
             blockNumber: 0,
             timestamp: 0,
         }
+        /*
         if (lastPublishedBlockNumber) {
             // quick fix for BigNumbers that have ended up in the store.json:
             //   they get serialized as {"_hex":"0x863a0a"}
@@ -137,7 +138,10 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             this.log(`Reading from store lastPublishedBlockNumber ${lastPublishedBlockNumber}`)
             lastBlock = await this.store.loadBlock(lastPublishedBlockNumber)
         }
-
+        */
+       if(await this.store.hasLatestBlock()){
+           lastBlock = await this.store.getLatestBlock()
+       }
         this.log(`Starting from block ${lastBlock.blockNumber} (t=${lastBlock.timestamp}, ${new Date((lastBlock.timestamp || 0) * 1000).toISOString()}) with ${lastBlock.members.length} members`)
         this.plasma = new MonoplasmaState(this.state.blockFreezeSeconds, lastBlock.members, this.store, this.state.adminAddress, this.state.adminFee, lastBlock.blockNumber, lastBlock.timestamp)
 
@@ -180,7 +184,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         })
         this.contract.on(this.blockCreateFilter, (blockNumber, rootHash, ipfsHash, event) => {
             this.log(`Observed creation of block ${+blockNumber} at block ${event.blockNumber} (root ${rootHash}, ipfs "${ipfsHash}")`)
-            this.state.lastPublishedBlock = event.args
+            //this.state.lastPublishedBlock = event.args
             this.emit("blockCreated", event)
         })
         this.token.on(this.tokenTransferFilter, async (to, from, amount, event) => {
@@ -206,7 +210,10 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         */
 
         // TODO: maybe state saving function should create the state object instead of continuously mutating "state" member
-        await this.store.saveState(this.state)
+        await this.saveState()
+    }
+    async saveState(){
+        this.store.saveState(this.state)
     }
 
     async stop() {

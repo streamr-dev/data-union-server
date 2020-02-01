@@ -3,7 +3,7 @@ const {
     utils: { id, getAddress, hexZeroPad, Interface }
 } = require("ethers")
 
-const FileStore = require("monoplasma/src/fileStore")
+const FileStore = require("./fileStore")
 
 const MonoplasmaOperator = require("./operator")
 const StreamrChannel = require("./streamrChannel")
