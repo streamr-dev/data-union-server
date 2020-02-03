@@ -2,11 +2,12 @@ const BN = require("bn.js")
 const {utils: { isAddress }} = require("web3")
 
 module.exports = class MonoplasmaMember {
-    constructor(name, address, earnings, active) {
+    constructor(name, address, earnings, active = true) {
         this.name = name || ""
         this.address = MonoplasmaMember.validateAddress(address)
         this.earnings = earnings ? new BN(earnings) : new BN(0)
-        this.active = active || true
+        this.active = active
+        console.log(`active ${active} ${this.active}`)
     }
 
     getEarningsAsString() {
