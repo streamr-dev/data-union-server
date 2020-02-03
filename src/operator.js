@@ -91,9 +91,8 @@ module.exports = class MonoplasmaOperator {
 
         await sleep(0)          // ensure lastObservedBlockNumber is updated since this likely happens as a response to event
         const blockNumber = rootchainBlockNumber || this.watcher.state.lastObservedBlockNumber
- //       if (blockNumber <= this.lastPublishedBlock) { throw new Error(`Block #${this.lastPublishedBlock} has already been published, can't publish #${blockNumber}`) }
-//        this.lastPublishedBlock = blockNumber
-
+        if (blockNumber <= await this.lastPublishedBlock()) { throw new Error(`Block #${this.lastPublishedBlock} has already been published, can't publish #${blockNumber}`) }
+            
         // see https://streamr.atlassian.net/browse/CPS-20
         // TODO: separate finalPlasma currently is so much out of sync with watcher.plasma that proofs turn out wrong
         //       perhaps communitiesRouter should get the proofs from operator's finalPlasma?

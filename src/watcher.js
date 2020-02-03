@@ -98,16 +98,18 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             this.log(`Loaded ${Object.keys(this.blockTimestampCache).length} block timestamps from disk`)
         }
 
-        this.eth.on("block", blockNumber => {
-            if (blockNumber % 10 === 0) { this.log(`Block ${blockNumber} observed`) }
-            this.state.lastObservedBlockNumber = blockNumber
-        })
-
         this.log("Initializing Monoplasma state...")
         const savedState = config.reset ? {} : await this.store.loadState()
         this.state = Object.assign({
             adminFee: 0,
         }, savedState, config)
+
+
+        this.eth.on("block", blockNumber => {
+            if (blockNumber % 10 === 0) { this.log(`Block ${blockNumber} observed`) }
+            this.state.lastObservedBlockNumber = blockNumber
+        })
+
 
         // get initial state from contracts, also works as a sanity check for the config
         this.contract = new Contract(this.state.contractAddress, MonoplasmaJson.abi, this.eth)
