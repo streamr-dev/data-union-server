@@ -18,13 +18,11 @@ const {
     ETHEREUM_SERVER,            // explicitly specify server address
     ETHEREUM_NETWORK,           // use ethers.js default servers
 
-    //COMMUNITY_ADDRESS,
+    COMMUNITY_ADDRESS,
 
     STREAMR_WS_URL,
     STREAMR_HTTP_URL,
 } = process.env
-
-const COMMUNITY_ADDRESS = "0xF24197f71fC9b2F4F4c24ecE461fB0Ff7C91FD23"
 
 async function start() {
     const provider = ETHEREUM_SERVER ? new JsonRpcProvider(ETHEREUM_SERVER) : getDefaultProvider(ETHEREUM_NETWORK)

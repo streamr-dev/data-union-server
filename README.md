@@ -28,19 +28,15 @@ Start server script can be modified using the following environment variables:
 | Variable | Notes |
 | --- | --- |
 |  ETHEREUM_SERVER | explicitly specify server address |
-|  ETHEREUM_NETWORK | use ethers.js default servers |
+|  ETHEREUM_NETWORK | fallback alternative to the above, use ethers.js default servers |
 |  OPERATOR_PRIVATE_KEY | private key of the operators, used for identifying which contracts we should be serving |
 |  TOKEN_ADDRESS | $DATA token address |
 |  STREAMR_WS_URL | Default: wss://www.streamr.com/api/v1/ws |
 |  STREAMR_HTTP_URL | Default: https://www.streamr.com/api/v1 |
-|  BLOCK_FREEZE_SECONDS |  |
-|  FINALITY_WAIT_SECONDS |  |
-|  GAS_PRICE_GWEI |  |
-|  STORE_DIR |  |
+|  FINALITY_WAIT_SECONDS | Seconds to wait before assuming Ethereum won't re-org anymore |
+|  GAS_PRICE_GWEI | Gas price for Ethereum transactions, defaults to network suggestion ([see ethers.js](https://github.com/ethers-io/ethers.js/blob/061b0eae1d4c570aedd9bee1971afa43fcdae1a6/tests/make-tests/make-contract-interface.js#L330)) |
+|  STORE_DIR | CPS file storage location, defaults to `store` |
 |  QUIET | Don't print to console.log |
-|  TOKEN_SYMBOL | Will be used 1) for demo token 2) if TOKEN_ADDRESS doesn't support name() and symbol() |
-|  TOKEN_NAME |  |
-|  GANACHE_PORT | if ETHEREUM_SERVER isn't specified, start a local Ethereum simulator (Ganache) in given port |
 |  WEBSERVER_PORT | HTTP API for /config and /communities endpoints |
 |  SENTRY_TOKEN | DSN for sending Sentry messages |
 
@@ -49,9 +45,10 @@ Start server script can be modified using the following environment variables:
 Use Node 10.14.0 and NPM 6.4.1.
 
 Run tests with one of the following:
-* `npm run test` for all tests
+* `npm run test` for all tests that should currently pass
 * `npm run unit-tests` for just locally run unit tests of JS source files
+* `npm run integration-tests` for end-to-end tests that run against [Docker environment](https://github.com/streamr-dev/streamr-docker-dev)
+* `npm run system-tests` for end-to-end tests that run against Docker environment
 * `npm run contract-tests` for smart contract tests
-* `npm run integration-tests` for end-to-end tests that talk to internet
 
-Note: STREAMR_WS_URL and STREAMR_HTTP_URL should be set for integration-tests, otherwise they'll contact production instances
+Note: STREAMR_WS_URL and STREAMR_HTTP_URL really should be set for integration-tests and system-tests, otherwise they'll contact production instances

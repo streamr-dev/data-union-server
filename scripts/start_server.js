@@ -36,8 +36,7 @@ const {
     GAS_PRICE_GWEI,
     //RESET,
 
-    // Monoplasma parameters
-    BLOCK_FREEZE_SECONDS,
+    // Safety parameter
     FINALITY_WAIT_SECONDS,
 
     // Optional; HTTP API for /config and /communities endpoints
@@ -47,6 +46,7 @@ const {
     SENTRY_TOKEN,
 
     DEVELOPER_MODE, // TODO: remove
+    BLOCK_FREEZE_SECONDS, // TODO: remove
 } = process.env
 
 let Sentry
