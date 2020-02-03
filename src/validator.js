@@ -45,7 +45,7 @@ module.exports = class MonoplasmaValidator {
 
         // update the "validated" version to the block number whose hash was published
         await this.watcher.playbackUntilBlock(blockNumber, this.validatedPlasma)
-        this.watcher.channelPruneCache()    // TODO: should prune only up to this.validatedPlasma.currentTimestamp
+        this.watcher.channelPruneCache()
         this.lastCheckedBlock = blockNumber
 
         // check that the hash at that point in history matches
