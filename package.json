@@ -9,6 +9,7 @@
     "lint": "eslint src test scripts",
     "flatten": "etherlime --solcVersion=0.4.24 flatten CommunityProduct.sol",
     "build-contracts": "etherlime --solcVersion=0.4.24 compile",
+    "docker-build": "docker build -t streamr/streamr-community-products:local .",
     "unit-tests": "mocha test/unit --exit",
     "integration-tests": "mocha test/integration --exit",
     "system-tests": "mocha test/system/engine-and-editor-api.js --exit",
