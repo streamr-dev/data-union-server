@@ -5,7 +5,7 @@ const os = require("os")
 const path = require("path")
 const { Wallet, providers: { Web3Provider } } = require("ethers")
 
-const log = require("debug")("CPS::test::unit::server")
+const log = require("debug")("Streamr::CPS::test::unit::server")
 
 const ganache = require("ganache-core")
 

@@ -1,7 +1,7 @@
 const sinon = require("sinon")
 const assert = require("assert")
 
-const log = require("debug")("CPS::test::unit::watcher")
+const log = require("debug")("Streamr::CPS::test::unit::watcher")
 
 const {
     Wallet,

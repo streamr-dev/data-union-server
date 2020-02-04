@@ -7,7 +7,7 @@ const http = require("http")
 const fetch = require("node-fetch")
 const { Wallet, ContractFactory, providers: { Web3Provider } } = require("ethers")
 
-const log = require("debug")("CPS::test::unit::communities-router")
+const log = require("debug")("Streamr::CPS::test::unit::communities-router")
 
 const CommunityJson = require("../../build/CommunityProduct")
 const TokenJson = require("../../build/TestToken")

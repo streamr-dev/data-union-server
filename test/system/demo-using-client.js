@@ -2,7 +2,7 @@ const { spawn } = require("child_process")
 const fetch = require("node-fetch")
 const assert = require("assert")
 
-const log = require("debug")("CPS::test::system::streamr-client")
+const log = require("debug")("Streamr::CPS::test::system::streamr-client")
 
 const StreamrClient = require("streamr-client")
 

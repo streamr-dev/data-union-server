@@ -1,6 +1,6 @@
 const BN = require("bn.js")
 
-const log = require("debug")("CPS::utils::events")
+const log = require("debug")("Streamr::CPS::utils::events")
 
 async function replayOn(plasma, events, messages) {
     const merged = mergeEventsWithMessages(events, messages)

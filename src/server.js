@@ -3,6 +3,7 @@ const {
     utils: { id, getAddress, hexZeroPad, Interface }
 } = require("ethers")
 
+const debug = require("debug")
 const FileStore = require("monoplasma/src/fileStore")
 
 const MonoplasmaOperator = require("./operator")
@@ -34,7 +35,7 @@ module.exports = class CommunityProductServer {
 
         this.wallet = wallet
         this.eth = wallet.provider
-        this.log = log || require("debug")("CPS::server")   // TODO: don't pass log func in constructor
+        this.log = log || debug("Streamr::CPS::server")   // TODO: don't pass log func in constructor
         this.error = error || console.error // eslint-disable-line no-console
         this.communities = {}       // mapping: Ethereum address => Community object
         this.storeDir = storeDir

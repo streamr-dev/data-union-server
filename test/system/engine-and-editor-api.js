@@ -2,7 +2,7 @@ const { spawn } = require("child_process")
 const fetch = require("node-fetch")
 const assert = require("assert")
 
-const log = require("debug")("CPS::test::system::http-api")
+const log = require("debug")("Streamr::CPS::test::system::http-api")
 
 const StreamrClient = require("streamr-client") // just for getting session tokens (ethereum-sign-in)...
 

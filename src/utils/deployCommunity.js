@@ -4,7 +4,7 @@ const {
 } = require("ethers")
 const StreamrClient = require("streamr-client")
 
-const log = require("debug")("CPS::utils::deployCommunity")
+const log = require("debug")("Streamr::CPS::utils::deployCommunity")
 
 const { throwIfBadAddress, throwIfNotContract } = require("./checkArguments")
 

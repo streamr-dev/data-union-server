@@ -1,6 +1,6 @@
 /*global accounts assert utils */
 
-const log = require("debug")("CPS::test::contracts::CommunityProduct")
+const log = require("debug")("Streamr::CPS::test::contracts::CommunityProduct")
 
 const etherlime = require("etherlime")
 const CommunityProduct = require("../../build/CommunityProduct.json")

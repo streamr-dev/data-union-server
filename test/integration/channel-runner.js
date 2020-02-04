@@ -1,7 +1,7 @@
 const path = require("path")
 const { spawn } = require("child_process")
 
-const log = require("debug")("CPS::test::integration::channel")
+const log = require("debug")("Streamr::CPS::test::integration::channel")
 
 const { STREAMR_WS_URL, STREAMR_HTTP_URL } = require("./CONFIG")
 
