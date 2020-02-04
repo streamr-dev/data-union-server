@@ -147,6 +147,10 @@ module.exports = class StreamrChannel extends EventEmitter {
         this.mode = State.CLIENT
     }
 
+    isClosed() {
+        return this.mode === State.CLOSED
+    }
+
     /** Close the channel */
     async close() {
         if (this.mode === State.CLOSED) { throw new Error("Can't close, already closed")}

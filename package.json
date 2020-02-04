@@ -5,6 +5,7 @@
   "main": "./scripts/start_server.js",
   "scripts": {
     "start": "node ./scripts/start_server.js",
+    "inspect": "node --inspect-brk ./scripts/start_server.js",
     "lint": "eslint src test scripts",
     "flatten": "etherlime --solcVersion=0.4.24 flatten CommunityProduct.sol",
     "build-contracts": "etherlime --solcVersion=0.4.24 compile",
