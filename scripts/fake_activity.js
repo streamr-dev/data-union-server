@@ -11,7 +11,7 @@ const {
 } = require("ethers")
 
 const TokenJson = require("../build/ERC20Detailed.json")
-const MarketplaceAbi = require("../build/Marketplace.json")
+const MarketplaceAbi = require("../Dependencies/Marketplace.json")
 //const CommunityJson = require("../build/CommunityProduct.json")
 
 const {
