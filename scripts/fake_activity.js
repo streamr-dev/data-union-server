@@ -1,37 +1,36 @@
 const StreamrClient = require("streamr-client")
 const sleep = require("../src/utils/sleep-promise")
+const fetch = require("node-fetch")
 
 const {
     getDefaultProvider,
     providers: { JsonRpcProvider },
-    utils: { formatEther, parseEther },
+    utils: { formatEther, parseEther, hexlify },
     Wallet,
     Contract,
 } = require("ethers")
 
 const TokenJson = require("../build/ERC20Detailed.json")
+const MarketplaceAbi = require("../build/Marketplace.json")
 //const CommunityJson = require("../build/CommunityProduct.json")
 
 const {
     ETHEREUM_SERVER,            // explicitly specify server address
     ETHEREUM_NETWORK,           // use ethers.js default servers
-    ETHEREUM_PRIVATE_KEY,
+    BUYER_WALLET_PRIVATE_KEY,
 
     TOKEN_ADDRESS,
+    MARKETPLACE_ADDRESS,
     COMMUNITY_ADDRESS,
     SECRET,
 
     STREAMR_WS_URL,
     STREAMR_HTTP_URL,
 
-    // join and parts, in fact, to keep the size of community around TARGET_SIZE
-    JOINS_PER_MINUTE_AVERAGE,       // mean of sinusoidal frequency cycle
-    JOINS_PER_MINUTE_VARIANCE,      // amplitude of sinusoidal frequency cycle
-    JOINS_PER_MINUTE_CYCLE_HOURS,   // length of full cycle of sinusoidal frequency cycle
-    TARGET_SIZE,                    // increase probability of parting after community size > TARGET_SIZE
-
-    REVENUE_PER_MINUTE,             // average frequency, uniform 1/2 f ... 3/2 f
-    REVENUE_PER_TRANSFER,           // average size, power law, capped at 100x
+    JOINS_PER_MINUTE_AVERAGE,
+    PURCHASES_PER_MINUTE,
+    PURCHASE_SUBSCRIPTION_LENGTH_SECS_MIN,
+    PURCHASE_SUBSCRIPTION_LENGTH_SECS_MAX,
 
     QUIET,
 } = process.env
@@ -48,10 +47,11 @@ const error = (e, ...args) => {
 
 const { throwIfBadAddress, throwIfNotContract } = require("../src/utils/checkArguments")
 
-let token
+let tokenContract
+let marketplaceContract
 let wallet
 let lastJoin = Date.now()
-let lastTransfer = Date.now()
+let lastPurchase = Date.now()
 
 async function start() {
     const provider =
@@ -67,15 +67,17 @@ async function start() {
     if (!SECRET) { throw new Error("Please specify env variable SECRET") }
     await throwIfNotContract(provider, COMMUNITY_ADDRESS, "env variable COMMUNITY_ADDRESS")
     const tokenAddress = await throwIfNotContract(provider, TOKEN_ADDRESS, "env variable TOKEN_ADDRESS")
+    const marketplaceAddress = await throwIfNotContract(provider, MARKETPLACE_ADDRESS, "env variable MARKETPLACE_ADDRESS")
 
-    const privateKey = ETHEREUM_PRIVATE_KEY.startsWith("0x") ? ETHEREUM_PRIVATE_KEY : "0x" + ETHEREUM_PRIVATE_KEY
+    const privateKey = BUYER_WALLET_PRIVATE_KEY.startsWith("0x") ? BUYER_WALLET_PRIVATE_KEY : "0x" + BUYER_WALLET_PRIVATE_KEY
     if (privateKey.length !== 66) { throw new Error("Malformed private key, must be 64 hex digits long (optionally prefixed with '0x')") }
     wallet = new Wallet(privateKey, provider)
 
-    token = new Contract(tokenAddress, TokenJson.abi, wallet)
+    tokenContract = new Contract(tokenAddress, TokenJson.abi, wallet)
+    marketplaceContract = new Contract(marketplaceAddress, MarketplaceAbi, wallet)
 
     while (true) {
-        tick()
+        await tick()
         await sleep(TICK_RATE_MS)
     }
 }
@@ -83,7 +85,7 @@ async function start() {
 async function tick() {
     // Handle member joins
     const lastJoinDiff = Date.now() - lastJoin
-    const joinProbability = JOINS_PER_MINUTE_AVERAGE * (lastJoinDiff / (60 * 1000))
+    const joinProbability = JOINS_PER_MINUTE_AVERAGE * (lastJoinDiff / (60 * 1000)) * (TICK_RATE_MS / (60 * 1000))
 
     if (Math.random() < joinProbability) {
         let secret = SECRET
@@ -101,12 +103,18 @@ async function tick() {
     // TODO: Handle member parts when StreamrClient supports them....
     
     // Handle buys
-    const lastTransferDiff = Date.now() - lastTransfer
-    const transferAmount = REVENUE_PER_MINUTE * (lastTransferDiff / (60 * 1000))
+    const lastPurchaseDiff = Date.now() - lastPurchase
+    const purchaseProbability = PURCHASES_PER_MINUTE * (lastPurchaseDiff / (60 * 1000)) * (TICK_RATE_MS / (60 * 1000))
 
-    if (transferAmount > REVENUE_PER_TRANSFER) {
-        await sendTokens(COMMUNITY_ADDRESS, transferAmount)
-        lastTransfer = Date.now()
+    if (Math.random() < purchaseProbability) {
+        const productId = await findProductForCommunity(COMMUNITY_ADDRESS)
+        if (productId) {
+            const subscriptionLength = getRandomInt(PURCHASE_SUBSCRIPTION_LENGTH_SECS_MIN, PURCHASE_SUBSCRIPTION_LENGTH_SECS_MAX)
+            await buyProduct(productId, subscriptionLength)
+            lastPurchase = Date.now()
+        } else {
+            log("Could not find marketplace product id for community. Is the product published?")
+        }
     }
 }
 
@@ -130,11 +138,53 @@ async function joinRandom(communityAddress, secret) {
 
 async function sendTokens(communityAddress, dataAmount) {
     const dataWeiAmount = parseEther(dataAmount.toString())
-    const tx = await token.transfer(communityAddress, dataWeiAmount)
+    const tx = await tokenContract.transfer(communityAddress, dataWeiAmount)
     log(`Transferring ${formatEther(dataWeiAmount)} DATA from ${wallet.address} to ${communityAddress}`)
     const tr = await tx.wait(1)
     log(`TX completed with hash ${tr.transactionHash}`)
     return tr
 }
+
+async function buyProduct(productId, subscriptionTimeInSeconds) {
+    const hexProductId = hexlify("0x" + productId)
+    const product = await marketplaceContract.getProduct(hexProductId)
+    const pricePerSec = product[3]
+    const allowance = pricePerSec * subscriptionTimeInSeconds
+    const approveTx = await tokenContract.approve(MARKETPLACE_ADDRESS, parseEther(allowance.toString()))
+    await approveTx.wait(1)
+
+    log(`Buying product ${hexProductId} for ${subscriptionTimeInSeconds} seconds`)
+    const tx = await marketplaceContract.buy(hexProductId, subscriptionTimeInSeconds)
+    const tr = await tx.wait(1)
+    log("Buy TX completed with hash " + tx.hash)
+    return tr
+}
+
+async function findProductForCommunity(communityAddress) {
+    const products = await fetch(`${STREAMR_HTTP_URL}/products?publicAccess=true`).then(resp => resp.json())
+    if (products && Array.isArray(products)) {
+        const product = products.find(p => p.beneficiaryAddress && p.beneficiaryAddress.toLowerCase() === communityAddress.toLowerCase())
+        if (product) {
+            return product.id
+        }
+    }
+
+    return null
+}
+
+function getRandomInt(min, max) {
+    min = Math.ceil(min)
+    max = Math.floor(max)
+    return Math.floor(Math.random() * (max - min)) + min
+}
+
+process
+    .on("unhandledRejection", (reason, p) => {
+        console.error(reason, "Unhandled Rejection at Promise", p)
+    })
+    .on("uncaughtException", err => {
+        console.error(err, "Uncaught Exception thrown")
+        process.exit(1)
+    })
 
 start().catch(error)
