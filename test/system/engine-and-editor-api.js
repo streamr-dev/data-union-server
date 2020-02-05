@@ -279,13 +279,15 @@ describe("Community product demo but through a running E&E instance", () => {
         }
 
         log("3.1) Wait for blocks to unfreeze...") //... and also that state updates.
+
+        const expectedAdminEarnings = parseEther("14").toString()
         let member = memberBeforeRevenues
-        // wait until member.withdrawableEarnings exists && has increased
-        while (member.withdrawableEarnings < 1 + memberBeforeRevenues.withdrawableEarnings) {
+        // wait until member.withdrawableEarnings is at least expected earnings
+        while ((member.withdrawableEarnings - memberBeforeRevenues.withdrawableEarnings) < expectedAdminEarnings) {
             await sleep(1000)
             member = await GET(`/communities/${communityAddress}/members/${address}`)
         }
-        Object.keys(member).forEach(k => log(`    ${k} ${JSON.stringify(member[k])}`))
+        log("    member:", member)
 
         log("4) Withdraw tokens")
 
@@ -325,12 +327,11 @@ describe("Community product demo but through a running E&E instance", () => {
         const difference2 = balanceAfter2.sub(balanceBefore2)
         log(`   Withdraw effect: ${formatEther(difference2)}`)
 
-        const adminEarnings = parseEther("14").toString()
-        const memberEarnings = parseEther("4").toString()
-        assert.strictEqual(member.withdrawableEarnings, adminEarnings)
-        assert.strictEqual(member2.withdrawableEarnings, memberEarnings)
-        assert.strictEqual(difference.toString(), adminEarnings)
-        assert.strictEqual(difference2.toString(), memberEarnings)
+        const expectedMember2Earnings = parseEther("4").toString()
+        assert.strictEqual(member.withdrawableEarnings, expectedAdminEarnings)
+        assert.strictEqual(member2.withdrawableEarnings, expectedMember2Earnings)
+        assert.strictEqual(difference.toString(), expectedAdminEarnings)
+        assert.strictEqual(difference2.toString(), expectedMember2Earnings)
     })
 
     afterEach(() => {
