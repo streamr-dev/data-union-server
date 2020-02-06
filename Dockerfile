@@ -18,7 +18,7 @@ RUN useradd -ms /bin/bash node
 USER node
 WORKDIR /home/node
 COPY ./ ./
-RUN npm ci
+RUN npm ci --only=production
 RUN npm run build-contracts
 
 FROM ubuntu:16.04
