@@ -4,8 +4,9 @@ const {
 } = require("ethers")
 
 const debug = require("debug")
-const FileStore = require("./fileStore")
+const pAll = require("p-all")
 
+const FileStore = require("./fileStore")
 const MonoplasmaOperator = require("./operator")
 const StreamrChannel = require("./streamrChannel")
 
@@ -79,21 +80,17 @@ module.exports = class CommunityProductServer {
 
         const logs = await this.eth.getLogs(filter)
 
-        const total = logs.length
-        this.log(`Playing back ${total} operator change events...`)
-        const startAllTime = Date.now()
+        // get unique addresses
+        const addresses = Array.from(new Set(logs.map((log) => getAddress(log.address))))
 
-        // TODO: we should also catch all OperatorChanged from communities that we we've operated
-        //    so that we can detect if we've been swapped out
+        const total = addresses.length
+        this.log(`Playing back ${total} operator change events...`)
         let numErrors = 0
-        for (let i = 0; i < total; i++) {
+        let numComplete = 0
+        const startAllTime = Date.now()
+        await pAll(addresses.map((contractAddress) => () => {
             const startEventTime = Date.now()
-            const log = logs[i]
-            let event = operatorChangedInterface.parseLog(log)
-            const num = i + 1
-            this.log(`Playing back past OperatorChanged event ${num} of ${total}: ` + JSON.stringify(event))
-            const contractAddress = getAddress(log.address)
-            await this.onOperatorChangedEventAt(contractAddress).catch(err => {
+            return this.onOperatorChangedEventAt(contractAddress).catch((err) => {
                 // TODO: while developing, 404 for joinPartStream could just mean
                 //   mysql has been emptied by streamr-ganache docker not,
                 //   so some old joinPartStreams are in ganache but not in mysql
@@ -104,9 +101,12 @@ module.exports = class CommunityProductServer {
                 this.error(err.stack)
                 // keep chugging, only give up if all fail
                 numErrors++
+            }).then(() => {
+                numComplete++
+                this.log(`Event ${numComplete} of ${total} processed in ${Date.now() - startEventTime}ms, ${Math.round((numComplete / total) * 100)}% complete.`)
             })
-            this.log(`Event ${num} of ${total} processed in ${Date.now() - startEventTime}ms, ${Math.round((num / total) * 100)}% complete.`)
-        }
+        }), { concurrency: 6 })
+
         this.log(`Finished playback of ${total} operator change events in ${Date.now() - startAllTime}ms.`)
         const numCommunities = Object.keys(this.communities).length
         if (numErrors && numErrors === numCommunities) {

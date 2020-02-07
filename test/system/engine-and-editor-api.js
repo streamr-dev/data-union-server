@@ -288,6 +288,7 @@ describe("Community product demo but through a running E&E instance", () => {
             member = await GET(`/communities/${communityAddress}/members/${address}`)
         }
         log("    member:", member)
+        sleep(3000) // unfreeze?
 
         log("4) Withdraw tokens")
 
@@ -296,7 +297,7 @@ describe("Community product demo but through a running E&E instance", () => {
 
         const contract = new Contract(communityAddress, CommunityProduct.abi, wallet)
         const withdrawTx = await contract.withdrawAll(member.withdrawableBlockNumber, member.withdrawableEarnings, member.proof)
-        await withdrawTx.wait(1)
+        await withdrawTx.wait(2)
 
         const res4b = await GET(`/communities/${communityAddress}/members/${address}`)
         Object.keys(res4b).forEach(k => log(`    ${k} ${JSON.stringify(res4b[k])}`))
