@@ -36,6 +36,7 @@
     "monoplasma": "0.1.10",
     "morgan": "1.9.1",
     "mz": "2.7.0",
+    "p-all": "2.1.0",
     "streamr-client": "3.0.1"
   },
   "devDependencies": {
