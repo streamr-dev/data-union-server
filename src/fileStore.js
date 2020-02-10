@@ -114,30 +114,30 @@ module.exports = class FileStore {
         if (!block || !block.blockNumber) { throw new Error(`Bad block: ${JSON.stringify(block)}`) }
         const path = this.getBlockPath(block.blockNumber)
         const raw = JSON.stringify(block)
-        this.log(`Saving block ${block.blockNumber} to ${path}: ${this.sanitize(raw)}`)
+        this.log(`Saving block ${block.blockNumber} to ${path}`)
         if (await fs.exists(path)) {
             this.log(`Overwriting block ${block.blockNumber}!`)
         }
-        return fs.writeFile(path, raw,(err) => {
+        return fs.writeFile(path, raw, (err) => {
             if (err) throw err
-            this.makeLatestSymlink(block.blockNumber)
+            return this.makeLatestSymlink(block.blockNumber)
         })
     }
 
     async makeLatestSymlink(blockNum){
         const path = this.getBlockPath(blockNum)
         const latest = this.getLatestPath()
-        const exists = await fs.exists(latest)
-        this.log(`making symlink ${latest} to ${path} ${exists}`)
+        const exists = fs.existsSync(latest)
         if (exists) {
-            const latestBlock  = await this.getLatestBlock()
-            //only link if block is newer
+            const latestBlock = await this.getLatestBlock()
+            // only link if block is newer
             this.log(`NM symlink ${latestBlock.blockNumber} to ${blockNum}`)
-            if (latestBlock.blockNumber > blockNum) {return}
+            if (latestBlock.blockNumber > blockNum) { return }
             fs.unlinkSync(latest)
         }
+        this.log(`making symlink ${latest} to ${path} ${exists}`)
         //create latest.json link
-        fs.symlink(path, latest)
+        fs.symlinkSync(path, latest)
     }
 
     /**
