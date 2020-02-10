@@ -137,7 +137,11 @@ async function start() {
         app.use(bodyParser.json({limit: "50mb"}))
 
         app.get("/config", (req, res) => { res.send(config) }) // TODO: remove
-        app.use("/communities", getCommunitiesRouter(server))
+
+        const communitiesRouter = getCommunitiesRouter(server)
+        app.use("/dataunions", communitiesRouter)
+        app.use("/communities", communitiesRouter) // deprecated alias, remove once no longer used
+
         app.listen(port, () => log(`Web server started at ${serverURL}`))
 
         // TODO: remove after 0.2 refactor is done
