@@ -59,10 +59,12 @@ module.exports = class FileStore {
         const memberArray = JSON.parse(raw)
         return memberArray
     }
+
     async hasLatestBlock() {
         const path = this.getLatestPath()
         return fs.exists(path)
     }
+
     async getLatestBlock() {
         const existing = await this.hasLatestBlock()
         if (!existing) { return undefined }
