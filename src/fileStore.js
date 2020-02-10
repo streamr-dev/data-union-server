@@ -118,10 +118,8 @@ module.exports = class FileStore {
         if (await fs.exists(path)) {
             this.log(`Overwriting block ${block.blockNumber}!`)
         }
-        return fs.writeFile(path, raw, (err) => {
-            if (err) throw err
-            return this.makeLatestSymlink(block.blockNumber)
-        })
+        await fs.writeFile(path, raw)
+        return this.makeLatestSymlink(block.blockNumber)
     }
 
     async makeLatestSymlink(blockNum){
