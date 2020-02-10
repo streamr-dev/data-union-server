@@ -202,6 +202,6 @@ describe("CommunityProductServer", function () {
         server.getChannelFor.callsFake(async function () {
             throw new Error("expected fail")
         })
-        assert.rejects(() => server.start())
+        await assert.rejects(() => server.start())
     })
 })
