@@ -108,9 +108,10 @@ module.exports = class CommunityProductServer {
             this.log(`Event ${num} of ${total} processed in ${Date.now() - startEventTime}ms, ${Math.round((num / total) * 100)}% complete.`)
         }
         this.log(`Finished playback of ${total} operator change events in ${Date.now() - startAllTime}ms.`)
-        if (numErrors && numErrors === total) {
+        const numCommunities = Object.keys(this.communities).length
+        if (numErrors && numErrors === numCommunities) {
             // kill if all operators errored
-            throw new Error(`All ${total} operator changed events failed to process. Shutting down.`)
+            throw new Error(`All ${numCommunities} communities failed to start. Shutting down.`)
         }
     }
 
