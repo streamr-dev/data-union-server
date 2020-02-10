@@ -19,7 +19,7 @@ const TokenJson = require("../../build/TestToken")
 const sleep = require("../../src/utils/sleep-promise")
 
 const MockStreamrChannel = require("../utils/mockStreamrChannel")
-const mockStore = require("monoplasma/test/utils/mockStore")
+const mockStore = require("../utils/mockStore")
 
 const members = [
     { address: "0x2F428050ea2448ed2e4409bE47e1A50eBac0B2d2", earnings: "50" },
