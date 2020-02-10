@@ -7,7 +7,6 @@ module.exports = class MonoplasmaMember {
         this.address = MonoplasmaMember.validateAddress(address)
         this.earnings = earnings ? new BN(earnings) : new BN(0)
         this.active = active
-        console.log(`active ${active} ${this.active}`)
     }
 
     getEarningsAsString() {

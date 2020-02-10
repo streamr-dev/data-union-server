@@ -124,7 +124,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         this.blockCreateFilter = this.contract.filters.BlockCreated()
         this.tokenTransferFilter = this.token.filters.Transfer(null, this.contract.address)
 
-//        let lastPublishedBlockNumber = this.state.lastPublishedBlock && this.state.lastPublishedBlock.blockNumber
+        // let lastPublishedBlockNumber = this.state.lastPublishedBlock && this.state.lastPublishedBlock.blockNumber
         let lastBlock = {
             members: [],
             blockNumber: 0,
@@ -141,9 +141,9 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             lastBlock = await this.store.loadBlock(lastPublishedBlockNumber)
         }
         */
-       if(await this.store.hasLatestBlock()){
-           lastBlock = await this.store.getLatestBlock()
-       }
+        if (await this.store.hasLatestBlock()){
+            lastBlock = await this.store.getLatestBlock()
+        }
         this.log(`Starting from block ${lastBlock.blockNumber} (t=${lastBlock.timestamp}, ${new Date((lastBlock.timestamp || 0) * 1000).toISOString()}) with ${lastBlock.members.length} members`)
         this.plasma = new MonoplasmaState(this.state.blockFreezeSeconds, lastBlock.members, this.store, this.state.adminAddress, this.state.adminFee, lastBlock.blockNumber, lastBlock.timestamp)
 
