@@ -128,11 +128,9 @@ describe("MonoplasmaState", () => {
             const bnum = 100 + i % 3
             const { address } = initialMembers[(50 * i) % initialMembers.length]
             await plasma.getProofAt(address, bnum)
+            const timeTaken = Date.now() - startTime
+            assert(timeTaken < 30000, `${timeTaken} is too slow!`)
         }
-        //  await sleep(100)
-        //}
-        const timeTaken = Date.now() - startTime
-        assert(timeTaken < 30000, "too slow!")
     })
 
     it("should give revenue to adminAccount if no members present", async () => {
