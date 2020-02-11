@@ -69,12 +69,14 @@ describe("Community product demo but through a running E&E instance", () => {
                 RESET: "yesplease",
             }
         })
-        operatorProcess.stdout.on("data", data => { log(`<server> ${data.toString().trim()}`) })
-        operatorProcess.stderr.on("data", data => { log(`server *** ERROR: ${data}`) })
-        operatorProcess.on("close", code => { log(`start_server.js exited with code ${code}`) })
+        operatorProcess.stdout.on("data", data => { log(`<server stdio> ${String(data).trim()}`) })
+        operatorProcess.stderr.on("data", data => { log(`<server stderr> ${String(data).trim()}`) })
+        operatorProcess.on("close", (code, signal) => {
+            throw new Error(`start_server.js exited with code ${code}, signal ${signal}`)
+        })
         operatorProcess.on("error", err => {
             log(`start_server.js ERROR: ${err}`)
-            process.exit(1)
+            process.exitCode = 1
         })
 
         await untilStreamContains(operatorProcess.stdout, "[DONE]")
