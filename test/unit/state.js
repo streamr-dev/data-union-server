@@ -103,7 +103,7 @@ describe("MonoplasmaState", () => {
         this.timeout(40000)
 
         const initialMembers = []
-        while (initialMembers.length < 200000) {
+        while (initialMembers.length < 150000) {
             initialMembers.push({
                 address: `0x${crypto.randomBytes(20).toString("hex")}`,
                 earnings: 0,
@@ -124,7 +124,7 @@ describe("MonoplasmaState", () => {
         //         each getProofAt on cold cache (new block) takes about 5s
         const startTime = Date.now()
         //for (let j = 0; j < 10; j++) {
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < 15; i++) {
             const bnum = 100 + i % 3
             const { address } = initialMembers[(50 * i) % initialMembers.length]
             await plasma.getProofAt(address, bnum)
