@@ -12,7 +12,7 @@ const sleep = require("../src/utils/sleep-promise")
 const { throwIfNotContract } = require("../src/utils/checkArguments")
 
 const TokenJson = require("../build/ERC20Detailed.json")
-const CommunityJson = require("../build/CommunityProduct.json")
+const CommunityJson = require("../build/DataUnion.json")
 
 const {
     ETHEREUM_SERVER,            // explicitly specify server address
@@ -20,7 +20,7 @@ const {
     ETHEREUM_PRIVATE_KEY,
 
     TOKEN_ADDRESS,
-    COMMUNITY_ADDRESS,
+    DATAUNION_ADDRESS,
     GAS_PRICE_GWEI,
 
     // only one of these two please...
@@ -56,7 +56,7 @@ async function start() {
     log("Connected to Ethereum network: ", JSON.stringify(network))
 
     const tokenAddress = await throwIfNotContract(provider, TOKEN_ADDRESS, "env variable TOKEN_ADDRESS")
-    const communityAddress = await throwIfNotContract(provider, COMMUNITY_ADDRESS, "env variable COMMUNITY_ADDRESS")
+    const communityAddress = await throwIfNotContract(provider, DATAUNION_ADDRESS, "env variable DATAUNION_ADDRESS")
 
     if (DATA_TOKEN_AMOUNT && DATA_WEI_AMOUNT || !DATA_TOKEN_AMOUNT && !DATA_WEI_AMOUNT) { throw new Error("Please specify either env variable DATA_TOKEN_AMOUNT or DATA_WEI_AMOUNT, but not both!") }
     const dataWeiAmount = DATA_WEI_AMOUNT ? bigNumberify(DATA_WEI_AMOUNT) : parseEther(DATA_TOKEN_AMOUNT)

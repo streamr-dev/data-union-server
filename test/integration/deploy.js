@@ -2,7 +2,7 @@ const fetch = require("node-fetch")
 const { spawn } = require("child_process")
 const assert = require("assert")
 
-const log = require("debug")("Streamr::CPS::test::integration::deploy-community-script")
+const log = require("debug")("Streamr::dataunion::test::integration::deploy-community-script")
 
 const {
     Contract,
@@ -14,9 +14,9 @@ const {
 const { untilStreamContains, untilStreamMatches, capture } = require("../utils/await-until")
 
 const sleep = require("../../src/utils/sleep-promise")
-const deployCommunity = require("../../src/utils/deployCommunity")
+const deployCommunity = require("../../src/utils/deploy")
 
-const CommunityJson = require("../../build/CommunityProduct")
+const CommunityJson = require("../../build/DataUnion")
 
 const { streamrWs, streamrHttp, streamrNodeAddress } = require("./CONFIG")
 
@@ -140,7 +140,7 @@ describe.skip("Deploy community script", () => {
         let stats = { error: true }
         while (stats.error) {
             await sleep(100)
-            stats = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityContract.address}/stats`).then(resp => resp.json())
+            stats = await fetch(`http://localhost:${WEBSERVER_PORT}/dataunions/${communityContract.address}/stats`).then(resp => resp.json())
         }
 
         assert.strictEqual(stats.totalEarnings, "0")
@@ -173,7 +173,7 @@ describe.skip("Deploy community script", () => {
         let stats = { error: true }
         while (stats.error) {
             await sleep(100)
-            stats = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityContract.address}/stats`).then(resp => resp.json())
+            stats = await fetch(`http://localhost:${WEBSERVER_PORT}/dataunions/${communityContract.address}/stats`).then(resp => resp.json())
         }
 
         assert.strictEqual(stats.totalEarnings, "0")

@@ -1,6 +1,6 @@
 const BN = require("bn.js")
 
-const log = require("debug")("Streamr::CPS::utils::events")
+const log = require("debug")("Streamr::dataunion::utils::events")
 
 async function replayOn(plasma, events, messages) {
     const merged = mergeEventsWithMessages(events, messages)
@@ -33,7 +33,7 @@ async function replayEvent(plasma, event) {
             const { addressList } = event
             plasma.removeMembers(addressList)
         } break
-        // TODO: this event is not yet implemented in CPS (it is in Monoplasma...)
+        // TODO: this event is not yet implemented in dataunion (it is in Monoplasma...)
         case "OwnershipTransferred": {
             const { previousOwner, newOwner } = event.args
             log(`Owner (admin) address changed to ${newOwner} from ${previousOwner} @ block ${event.blockNumber}`)

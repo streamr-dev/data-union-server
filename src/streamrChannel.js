@@ -1,7 +1,7 @@
 const EventEmitter = require("events")
 const StreamrClient = require("streamr-client")
 const { utils: { computeAddress } } = require("ethers")
-const log = require("debug")("Streamr::CPS::StreamrChannel")
+const log = require("debug")("Streamr::dataunion::StreamrChannel")
 
 /**
  * @typedef {string} State

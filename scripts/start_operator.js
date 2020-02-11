@@ -11,12 +11,12 @@ const onProcessExit = require("exit-hook")
 
 const { Wallet, Contract, providers: { JsonRpcProvider } } = require("ethers")
 
-const CommunityProductJson = require("../build/CommunityProduct.json")
+const DataUnionJson = require("../build/DataUnion.json")
 
 const FileStore = require("monoplasma/src/fileStore")
 const Operator = require("../src/operator")
 const { throwIfSetButNotContract /*, throwIfNotSet */ } = require("../src/utils/checkArguments")
-const deployCommunity = require("../src/utils/deployCommunity")
+const deployCommunity = require("../src/utils/deploy")
 
 const deployTestToken = require("../test/utils/deployTestToken")
 
@@ -118,7 +118,7 @@ async function start() {
 
     log("Starting the joinPartChannel and Operator")
 
-    const contract = new Contract(config.contractAddress, CommunityProductJson.abi, this.eth)
+    const contract = new Contract(config.contractAddress, DataUnionJson.abi, this.eth)
     const joinPartStreamId = await contract.joinPartStream()
     const adminChannel = new Channel(joinPartStreamId, config.streamrWsUrl, config.streamrHttpUrl)
     await adminChannel.startServer(privateKey)

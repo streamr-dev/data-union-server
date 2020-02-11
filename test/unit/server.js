@@ -3,16 +3,17 @@ const sleep = require("../../src/utils/sleep-promise")
 const sinon = require("sinon")
 const os = require("os")
 const path = require("path")
-const { Wallet, providers: { Web3Provider } } = require("ethers")
+const { Wallet, ContractFactory, providers: { Web3Provider } } = require("ethers")
 
-const log = require("debug")("Streamr::CPS::test::unit::server")
+const log = require("debug")("Streamr::dataunion::test::unit::server")
 
 const ganache = require("ganache-core")
+
+const CommunityJson = require("../../build/DataUnion")
 
 const mockStore = require("monoplasma/test/utils/mockStore")
 const MockStreamrChannel = require("../utils/mockStreamrChannel")
 const deployTestToken = require("../utils/deployTestToken")
-const deployTestCommunity = require("../utils/deployTestCommunity")
 const ganacheBlockIntervalSeconds = 4
 const members = [
     { address: "0x2F428050ea2448ed2e4409bE47e1A50eBac0B2d2", earnings: "50" },
@@ -30,8 +31,26 @@ const startState = {
     }
 }
 
-const CommunityProductServer = require("../../src/server")
-describe("CommunityProductServer", function () {
+/** @typedef {string} EthereumAddress */
+
+/**
+ * Deploy a DataUnion contract with no real joinPartStream, for (unit) test purposes
+ * @param {Wallet} wallet to do the deployment from, also becomes owner or stream and contract
+ * @param {EthereumAddress} operatorAddress community-product-server that should operate the contract
+ * @param {EthereumAddress} tokenAddress
+ * @param {Number} blockFreezePeriodSeconds
+ * @param {Number} adminFeeFraction
+ */
+async function deployMock(wallet, operatorAddress, tokenAddress, blockFreezePeriodSeconds, adminFeeFraction) {
+    log(`Deploying MOCK root chain contract (token @ ${tokenAddress}, blockFreezePeriodSeconds = ${blockFreezePeriodSeconds}, no joinPartStream...`)
+    const deployer = new ContractFactory(CommunityJson.abi, CommunityJson.bytecode, wallet)
+    const result = await deployer.deploy(operatorAddress, "dummy-stream-id", tokenAddress, blockFreezePeriodSeconds, adminFeeFraction)
+    await result.deployed()
+    return result
+}
+
+const DataunionServer = require("../../src/server")
+describe("DataunionServer", function () {
     this.timeout(10000)
     let tokenAddress
     let wallet
@@ -53,21 +72,21 @@ describe("CommunityProductServer", function () {
         sinon.restore()
     })
 
-    it("notices creation of a new CommunityProduct and starts Operator", async function () {
-        log("Starting CommunityProductServer...")
+    it("notices creation of a new DataUnion and starts Operator", async function () {
+        log("Starting DataUnionServer...")
         const storeDir = path.join(os.tmpdir(), `communitiesRouter-test2-${+new Date()}`)
         const config = {
             tokenAddress,
             operatorAddress: wallet.address,
         }
-        const server = new CommunityProductServer(wallet, storeDir, config, log, log)
+        const server = new DataunionServer(wallet, storeDir, config, log, log)
         server.getStoreFor = () => mockStore(startState, initialBlock, log)
         server.getChannelFor = () => new MockStreamrChannel("dummy-stream-id")
 
         sinon.spy(server, "onOperatorChangedEventAt")
         sinon.spy(server, "startOperating")
         await server.start()
-        const contract = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
+        const contract = await deployMock(wallet, wallet.address, tokenAddress, 1000, 0)
         const contractAddress = contract.address
 
         // give ethers.js time to poll and notice the block, also for server to react
@@ -88,17 +107,17 @@ describe("CommunityProductServer", function () {
     })
 
     it("stops operators when server is stopped", async function () {
-        log("Starting CommunityProductServer...")
+        log("Starting DataUnionServer...")
         const storeDir = path.join(os.tmpdir(), `communitiesRouter-test2-${+new Date()}`)
         const config = {
             tokenAddress,
             operatorAddress: wallet.address,
         }
-        const server = new CommunityProductServer(wallet, storeDir, config, log, log)
+        const server = new DataunionServer(wallet, storeDir, config, log, log)
         server.getStoreFor = () => mockStore(startState, initialBlock, log)
         server.getChannelFor = () => new MockStreamrChannel("dummy-stream-id")
         await server.start()
-        const contract = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
+        const contract = await deployMock(wallet, wallet.address, tokenAddress, 1000, 0)
         await server.communityIsRunning(contract.address)
 
         // give ethers.js time to poll and notice the block, also for server to react
@@ -116,21 +135,21 @@ describe("CommunityProductServer", function () {
     })
 
     it("resumed operating communities it's operated before (e.g. a crash)", async function () {
-        log("Starting CommunityProductServer...")
+        log("Starting DataUnionServer...")
         const storeDir = path.join(os.tmpdir(), `communitiesRouter-test1-${+new Date()}`)
         const config = {
             tokenAddress,
             operatorAddress: wallet.address,
         }
-        const server = new CommunityProductServer(wallet, storeDir, config, log, log)
+        const server = new DataunionServer(wallet, storeDir, config, log, log)
         server.getStoreFor = () => mockStore(startState, initialBlock, log)
         server.getChannelFor = () => new MockStreamrChannel("dummy-stream-id")
         await server.start()
 
-        const contract = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
+        const contract = await deployMock(wallet, wallet.address, tokenAddress, 1000, 0)
         log(`Deployed contract at ${contract.address}`)
 
-        const contract2 = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
+        const contract2 = await deployMock(wallet, wallet.address, tokenAddress, 1000, 0)
         log(`Deployed contract at ${contract2.address}`)
 
         await contract2.setOperator("0x0000000000000000000000000000000000000001")
@@ -145,22 +164,22 @@ describe("CommunityProductServer", function () {
     })
 
     it("will not fail to start if there is an error playing back a community", async function () {
-        log("Starting CommunityProductServer...")
+        log("Starting DataUnionServer...")
         const storeDir = path.join(os.tmpdir(), `communitiesRouter-test1-${+new Date()}`)
         const config = {
             tokenAddress,
             operatorAddress: wallet.address,
         }
-        const server = new CommunityProductServer(wallet, storeDir, config, log, log)
+        const server = new DataunionServer(wallet, storeDir, config, log, log)
         sinon.stub(server, "getStoreFor").callsFake(() => mockStore(startState, initialBlock, log))
         sinon.stub(server, "getChannelFor").callsFake(() => new MockStreamrChannel("dummy-stream-id"))
 
         await server.start()
 
-        const contract = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
+        const contract = await deployMock(wallet, wallet.address, tokenAddress, 1000, 0)
         log(`Deployed contract at ${contract.address}`)
 
-        const contract2 = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
+        const contract2 = await deployMock(wallet, wallet.address, tokenAddress, 1000, 0)
         log(`Deployed contract at ${contract2.address}`)
 
         await server.communityIsRunning(contract.address)
@@ -184,16 +203,16 @@ describe("CommunityProductServer", function () {
             tokenAddress,
             operatorAddress: wallet.address,
         }
-        const server = new CommunityProductServer(wallet, storeDir, config, log, log)
+        const server = new DataunionServer(wallet, storeDir, config, log, log)
         sinon.stub(server, "getStoreFor").callsFake(() => mockStore(startState, initialBlock, log))
         sinon.stub(server, "getChannelFor").callsFake(() => new MockStreamrChannel("dummy-stream-id"))
 
         await server.start()
 
-        const contract = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
+        const contract = await deployMock(wallet, wallet.address, tokenAddress, 1000, 0)
         log(`Deployed contract at ${contract.address}`)
 
-        const contract2 = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
+        const contract2 = await deployMock(wallet, wallet.address, tokenAddress, 1000, 0)
         log(`Deployed contract at ${contract2.address}`)
 
         await server.stop()

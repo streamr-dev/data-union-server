@@ -7,7 +7,7 @@
     "start": "node ./scripts/start_server.js",
     "inspect": "node --inspect-brk ./scripts/start_server.js",
     "lint": "eslint src test scripts",
-    "flatten": "etherlime --solcVersion=0.4.24 flatten CommunityProduct.sol",
+    "flatten": "etherlime --solcVersion=0.4.24 flatten DataUnion.sol",
     "build-contracts": "etherlime --solcVersion=0.4.24 compile",
     "docker-build": "docker build -t streamr/streamr-community-products:local .",
     "docker-tag-dev": "docker tag streamr/streamr-community-products:local streamr/streamr-community-products:dev",

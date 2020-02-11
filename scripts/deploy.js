@@ -8,7 +8,7 @@ const {
     providers: { JsonRpcProvider }
 } = require("ethers")
 
-const deployCommunity = require("../src/utils/deployCommunity")
+const deployCommunity = require("../src/utils/deploy")
 const { throwIfNotContract, throwIfBadAddress } = require("../src/utils/checkArguments")
 
 const TokenJson = require("../build/ERC20Detailed.json")

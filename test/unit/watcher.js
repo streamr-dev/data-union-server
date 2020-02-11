@@ -1,7 +1,7 @@
 const sinon = require("sinon")
 const assert = require("assert")
 
-const log = require("debug")("Streamr::CPS::test::unit::watcher")
+const log = require("debug")("Streamr::dataunion::test::unit::watcher")
 
 const {
     Wallet,
@@ -13,7 +13,7 @@ const ganache = require("ganache-core")
 //const { Wallet, ContractFactory, providers: { JsonRpcProvider } } = require("ethers")
 //const startGanache = require("monoplasma/src/utils/startGanache")
 
-const CommunityJson = require("../../build/CommunityProduct")
+const CommunityJson = require("../../build/DataUnion")
 const TokenJson = require("../../build/TestToken")
 
 const sleep = require("../../src/utils/sleep-promise")
