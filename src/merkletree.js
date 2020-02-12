@@ -128,7 +128,7 @@ class MerkleTree {
         this.contents = newContents
     }
 
-    getContents() {
+    async getContents() {
         if (this.contents.length === 0) {
             throw new Error("Can't construct a MerkleTree with empty contents!")
         }
@@ -155,8 +155,8 @@ class MerkleTree {
      * @param address of the balance that the path is supposed to verify
      * @returns {Array} of bytes32 hashes ["0x123...", "0xabc..."]
      */
-    getPath(address) {
-        const { hashes, indexOf } = this.getContents()
+    async getPath(address) {
+        const { hashes, indexOf } = await this.getContents()
         const index = indexOf[address]
         if (!index) {
             throw new Error(`Address ${address} not found!`)
@@ -168,13 +168,31 @@ class MerkleTree {
         return path.map(buffer => `0x${buffer.toString("hex")}`)
     }
 
-    getRootHash() {
-        const { hashes } = this.getContents()
+    async getRootHash() {
+        const { hashes } = await this.getContents()
         return `0x${hashes[1].toString("hex")}`
     }
 }
 MerkleTree.hash = hash
 MerkleTree.hashCombined = hashCombined
 
-module.exports = MerkleTree
+class AsyncMerkleTree extends MerkleTree {
+    async getContents() {
+        return super.getContents()
+    }
+
+    includes(address) {
+        return this.contents.find((m) => m.address === address)
+    }
+
+    async getPath(address) {
+        return super.getPath(address)
+    }
+
+    async getRootHash() {
+        return super.getRootHash()
+    }
+}
+
+module.exports = AsyncMerkleTree
 

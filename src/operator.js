@@ -104,7 +104,7 @@ module.exports = class MonoplasmaOperator {
 
         //await this.watcher.playbackUntilBlock(blockNumber, this.finalPlasma)
         //const hash = this.finalPlasma.getRootHash()
-        const hash = this.watcher.plasma.getRootHash()  // TODO: remove, uncomment above
+        const hash = await this.watcher.plasma.getRootHash()  // TODO: remove, uncomment above
         const ipfsHash = ""     // TODO: upload this.finalPlasma to IPFS while waiting for finality
 
         const tx = await this.contract.commit(blockNumber, hash, ipfsHash)

@@ -32,23 +32,23 @@ describe("MonoplasmaMember", () => {
         const data = "0xb3428050ea2448ed2e4409be47e1a50ebac0b2d20000000000000000000000000000000000000000000000000000000000000064"
         assert.deepStrictEqual(m.toHashableString(), data)
     })
-    it("should return empty proof if earnings is zero", () => {
+    it("should return empty proof if earnings is zero", async () => {
         const m = new MonoplasmaMember("tester1", "0xb3428050ea2448ed2e4409be47e1a50ebac0b2d2")
-        assert.deepStrictEqual(m.getProof(), [])
+        assert.deepStrictEqual(await m.getProof(), [])
     })
-    it("should return proof", () => {
+    it("should return proof", async () => {
         const m = new MonoplasmaMember("tester1", "0xb3428050ea2448ed2e4409be47e1a50ebac0b2d2", 100)
         const tree = {}
         const proof = ["0x30b397c3eb0e07b7f1b8b39420c49f60c455a1a602f1a91486656870e3f8f74c"]
-        tree.getPath = sinon.stub().returns(proof)
-        assert.deepStrictEqual(m.getProof(tree), proof)
+        tree.getPath = sinon.stub().resolves(proof)
+        assert.deepStrictEqual(await m.getProof(tree), proof)
     })
-    it("should return proof", () => {
+    it("should return proof", async () => {
         const m = new MonoplasmaMember("tester1", "0xb3428050ea2448ed2e4409be47e1a50ebac0b2d2", 100)
         const tree = {}
         const proof = ["0x30b397c3eb0e07b7f1b8b39420c49f60c455a1a602f1a91486656870e3f8f74c"]
-        tree.getPath = sinon.stub().returns(proof)
-        assert.deepStrictEqual(m.getProof(tree), proof)
+        tree.getPath = sinon.stub().resolves(proof)
+        assert.deepStrictEqual(await m.getProof(tree), proof)
     })
     it("should throw when invalid address", () => {
         assert.throws(() => new MonoplasmaMember("tester1", "0xbe47e1ac0b2d2"))
