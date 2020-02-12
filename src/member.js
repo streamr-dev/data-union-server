@@ -54,8 +54,8 @@ module.exports = class MonoplasmaMember {
         return this.address + this.earnings.toString(16, 64)
     }
 
-    getProof(tree) {
-        return this.earnings.gt(new BN(0)) ? tree.getPath(this.address) : []
+    async getProof(tree) {
+        return this.earnings.gt(new BN(0)) ? await tree.getPath(this.address) : []
     }
 
     static getHashableString(address, earnings) {

@@ -49,7 +49,7 @@ module.exports = class MonoplasmaState {
         /** @property {Array<MonoplasmaMember>} members */
         this.members = initialMembers.map(m => new MonoplasmaMember(m.name, m.address, m.earnings, m.active))
         /** @property {MerkleTree} tree The MerkleTree for calculating the hashes */
-        this.tree = new MerkleTree(this.members)
+        this.tree = new MerkleTree()
         /** @property {string}  adminAddress the owner address who receives the admin fee and the default payee if no memebers */
         this.adminAddress = adminAddress
         /** @property {BN}  adminFeeFraction fraction of revenue that goes to admin */
@@ -142,14 +142,14 @@ module.exports = class MonoplasmaState {
      * Get member's current status (without valid withdrawal proof because it hasn't been recorded)
      * @param {string} address
      */
-    getMember(address) {
+    async getMember(address) {
         const i = this.indexOf[address]
         if (i === undefined) { return null }
         const m = this.members[i]
         if (!m) { throw new Error(`Bad index ${i}`) }   // TODO: change to return null in production
         const obj = m.toObject()
         obj.active = m.isActive()
-        obj.proof = this.getProof(address)
+        obj.proof = await this.getProof(address)
         return obj
     }
 
@@ -166,7 +166,7 @@ module.exports = class MonoplasmaState {
         }
         const members = block.members.map(m => MonoplasmaMember.fromObject(m))
         const tree = new MerkleTree(members)
-        member.proof = tree.getPath(address)
+        member.proof = await tree.getPath(address)
         return member
     }
 
@@ -213,8 +213,8 @@ module.exports = class MonoplasmaState {
      * @param {string} address with earnings to be verified
      * @returns {Array|null} of bytes32 hashes ["0x123...", "0xabc..."], or null if address not found
      */
-    getProof(address) {
-        return this.tree.includes(address) ? this.tree.getPath(address) : null
+    async getProof(address) {
+        return this.tree.includes(address) ? await this.tree.getPath(address) : null
     }
 
     /**
@@ -230,18 +230,18 @@ module.exports = class MonoplasmaState {
             throw new Error(`Member ${address} not found in block ${blockNumber}`)
         }
         const tree = await this.getTreeAt(blockNumber)
-        const path = tree.getPath(address)
+        const path = await tree.getPath(address)
         return path
     }
 
-    getRootHash() {
+    async getRootHash() {
         return this.tree.getRootHash()
     }
 
     async getRootHashAt(blockNumber) {
         if (!this.store.blockExists(blockNumber)) { throw new Error(`Block #${blockNumber} not found in published blocks`) }
         const tree = await this.getTreeAt(blockNumber)
-        const rootHash = tree.getRootHash()
+        const rootHash = await tree.getRootHash()
         return rootHash
     }
 

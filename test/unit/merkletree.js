@@ -33,9 +33,9 @@ describe("Merkle tree", () => {
 
     const testLarge = n => Array.from(Array(n)).map((undef, i) => new MonoplasmaMember(`Acco${i}`, buildValidAddress(i), i))
 
-    it("is constructed correctly for 3 items", () => {
+    it("is constructed correctly for 3 items", async () => {
         const tree = new MerkleTree(testSmall(3))
-        const { hashes } = tree.getContents()
+        const { hashes } = await tree.getContents()
         const hashList = hashes.map(buf => (typeof buf === "object" ? buf.toString("hex") : buf))
         assert.deepStrictEqual(hashList, [4,  // "branchCount", i.e. the index where leaf hashes start
             "dd9789560ea2c9f1bd696fb348d239063d2bf078902b4c6b5e2ccfc2b45cde21",     //     root
@@ -54,9 +54,9 @@ describe("Merkle tree", () => {
         assert.strictEqual(hashList[1], hashCombined(hashList[3], hashList[2]).toString("hex"))
     })
 
-    it("is constructed correctly for 5 items", () => {
+    it("is constructed correctly for 5 items", async () => {
         const tree = new MerkleTree(testSmall(5))
-        const { hashes } = tree.getContents()
+        const { hashes } = await tree.getContents()
         const hashList = hashes.map(buf => (typeof buf === "object" ? buf.toString("hex") : buf))
         assert.deepStrictEqual(hashList, [8,  // "branchCount", i.e. the index where leaf hashes start
             "68d7d43f9603a819e00ad7a8003eba2a0d96a9c5bd89841c42d62e0bead09b5d",             //       root
@@ -87,9 +87,9 @@ describe("Merkle tree", () => {
         assert.strictEqual(hashList[6], hashList[12])    // odd needs no hashing
     })
 
-    it("is constructed correctly for 1 item", () => {
+    it("is constructed correctly for 1 item", async () => {
         const tree = new MerkleTree(testSmall(1))
-        const { hashes } = tree.getContents()
+        const { hashes } = await tree.getContents()
         const hashList = hashes.map(buf => (typeof buf === "object" ? buf.toString("hex") : buf))
         assert.deepStrictEqual(hashList, [2,
             "80cbbaa563d509ffd388bd6e716bd85c0c35da5c87bbfb457c9c8cff0d518419",
@@ -98,18 +98,18 @@ describe("Merkle tree", () => {
         ])
     })
 
-    it("fails for 0 items", () => {
-        assert.throws(() => {
+    it("fails for 0 items", async () => {
+        await assert.rejects(async () => {
             const tree = new MerkleTree(testSmall(0))
-            tree.getContents()
+            await tree.getContents()
         })
     })
 
-    it("gives a correct path for 5 items", () => {
+    it("gives a correct path for 5 items", async () => {
         const members = testSmall(5)
         const tree = new MerkleTree(members)
-        const path = tree.getPath("0x5f428050ea2448ed2e4409be47e1a50ebac0b2d2")
-        const root = tree.getRootHash()
+        const path = await tree.getPath("0x5f428050ea2448ed2e4409be47e1a50ebac0b2d2")
+        const root = await tree.getRootHash()
         assert.deepStrictEqual(path, [
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -121,11 +121,11 @@ describe("Merkle tree", () => {
         assert.strictEqual(root, `0x${hashed.toString("hex")}`)
     })
 
-    it("gives a correct path for 100 items", () => {
+    it("gives a correct path for 100 items", async () => {
         const members = testLarge(100)
         const tree = new MerkleTree(members)
-        const path = tree.getPath("0x50428050ea2448ed2e4409be47e1a50ebac0b2d2")
-        const root = tree.getRootHash()
+        const path = await tree.getPath("0x50428050ea2448ed2e4409be47e1a50ebac0b2d2")
+        const root = await tree.getRootHash()
         assert.deepStrictEqual(path, [
             "0x3899f1e3196adaca54e5fce47c83478bbc68d82e1c4db340ff4d5be077da5809",
             "0xc27f2d90363c8681b7703d71466b0d29bc971e176548d925e9252568f9b93a4a",
