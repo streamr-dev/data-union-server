@@ -314,6 +314,7 @@ describe("Community product demo but through a running E&E instance", () => {
         // Attempt to avoid "frozen" errors
         await sleep(3000)
 
+        log(`   Calling withdrawAllFor(${address2}, ${member2.withdrawableBlockNumber}, ${member2.withdrawableEarnings}, ${member2.proof}`)
         const withdrawTx2 = await contract.withdrawAllFor(address2, member2.withdrawableBlockNumber, member2.withdrawableEarnings, member2.proof)
         await withdrawTx2.wait(2)
 
