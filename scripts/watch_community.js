@@ -15,7 +15,7 @@ const {
 
 const CommunityProductJson = require("../build/CommunityProduct.json")
 
-const FileStore = require("monoplasma/src/fileStore")
+const FileStore = require("../src/fileStore")
 const MonoplasmaWatcher = require("../src/watcher")
 const { throwIfNotContract } = require("../src/utils/checkArguments")
 

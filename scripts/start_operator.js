@@ -13,7 +13,7 @@ const { Wallet, Contract, providers: { JsonRpcProvider } } = require("ethers")
 
 const CommunityProductJson = require("../build/CommunityProduct.json")
 
-const FileStore = require("monoplasma/src/fileStore")
+const FileStore = require("../src/fileStore")
 const Operator = require("../src/operator")
 const { throwIfSetButNotContract /*, throwIfNotSet */ } = require("../src/utils/checkArguments")
 const deployCommunity = require("../src/utils/deployCommunity")

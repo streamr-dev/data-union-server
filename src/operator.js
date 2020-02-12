@@ -4,7 +4,7 @@ const sleep = require("./utils/sleep-promise")
 const { throwIfBadAddress } = require("./utils/checkArguments")
 
 const MonoplasmaWatcher = require("./watcher")
-const MonoplasmaState = require("monoplasma/src/state")
+const MonoplasmaState = require("./state")
 
 const MonoplasmaJson = require("../build/Monoplasma.json")
 
