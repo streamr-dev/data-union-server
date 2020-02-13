@@ -6,7 +6,7 @@ module.exports = class MonoplasmaMember {
         this.name = name || ""
         this.address = MonoplasmaMember.validateAddress(address)
         this.earnings = earnings ? new BN(earnings) : new BN(0)
-        this.active = active
+        this.active = !!active
     }
 
     getEarningsAsString() {
@@ -22,21 +22,21 @@ module.exports = class MonoplasmaMember {
     }
 
     isActive() {
-        return this.active
+        return !!this.active
     }
 
     /**
      * @param {boolean} activeState true if active, false if not going to be getting revenues
      */
     setActive(activeState) {
-        this.active = activeState
+        this.active = !!activeState
     }
 
     toObject() {
         const obj = {
             address: this.address,
             earnings: this.earnings.toString(10),
-            active: this.active
+            active: !!this.active
         }
         if (this.name) {
             obj.name = this.name

@@ -15,7 +15,11 @@ describe("MonoplasmaMember", () => {
     })
     it("should initially be active", () => {
         const m = new MonoplasmaMember("tester1", "0xb3428050ea2448ed2e4409be47e1a50ebac0b2d2")
-        assert(m.isActive())
+        assert.strictEqual(m.isActive(), true)
+    })
+    it("should allow active to be specified", () => {
+        const m = new MonoplasmaMember("tester1", "0xb3428050ea2448ed2e4409be47e1a50ebac0b2d2", 100, false)
+        assert.strictEqual(m.isActive(), false, "should not be active")
     })
     it("should return correct object representation", () => {
         const m = new MonoplasmaMember("tester1", "b3428050ea2448ed2e4409be47e1a50ebac0b2d2", 100)
