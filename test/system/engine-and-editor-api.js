@@ -1,7 +1,6 @@
 const { spawn } = require("child_process")
 const fetch = require("node-fetch")
 const assert = require("assert")
-
 const log = require("debug")("Streamr::CPS::test::system::http-api")
 
 const StreamrClient = require("streamr-client") // just for getting session tokens (ethereum-sign-in)...
@@ -313,7 +312,7 @@ describe("Community product demo but through a running E&E instance", () => {
 
         const balanceBefore2 = await token.balanceOf(address2)
         log(`   Token balance before: ${formatEther(balanceBefore2)}`)
-
+        
         const withdrawTx2 = await contract.withdrawAllFor(address2, member2.withdrawableBlockNumber, member2.withdrawableEarnings, member2.proof)
         await withdrawTx2.wait(2)
 
