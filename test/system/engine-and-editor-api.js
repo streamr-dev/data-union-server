@@ -287,8 +287,7 @@ describe("Community product demo but through a running E&E instance", () => {
             await sleep(1000)
             member = await GET(`/communities/${communityAddress}/members/${address}`)
         }
-        log("    member:", member)
-        sleep(3000) // unfreeze?
+        log("    Member before", member)
 
         log("4) Withdraw tokens")
 
@@ -297,10 +296,12 @@ describe("Community product demo but through a running E&E instance", () => {
 
         const contract = new Contract(communityAddress, CommunityProduct.abi, wallet)
         const withdrawTx = await contract.withdrawAll(member.withdrawableBlockNumber, member.withdrawableEarnings, member.proof)
+        log("    withdrawAll done")
         await withdrawTx.wait(2)
+        log("    withdrawAll confirmed")
 
         const res4b = await GET(`/communities/${communityAddress}/members/${address}`)
-        Object.keys(res4b).forEach(k => log(`    ${k} ${JSON.stringify(res4b[k])}`))
+        log("    member stats after", res4b)
 
         const balanceAfter = await token.balanceOf(address)
         log(`   Token balance after: ${formatEther(balanceAfter)}`)
@@ -311,16 +312,19 @@ describe("Community product demo but through a running E&E instance", () => {
         log("4.1) Withdraw tokens for another account")
         const address2 = members[1].address // 0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf
         const member2 = await GET(`/communities/${communityAddress}/members/${address2}`)
+        log("    Member2 stats before", res4b)
         Object.keys(member2).forEach(k => log(`    ${k} ${JSON.stringify(member2[k])}`))
 
         const balanceBefore2 = await token.balanceOf(address2)
         log(`   Token balance before: ${formatEther(balanceBefore2)}`)
-        
+
         const withdrawTx2 = await contract.withdrawAllFor(address2, member2.withdrawableBlockNumber, member2.withdrawableEarnings, member2.proof)
+        log("    withdrawAll done")
         await withdrawTx2.wait(2)
+        log("    withdrawAll confirmed")
 
         const res4c = await GET(`/communities/${communityAddress}/members/${address2}`)
-        Object.keys(res4c).forEach(k => log(`    ${k} ${JSON.stringify(res4c[k])}`))
+        log("    Member2 stats after", res4c)
 
         const balanceAfter2 = await token.balanceOf(address2)
         log(`   Token balance after: ${formatEther(balanceAfter2)}`)
