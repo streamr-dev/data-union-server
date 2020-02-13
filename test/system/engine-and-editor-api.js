@@ -257,7 +257,7 @@ describe("Community product demo but through a running E&E instance", () => {
         log("2.3) Wait until members have been added")
         let members = []
         sleepTime = 100
-        while (members.length < 1) {
+        while (members.length < 2) {
             await sleep(sleepTime *= 2)
             members = await GET(`/communities/${communityAddress}/members`)
         }
@@ -279,13 +279,15 @@ describe("Community product demo but through a running E&E instance", () => {
         }
 
         log("3.1) Wait for blocks to unfreeze...") //... and also that state updates.
+
+        const expectedAdminEarnings = parseEther("14").toString()
         let member = memberBeforeRevenues
-        // wait until member.withdrawableEarnings exists && has increased
-        while (member.withdrawableEarnings < 1 + memberBeforeRevenues.withdrawableEarnings) {
+        // wait until member.withdrawableEarnings is at least expected earnings
+        while ((member.withdrawableEarnings - memberBeforeRevenues.withdrawableEarnings) < expectedAdminEarnings) {
             await sleep(1000)
             member = await GET(`/communities/${communityAddress}/members/${address}`)
         }
-        Object.keys(member).forEach(k => log(`    ${k} ${JSON.stringify(member[k])}`))
+        log("    Member before", member)
 
         log("4) Withdraw tokens")
 
@@ -294,10 +296,12 @@ describe("Community product demo but through a running E&E instance", () => {
 
         const contract = new Contract(communityAddress, CommunityProduct.abi, wallet)
         const withdrawTx = await contract.withdrawAll(member.withdrawableBlockNumber, member.withdrawableEarnings, member.proof)
-        await withdrawTx.wait(1)
+        log("    withdrawAll done")
+        await withdrawTx.wait(2)
+        log("    withdrawAll confirmed")
 
         const res4b = await GET(`/communities/${communityAddress}/members/${address}`)
-        Object.keys(res4b).forEach(k => log(`    ${k} ${JSON.stringify(res4b[k])}`))
+        log("    member stats after", res4b)
 
         const balanceAfter = await token.balanceOf(address)
         log(`   Token balance after: ${formatEther(balanceAfter)}`)
@@ -308,16 +312,19 @@ describe("Community product demo but through a running E&E instance", () => {
         log("4.1) Withdraw tokens for another account")
         const address2 = members[1].address // 0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf
         const member2 = await GET(`/communities/${communityAddress}/members/${address2}`)
+        log("    Member2 stats before", res4b)
         Object.keys(member2).forEach(k => log(`    ${k} ${JSON.stringify(member2[k])}`))
 
         const balanceBefore2 = await token.balanceOf(address2)
         log(`   Token balance before: ${formatEther(balanceBefore2)}`)
-        
+
         const withdrawTx2 = await contract.withdrawAllFor(address2, member2.withdrawableBlockNumber, member2.withdrawableEarnings, member2.proof)
+        log("    withdrawAll done")
         await withdrawTx2.wait(2)
+        log("    withdrawAll confirmed")
 
         const res4c = await GET(`/communities/${communityAddress}/members/${address2}`)
-        Object.keys(res4c).forEach(k => log(`    ${k} ${JSON.stringify(res4c[k])}`))
+        log("    Member2 stats after", res4c)
 
         const balanceAfter2 = await token.balanceOf(address2)
         log(`   Token balance after: ${formatEther(balanceAfter2)}`)
@@ -325,12 +332,11 @@ describe("Community product demo but through a running E&E instance", () => {
         const difference2 = balanceAfter2.sub(balanceBefore2)
         log(`   Withdraw effect: ${formatEther(difference2)}`)
 
-        const adminEarnings = parseEther("14").toString()
-        const memberEarnings = parseEther("4").toString()
-        assert.strictEqual(member.withdrawableEarnings, adminEarnings)
-        assert.strictEqual(member2.withdrawableEarnings, memberEarnings)
-        assert.strictEqual(difference.toString(), adminEarnings)
-        assert.strictEqual(difference2.toString(), memberEarnings)
+        const expectedMember2Earnings = parseEther("4").toString()
+        assert.strictEqual(member.withdrawableEarnings, expectedAdminEarnings)
+        assert.strictEqual(member2.withdrawableEarnings, expectedMember2Earnings)
+        assert.strictEqual(difference.toString(), expectedAdminEarnings)
+        assert.strictEqual(difference2.toString(), expectedMember2Earnings)
     })
 
     afterEach(() => {

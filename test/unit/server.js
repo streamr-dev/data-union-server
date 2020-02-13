@@ -9,7 +9,7 @@ const log = require("debug")("Streamr::CPS::test::unit::server")
 
 const ganache = require("ganache-core")
 
-const mockStore = require("monoplasma/test/utils/mockStore")
+const mockStore = require("../utils/mockStore")
 const MockStreamrChannel = require("../utils/mockStreamrChannel")
 const deployTestToken = require("../utils/deployTestToken")
 const deployTestCommunity = require("../utils/deployTestCommunity")
@@ -202,6 +202,6 @@ describe("CommunityProductServer", function () {
         server.getChannelFor.callsFake(async function () {
             throw new Error("expected fail")
         })
-        assert.rejects(() => server.start())
+        await assert.rejects(() => server.start())
     })
 })
