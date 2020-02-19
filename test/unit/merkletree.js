@@ -141,13 +141,23 @@ describe("Merkle tree", () => {
         assert.strictEqual(root, `0x${hashed.toString("hex")}`)
     })
 
-    it("includes", () => {
-        const members = testLarge(100)
-        const tree = new MerkleTree(members)
-        for (let i = 0; i < 100; i++) {
-            const a = buildValidAddress(i)
-            const m = tree.includes(a)
-            assert(m)
-        }
+    describe("includes", async () => {
+        it("is true when member is in tree", () => {
+            const members = testLarge(100)
+            const tree = new MerkleTree(members)
+            for (let i = 0; i < 100; i++) {
+                const a = buildValidAddress(i)
+                const m = tree.includes(a)
+                assert(m)
+            }
+        })
+        it("is false when member is not in tree", () => {
+            const tree = new MerkleTree(testSmall(1))
+            for (let i = 0; i < 10; i++) {
+                const a = buildValidAddress(i)
+                const m = tree.includes(a + "1")
+                assert(!m)
+            }
+        })
     })
 })
