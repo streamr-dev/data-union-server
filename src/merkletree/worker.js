@@ -13,11 +13,15 @@ const exit = () => {
 
 const Log = debug(`Streamr::CPS::merkletree::worker::${process.pid}`)
 
-Log("started")
+const isChild = !!process.send
 
-process.on("message", onMessage)
+if (isChild) {
+    Log("started")
+    process.on("message", onMessage)
 
-process.on("beforeExit", () => Log("done"))
+    process.on("beforeExit", () => Log("done"))
+}
+
 
 function serialiseTree(tree) {
     return Object.assign({}, tree, {
