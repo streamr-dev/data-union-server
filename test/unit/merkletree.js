@@ -163,6 +163,41 @@ describe("Merkle tree", () => {
         })
     })
 
+    describe("update", () => {
+        it("can update tree", async () => {
+            const members = testLarge(5)
+            const [member1] = members
+            const tree = new MerkleTree([member1])
+            const member1Path1 = await tree.getPath(member1.address)
+            assert.ok(member1Path1, "member should have a path")
+            // capture root hash so we can check it changes
+            const rootBefore = await tree.getRootHash()
+            tree.update(members)
+
+            await Promise.all(members.map(async (m) => {
+                assert.ok(await tree.getPath(m.address), "member should have path")
+            }))
+            const rootAfter = await tree.getRootHash()
+            assert.notStrictEqual(rootBefore, rootAfter, "root hash should change after update")
+        })
+
+        it("can update tree while tree being calculated", async () => {
+            const members = testLarge(1000)
+            const firstBatch = members.slice(0, members.length / 2)
+            const secondBatch = members.slice(members.length / 2)
+            const tree = new MerkleTree(firstBatch)
+            const batch1Task1 = tree.getPath(firstBatch[0].address)
+            tree.update(firstBatch.concat(secondBatch))
+            const batch2Task = tree.getPath(secondBatch[0].address)
+            const batch1Task2 = tree.getPath(firstBatch[0].address)
+            const [batch1Path1, batch2Path, batch1Path2] = await Promise.all([batch1Task1, batch2Task, batch1Task2])
+            assert.ok(batch1Path1)
+            assert.ok(batch2Path)
+            assert.ok(batch1Path2)
+            assert.notStrictEqual(batch1Path1, batch1Path2)
+        })
+    })
+
     describe("performance", function () {
         this.timeout(10000)
         it("does not block while calculating", async () => {
