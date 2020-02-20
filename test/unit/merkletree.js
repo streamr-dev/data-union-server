@@ -143,7 +143,7 @@ describe("Merkle tree", () => {
         })
     })
 
-    describe("includes", async () => {
+    describe("includes", () => {
         it("is true when member is in tree", () => {
             const members = testLarge(100)
             const tree = new MerkleTree(members)
@@ -159,6 +159,40 @@ describe("Merkle tree", () => {
                 const a = buildValidAddress(i)
                 const m = tree.includes(a + "1")
                 assert(!m)
+            }
+        })
+    })
+
+    describe("performance", function () {
+        this.timeout(10000)
+        it("does not block while calculating", async () => {
+            const members = testLarge(10000)
+
+
+            // ticks in a loop
+            // returns a function that cancels next tick and returns count
+            function tick(n = 0) {
+                let end
+                const t = setTimeout(() => {
+                    end = tick(n + 1)
+                })
+
+                return () => {
+                    clearTimeout(t)
+                    if (end) {
+                        return end()
+                    }
+                    return n
+                }
+            }
+
+            for (const m of members.slice(0, 5)) {
+                const stopTick = tick()
+                const tree = new MerkleTree(members)
+                await tree.getPath(m.address).then(() => {
+                    const count = stopTick()
+                    assert(count > 1, "Should have ticked while getting path")
+                })
             }
         })
     })
