@@ -195,5 +195,24 @@ describe("Merkle tree", () => {
                 })
             }
         })
+
+        it("takes a similar duration to getPath for 1 member as it does for n members simultaneously", async () => {
+            // checks we don't try start new processes while initial task is in progress
+            const members = testLarge(10000)
+            // measure duration of getPath for a single member
+            const start1 = Date.now()
+            await new MerkleTree(members).getPath(members[0].address)
+            const singleDuration = Date.now() - start1
+
+            const start2 = Date.now()
+            const tree2 = new MerkleTree(members) // new tree so not cached
+            // getPath for n members simultaneously on uncached tree
+            await Promise.all(members.slice(0, 10).map((m) => (
+                tree2.getPath(m.address)
+            )))
+            const simultaneousDuration = Date.now() - start2
+            // duration for n should be less than time to get 2 paths
+            assert(simultaneousDuration < (singleDuration * 2))
+        })
     })
 })

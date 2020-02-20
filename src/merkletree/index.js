@@ -71,10 +71,35 @@ class Worker {
     }
 }
 
+/**
+ * Ensures multiple calls to `fn` with the same first argument
+ * will only execute `fn` once while `fn` resolves.
+ */
+
+function limitDuplicateAsyncWork(fn) {
+    const taskCache = new WeakMap()
+    return async (key, ...args) => {
+        if (taskCache.has(key)) {
+            // use cached value
+            return taskCache.get(key)
+        }
+
+        // wrap with Promise.resolve().then to any sync errors are accounted for
+        const currentTask = Promise.resolve().then(() => fn(key, ...args)).finally(() => {
+            // clean from cache after running
+            taskCache.delete(key)
+        })
+
+        taskCache.set(key, currentTask)
+        return currentTask
+    }
+}
+
 module.exports = class MerkleTreeRPCWrapper extends MerkleTree {
     constructor(...args) {
         super(...args)
         this.worker = new Worker()
+        this.buildTree = limitDuplicateAsyncWork((contents) => this.worker.buildTree(contents))
     }
 
     async getContents() {
@@ -83,9 +108,11 @@ module.exports = class MerkleTreeRPCWrapper extends MerkleTree {
         }
         if (this.isDirty) {
             const { contents } = this
+
+
             // TODO: sort, to enforce determinism?
-            const cached = await this.worker.buildTree(contents)
-            //const cached = await new MerkleTree(contents).getContents()
+            const cached = await this.buildTree(contents)
+
             // check for subsequent updates during build
             // only update state if no change
             if (this.contents === contents) {
