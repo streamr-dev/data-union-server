@@ -9,7 +9,7 @@ const {
 
 const MerkleTree = require("./api")
 
-function wrapErrorObject(message, err) {
+function wrapErrorObject(err, message) {
     let newError
     if (err instanceof Error) {
         newError = Object.create(err)
