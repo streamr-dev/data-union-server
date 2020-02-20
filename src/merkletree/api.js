@@ -51,7 +51,12 @@ function hashCombined(data1, data2) {
     return hash(Buffer.concat([data1, data2]))
 }
 
+const MAX_POW_2 = Math.pow(2, 32)
 function roundUpToPowerOfTwo(x) {
+    if (x > MAX_POW_2) {
+        // guard against infinite loop
+        throw new Error(`Number too big: ${x}. Must be smaller than 2^32.`)
+    }
     let i = 1
     while (i < x) { i <<= 1 }
     return i
