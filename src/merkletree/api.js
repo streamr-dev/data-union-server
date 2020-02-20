@@ -142,8 +142,7 @@ class MerkleTree {
     }
 
     includes(address) {
-        const { indexOf } = this.getContents()
-        return Object.prototype.hasOwnProperty.call(indexOf, address)
+        return this.contents.find((m) => m.address === address)
     }
 
     /**
@@ -174,26 +173,9 @@ class MerkleTree {
         return `0x${hashes[1].toString("hex")}`
     }
 }
+
 MerkleTree.hash = hash
 MerkleTree.hashCombined = hashCombined
 MerkleTree.hashLeaf = hashLeaf
 
-class AsyncMerkleTree extends MerkleTree {
-    async getContents() {
-        return super.getContents()
-    }
-
-    includes(address) {
-        return this.contents.find((m) => m.address === address)
-    }
-
-    async getPath(address) {
-        return super.getPath(address)
-    }
-
-    async getRootHash() {
-        return super.getRootHash()
-    }
-}
-
-module.exports = AsyncMerkleTree
+module.exports = MerkleTree
