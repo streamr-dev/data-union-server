@@ -2,6 +2,7 @@ const assert = require("assert")
 const MonoplasmaMember = require("../../src/member")
 const MerkleTree = require("../../src/merkletree")
 const { hash, hashCombined, hashLeaf } = MerkleTree
+const sleep = require("../../src/utils/sleep-promise")
 
 // calculate the root hash using the path (sync with SidechainCommunity.sol:rootHash)
 function calculateRootHash(hash, path) {
@@ -228,12 +229,13 @@ describe("Merkle tree", () => {
                 }
             }
 
-            for (const m of members.slice(0, 5)) {
+            for (const m of members.slice(0, 1)) {
                 const stopTick = tick()
                 const tree = new MerkleTree(members)
                 await tree.getPath(m.address).then(() => {
                     const count = stopTick()
-                    assert(count > 1, "Should have ticked while getting path")
+                    const expectedCount = 50 // roughly?
+                    assert(count > expectedCount, `Should have ticked more while getting path. Expected: ${expectedCount},  Actual: ${count}`)
                 })
             }
         })

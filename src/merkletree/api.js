@@ -8,7 +8,7 @@
 
 const { utils: ethersUtils } = require("ethers")
 const BN = require("BN.js")
-
+const sleep = require('../utils/sleep-promise')
 const { keccak256 } = ethersUtils
 
 /**
@@ -77,7 +77,7 @@ function roundUpToPowerOfTwo(x) {
  */
 // TODO: --omg-optimisation: tree contents could be one big Buffer too! Hash digests are constant 32 bytes in length.
 //          Currently the tree contents is Array<MonoplasmaMember>
-function buildMerkleTree(leafContents) {
+async function buildMerkleTree(leafContents) {
     const leafCount = leafContents.length + (leafContents.length % 2)   // room for zero next to odd leaf
     const branchCount = roundUpToPowerOfTwo(leafCount)
     const treeSize = branchCount + leafCount
@@ -115,6 +115,7 @@ function buildMerkleTree(leafContents) {
             sourceI += 2
             targetI += 1
         }
+        await sleep(0)
     }
 
     return { hashes, indexOf }
@@ -140,7 +141,7 @@ class MerkleTree {
         }
         if (this.isDirty) {
             // TODO: sort, to enforce determinism?
-            this.cached = buildMerkleTree(this.contents)
+            this.cached = await buildMerkleTree(this.contents)
             this.isDirty = false
         }
         return this.cached
