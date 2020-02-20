@@ -1,8 +1,9 @@
 const assert = require("assert")
+
 const MonoplasmaMember = require("../../src/member")
 const MerkleTree = require("../../src/merkletree")
+
 const { hash, hashCombined, hashLeaf } = MerkleTree
-const sleep = require("../../src/utils/sleep-promise")
 
 // calculate the root hash using the path (sync with SidechainCommunity.sol:rootHash)
 function calculateRootHash(hash, path) {

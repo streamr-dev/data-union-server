@@ -8,7 +8,9 @@
 
 const { utils: ethersUtils } = require("ethers")
 const BN = require("BN.js")
-const sleep = require('../utils/sleep-promise')
+
+const sleep = require("../utils/sleep-promise")
+
 const { keccak256 } = ethersUtils
 
 /**
