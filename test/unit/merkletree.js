@@ -183,18 +183,25 @@ describe("Merkle tree", () => {
 
         it("can update tree while tree being calculated", async () => {
             const members = testLarge(1000)
+            // add members in two batches
             const firstBatch = members.slice(0, members.length / 2)
             const secondBatch = members.slice(members.length / 2)
             const tree = new MerkleTree(firstBatch)
+            // trigger a tree calculation before calling update
             const batch1Task1 = tree.getPath(firstBatch[0].address)
             tree.update(firstBatch.concat(secondBatch))
+            // trigger calculations after update
             const batch2Task = tree.getPath(secondBatch[0].address)
             const batch1Task2 = tree.getPath(firstBatch[0].address)
             const [batch1Path1, batch2Path, batch1Path2] = await Promise.all([batch1Task1, batch2Task, batch1Task2])
+            // ensure all resolve correctly
             assert.ok(batch1Path1)
             assert.ok(batch2Path)
             assert.ok(batch1Path2)
-            assert.notStrictEqual(batch1Path1, batch1Path2)
+            // getPath on same member from before update
+            // should give different path to getPath from after update
+            // i.e. update doesn't affect existing getPath call
+            assert.notStrictEqual(batch1Path1, batch1Path2, "path should change")
         })
     })
 
