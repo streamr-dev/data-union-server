@@ -287,6 +287,10 @@ describe("Community product demo but through a running E&E instance", () => {
             await sleep(1000)
             member = await GET(`/communities/${communityAddress}/members/${address}`)
         }
+
+        // add so CI more reliable until error_frozen issue has a workaround+test
+        await sleep(3000)
+
         log("    Member before", member)
 
         log("4) Withdraw tokens")
