@@ -7,6 +7,7 @@
 //const createKeccakHash = require("keccak")
 
 const { utils: ethersUtils } = require("ethers")
+const BN = require("BN.js")
 
 const { keccak256 } = ethersUtils
 
@@ -29,7 +30,7 @@ function hash(data) {
  * @param {Number} blockNumber
  */
 function hashLeaf(member, blockNumber) {    // eslint-disable-line no-unused-vars
-    const data = blockNumber + member.address + member.earnings.toString(16, 64)
+    const data = blockNumber + member.address + new BN(member.earnings).toString(16, 64)
     return hash(data)
 }
 
@@ -85,9 +86,9 @@ function buildMerkleTree(leafContents) {
         indexOf[m.address] = i
         // TODO: move toHashableString back to this file, into a function hashLeaf
         // TODO: add relevant blockNumber everywhere (used for salt)
-        // hashes[i++] = hashLeaf(member, blockNumber)
-        hashes[i++] = hash(m.toHashableString()) // eslint-disable-line no-plusplus
+        hashes[i++] = hashLeaf(m, "")
     })
+
 
     // Branch hashes: start from leaves, populate branches with hash(hash of left + right child)
     // Iterate start...end each level in tree, that is, indices 2^(n-1)...2^n
@@ -175,6 +176,7 @@ class MerkleTree {
 }
 MerkleTree.hash = hash
 MerkleTree.hashCombined = hashCombined
+MerkleTree.hashLeaf = hashLeaf
 
 class AsyncMerkleTree extends MerkleTree {
     async getContents() {
@@ -195,4 +197,3 @@ class AsyncMerkleTree extends MerkleTree {
 }
 
 module.exports = AsyncMerkleTree
-

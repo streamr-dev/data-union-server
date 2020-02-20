@@ -1,7 +1,7 @@
 const assert = require("assert")
 const MonoplasmaMember = require("../../src/member")
 const MerkleTree = require("../../src/merkletree")
-const { hash, hashCombined } = MerkleTree
+const { hash, hashCombined, hashLeaf } = MerkleTree
 
 // calculate the root hash using the path (sync with SidechainCommunity.sol:rootHash)
 function calculateRootHash(hash, path) {
@@ -35,7 +35,8 @@ describe("Merkle tree", () => {
 
     it("is constructed correctly for 3 items", async () => {
         const tree = new MerkleTree(testSmall(3))
-        const { hashes } = await tree.getContents()
+        const t = await tree.getContents()
+        const { hashes } = t
         const hashList = hashes.map(buf => (typeof buf === "object" ? buf.toString("hex") : buf))
         assert.deepStrictEqual(hashList, [4,  // "branchCount", i.e. the index where leaf hashes start
             "dd9789560ea2c9f1bd696fb348d239063d2bf078902b4c6b5e2ccfc2b45cde21",     //     root
@@ -104,41 +105,42 @@ describe("Merkle tree", () => {
             await tree.getContents()
         })
     })
+    describe("getPath", () => {
+        it("gives a correct path for 5 items", async () => {
+            const members = testSmall(5)
+            const tree = new MerkleTree(members)
+            const path = await tree.getPath("0x5f428050ea2448ed2e4409be47e1a50ebac0b2d2")
+            const root = await tree.getRootHash()
+            assert.deepStrictEqual(path, [
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "0x39720c89aa9c0c443c3c9e9e283a8bf1064c15bb8cd066c78a98fa31573aa95a",
+            ])
 
-    it("gives a correct path for 5 items", async () => {
-        const members = testSmall(5)
-        const tree = new MerkleTree(members)
-        const path = await tree.getPath("0x5f428050ea2448ed2e4409be47e1a50ebac0b2d2")
-        const root = await tree.getRootHash()
-        assert.deepStrictEqual(path, [
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x39720c89aa9c0c443c3c9e9e283a8bf1064c15bb8cd066c78a98fa31573aa95a",
-        ])
+            const memberHash = hashLeaf(e, "")
+            const hashed = calculateRootHash(memberHash, path)
+            assert.strictEqual(root, `0x${hashed.toString("hex")}`)
+        })
 
-        const memberHash = hash(e.toHashableString())
-        const hashed = calculateRootHash(memberHash, path)
-        assert.strictEqual(root, `0x${hashed.toString("hex")}`)
-    })
+        it("gives a correct path for 100 items", async () => {
+            const members = testLarge(100)
+            const tree = new MerkleTree(members)
+            const path = await tree.getPath("0x50428050ea2448ed2e4409be47e1a50ebac0b2d2")
+            const root = await tree.getRootHash()
+            assert.deepStrictEqual(path, [
+                "0x3899f1e3196adaca54e5fce47c83478bbc68d82e1c4db340ff4d5be077da5809",
+                "0xc27f2d90363c8681b7703d71466b0d29bc971e176548d925e9252568f9b93a4a",
+                "0x22a472070f84cb2259fc2dcdf5b7b387390e0fc01fd949dd113f4b2426af24d7",
+                "0xc09fb967d65193de64670085a09a814f51be24c9461b361c960f9fe049be724d",
+                "0xc49d351e156eedeff8dc29f1414835e8d243d9d98cb8ab0d62b76e4e159fa7c5",
+                "0x368cc389cf2618d7c101a854fff75ed5a547d0986bf78da6153da23b8fea16ee",
+                "0xa697780bec0c72e7a647f0cc067dd2b30732cbbb362d63f2eccee67dee345690"
+            ])
 
-    it("gives a correct path for 100 items", async () => {
-        const members = testLarge(100)
-        const tree = new MerkleTree(members)
-        const path = await tree.getPath("0x50428050ea2448ed2e4409be47e1a50ebac0b2d2")
-        const root = await tree.getRootHash()
-        assert.deepStrictEqual(path, [
-            "0x3899f1e3196adaca54e5fce47c83478bbc68d82e1c4db340ff4d5be077da5809",
-            "0xc27f2d90363c8681b7703d71466b0d29bc971e176548d925e9252568f9b93a4a",
-            "0x22a472070f84cb2259fc2dcdf5b7b387390e0fc01fd949dd113f4b2426af24d7",
-            "0xc09fb967d65193de64670085a09a814f51be24c9461b361c960f9fe049be724d",
-            "0xc49d351e156eedeff8dc29f1414835e8d243d9d98cb8ab0d62b76e4e159fa7c5",
-            "0x368cc389cf2618d7c101a854fff75ed5a547d0986bf78da6153da23b8fea16ee",
-            "0xa697780bec0c72e7a647f0cc067dd2b30732cbbb362d63f2eccee67dee345690"
-        ])
-
-        const memberHash = hash(members.find(m => m.address === "0x50428050ea2448ed2e4409be47e1a50ebac0b2d2").toHashableString())
-        const hashed = calculateRootHash(memberHash, path)
-        assert.strictEqual(root, `0x${hashed.toString("hex")}`)
+            const memberHash = hashLeaf(members.find(m => m.address === "0x50428050ea2448ed2e4409be47e1a50ebac0b2d2"), "")
+            const hashed = calculateRootHash(memberHash, path)
+            assert.strictEqual(root, `0x${hashed.toString("hex")}`)
+        })
     })
 
     describe("includes", async () => {
