@@ -60,7 +60,13 @@ class Worker {
     async buildTree(treeContents) {
         const result = await this.sendAction({
             type: BUILD_TREE,
-            payload: treeContents.map((m) => m.toObject()),
+            payload: treeContents.map((m) => (
+                // convert Member instances to member Objects
+                // support both as when members are read from disk
+                // block.members are just JSON, no point converting
+                // to instances just to convert them back to Objects
+                m.toObject ? m.toObject() : m
+            )),
         })
         if (result.type === SUCCESS) {
             return deserialiseTree(result.payload)

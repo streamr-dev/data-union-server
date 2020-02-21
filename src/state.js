@@ -164,8 +164,7 @@ module.exports = class MonoplasmaState {
         if (!member) {
             throw new Error(`Member ${address} not found in block ${blockNumber}`)
         }
-        const members = block.members.map(m => MonoplasmaMember.fromObject(m))
-        const tree = new MerkleTree(members)
+        const tree = new MerkleTree(block.members)
         member.proof = await tree.getPath(address)
         return member
     }
@@ -195,8 +194,7 @@ module.exports = class MonoplasmaState {
             }
 
             const block = await this.getBlock(blockNumber)
-            const members = block.members.map(m => MonoplasmaMember.fromObject(m))
-            const tree = new MerkleTree(members)
+            const tree = new MerkleTree(block.members)
             cached = {
                 blockNumber,
                 tree,
