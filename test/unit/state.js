@@ -62,6 +62,41 @@ describe("MonoplasmaState", () => {
         plasma.addRevenue(100)
     })
 
+    it.only("should distribute earnings correctly when revenue < number of members", () => {
+        const initialMembers = []
+        while (initialMembers.length < 100) {
+            initialMembers.push({
+                address: `0x${crypto.randomBytes(20).toString("hex")}`,
+                earnings: 0,
+            })
+        }
+        const plasma1 = new MonoplasmaState(0, initialMembers, fileStore, admin, 0)
+        assert(plasma1.getMembers().every((m) => (
+            m.earnings === "0"
+        )), "all members should have zero earnings")
+        const revenue = initialMembers.length
+        plasma1.addRevenue(revenue)
+        assert(plasma1.getMembers().every((m) => (
+            m.earnings !== "0"
+        )), "all members should have non-zero earnings")
+        assert.equal(plasma1.getTotalRevenue(), revenue, "total revenue should be what we added")
+        const plasma2 = new MonoplasmaState(0, initialMembers, fileStore, admin, 0)
+        assert(plasma2.getMembers().every((m) => (
+            m.earnings === "0"
+        )), "all members should have zero earnings")
+        plasma2.addRevenue(revenue / 2)
+        plasma2.addRevenue(revenue / 2)
+        assert.equal(plasma1.getTotalRevenue(), revenue, "total revenue should be all of what we added")
+        assert(plasma2.getMembers().every((m) => (
+            m.earnings !== "0"
+        )), "all members should have non-zero earnings")
+        const p1Members = plasma1.getMembers()
+        const p2Members = plasma2.getMembers()
+        assert(p1Members.every((m, i) => (
+            m.earnings === p2Members[i].earnings
+        )), "adding same total revenue over multiple transactions should give same member earnings")
+    })
+
     it("should remember past blocks' earnings", async () => {
         const plasma = new MonoplasmaState(0, [], fileStore, admin, 0)
         plasma.addMember("0xb3428050ea2448ed2e4409be47e1a50ebac0b2d2", "tester1")
