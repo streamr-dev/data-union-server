@@ -50,7 +50,8 @@ describe("MonoplasmaState", () => {
         ])
     })
 
-    it("should not crash with large number of members", () => {
+    it("should not crash with large number of members", function () {
+        this.timeout(5000)
         const initialMembers = []
         while (initialMembers.length < 200000) {
             initialMembers.push({
