@@ -7,7 +7,7 @@
 //const createKeccakHash = require("keccak")
 
 const { utils: ethersUtils } = require("ethers")
-const BN = require("BN.js")
+const BN = require("bn.js")
 
 const sleep = require("../utils/sleep-promise")
 
