@@ -84,8 +84,6 @@ describe("Withdraw Timing", () => {
         return {
             ganacheProvider: new JsonRpcProvider(ETHEREUM_SERVER),
             adminPrivateKey: OPERATOR_PRIVATE_KEY,
-            privateKey: "0xe5af7834455b7239881b85be89d905d6881dcb4751063897f12be1b0dd546bdb", // ganache 1
-            address: "0x4178baBE9E5148c6D5fd431cD72884B07Ad855a0",
         }
     }
 
@@ -94,8 +92,6 @@ describe("Withdraw Timing", () => {
         return {
             ganacheProvider: new JsonRpcProvider("http://localhost:8545"),
             adminPrivateKey: "0x5e98cce00cff5dea6b454889f359a4ec06b9fa6b88e9d69b86de8e1c81887da0",  // ganache 0
-            privateKey: "0xe5af7834455b7239881b85be89d905d6881dcb4751063897f12be1b0dd546bdb", // ganache 1
-            address: "0x4178baBE9E5148c6D5fd431cD72884B07Ad855a0",
         }
     }
 
@@ -105,10 +101,12 @@ describe("Withdraw Timing", () => {
         const {
             ganacheProvider,
             adminPrivateKey,
-            privateKey,
-            address,
         } = await startServer()
-        // } = connectToLocalGanache()
+        //} = connectToLocalGanache()
+
+        const privateKey = "0x1000000000000000000000000000000000000000000000000000000000001000"
+        const wallet = new Wallet(privateKey, ganacheProvider)
+        const address = wallet.address
 
         log("--- Server started, getting the operator config ---")
         // TODO: eliminate direct server communication (use /stats? Change EE?)
@@ -213,7 +211,6 @@ describe("Withdraw Timing", () => {
 
         log("1.4) Create joinPartStream")   // done inside deployCommunity below
         log("1.5) Deploy CommunityProduct contract")
-        const wallet = new Wallet(privateKey, ganacheProvider)
         const nodeAddress = getAddress(STREAMR_NODE_ADDRESS)
         const communityContract = await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, ADMIN_FEE, config.streamrWsUrl, config.streamrHttpUrl)
         const communityAddress = communityContract.address
