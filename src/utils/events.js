@@ -23,8 +23,9 @@ async function replayEvent(plasma, event) {
         // event BlockCreated(uint blockNumber, bytes32 rootHash, string ipfsHash);
         case "BlockCreated": {
             const blockNumber = +event.args.blockNumber
-            log(`Storing block ${blockNumber}`)
-            await plasma.storeBlock(blockNumber)
+            const eventTimestampSeconds = event.timestamp / 1000
+            log(`Storing block ${blockNumber}, freeze period starts at ${eventTimestampSeconds}`)
+            await plasma.storeBlock(blockNumber, eventTimestampSeconds)
         } break
         case "join": {
             const { addressList } = event

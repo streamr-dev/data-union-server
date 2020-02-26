@@ -41,7 +41,8 @@ module.exports = class MonoplasmaValidator {
         // add the block to store; this won't be done by Watcher because Operator does it now
         // TODO: move this to Watcher
         const blockNumber = +block.blockNumber
-        this.plasma.storeBlock(blockNumber)
+        const commitTimestamp = (await this.contract.blockTimestamp(blockNumber)).toNumber()
+        this.plasma.storeBlock(blockNumber, commitTimestamp)
 
         // update the "validated" version to the block number whose hash was published
         await this.watcher.playbackUntilBlock(blockNumber, this.validatedPlasma)

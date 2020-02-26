@@ -118,7 +118,8 @@ module.exports = class MonoplasmaOperator {
         // TODO https://streamr.atlassian.net/browse/CPS-82 should be instead:
         // await this.finalPlasma.storeBlock(blockNumber) // TODO: give a timestamp
         // this.watcher.state.lastPublishedBlock = {blockNumber: blockNumber}
-        await this.watcher.plasma.storeBlock(blockNumber)
+        const commitTimestamp = (await this.contract.blockTimestamp(blockNumber)).toNumber()
+        await this.watcher.plasma.storeBlock(blockNumber, commitTimestamp)
         await this.watcher.saveState()
 
         log("Commit sent, receipt:", tr)
