@@ -50,8 +50,7 @@ module.exports = class MonoplasmaOperator {
             this.watcher.plasma.currentTimestamp
         )
 
-        const self = this
-        this.watcher.on("tokensReceived", async event => self.onTokensReceived(event).catch(self.error))
+        this.watcher.on("tokensReceived", event => this.onTokensReceived(event))
     }
 
     async shutdown() {
@@ -67,9 +66,13 @@ module.exports = class MonoplasmaOperator {
         return lb.blockNumber
     }
 
+    async onTokensReceived(...args) {
+        return this._onTokensReceived(...args).catch((error) => this.log(error))
+    }
+
     // TODO: block publishing should be based on value-at-risk, that is, publish after so-and-so many tokens received
     // see https://streamr.atlassian.net/browse/CPS-39
-    async onTokensReceived(event) {
+    async _onTokensReceived(event) {
         const last = await this.lastPublishedBlock()
         const blockNumber = event.blockNumber
         if (last == undefined || +blockNumber >= last + +this.minIntervalBlocks) {
@@ -93,7 +96,9 @@ module.exports = class MonoplasmaOperator {
         await sleep(0)          // ensure lastObservedBlockNumber is updated since this likely happens as a response to event
         const blockNumber = rootchainBlockNumber || this.watcher.state.lastObservedBlockNumber
         if (blockNumber <= await this.lastPublishedBlock()) { throw new Error(`Block #${this.lastPublishedBlock} has already been published, can't publish #${blockNumber}`) }
-            
+        const log = this.log.extend(blockNumber)
+        log("Publish block", blockNumber)
+
         // see https://streamr.atlassian.net/browse/CPS-20
         // TODO: separate finalPlasma currently is so much out of sync with watcher.plasma that proofs turn out wrong
         //       perhaps communitiesRouter should get the proofs from operator's finalPlasma?
@@ -108,15 +113,15 @@ module.exports = class MonoplasmaOperator {
         const ipfsHash = ""     // TODO: upload this.finalPlasma to IPFS while waiting for finality
 
         const tx = await this.contract.commit(blockNumber, hash, ipfsHash)
-        const tr = await tx.wait(1)        // confirmations
-        
+        const tr = await tx.wait()        // confirmations
+
         // TODO https://streamr.atlassian.net/browse/CPS-82 should be instead:
         // await this.finalPlasma.storeBlock(blockNumber) // TODO: give a timestamp
         // this.watcher.state.lastPublishedBlock = {blockNumber: blockNumber}
         await this.watcher.plasma.storeBlock(blockNumber)
         await this.watcher.saveState()
-        
-        this.log(`Commit sent, receipt: ${JSON.stringify(tr)}`)
+
+        log("Commit sent, receipt:", tr)
 
         // TODO: something causes events to be replayed many times, resulting in wrong balances. It could have something to do with the state cloning that happens here
         // replace watcher's MonoplasmaState with the final "true" state that was just committed to blockchain
