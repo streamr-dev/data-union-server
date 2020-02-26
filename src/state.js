@@ -390,6 +390,7 @@ module.exports = class MonoplasmaState {
      */
     async storeBlock(blockNumber, timestamp) {
         if (!Number.isInteger(blockNumber) || !(blockNumber > 0)) { throw new Error("blockNumber must be a positive integer")}
+        this.log(`Storing block ${blockNumber} at timestamp ${timestamp}`)
         const latestBlock = {
             blockNumber,
             members: this.members.map(m => m.toObject()),

@@ -1,7 +1,7 @@
 const { spawn } = require("child_process")
 const fetch = require("node-fetch")
 const assert = require("assert")
-const log = require("debug")("Streamr::CPS::test::system::http-api")
+const log = require("debug")("Streamr::CPS::test::system::timing")
 
 const StreamrClient = require("streamr-client") // just for getting session tokens (ethereum-sign-in)...
 
@@ -66,6 +66,7 @@ describe("Withdraw Timing", () => {
                 WEBSERVER_PORT,
                 BLOCK_FREEZE_SECONDS,
                 RESET: "yesplease",
+                DEBUG: "Streamr*",
             }
         })
         operatorProcess.stdout.on("data", data => { log(`<server stdio> ${String(data).trim()}`) })
@@ -299,12 +300,16 @@ describe("Withdraw Timing", () => {
         }
 
         log("    Member before", member)
+        log(wallet.address)
+        log(wallet)
 
         const balanceBefore = await token.balanceOf(address)
 
         log("4) Withdraw tokens")
 
         const contract = new Contract(communityAddress, CommunityProduct.abi, wallet)
+        log(await contract.proofIsCorrect(member.withdrawableBlockNumber, wallet.address, member.withdrawableEarnings, member.proof))
+        log(await contract.proofIsCorrect(member.withdrawableBlockNumber, member.address, member.withdrawableEarnings, member.proof))
         const withdrawTx = await contract.withdrawAll(member.withdrawableBlockNumber, member.withdrawableEarnings, member.proof)
         log("    withdrawAll done")
         await withdrawTx.wait()
