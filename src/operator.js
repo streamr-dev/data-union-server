@@ -82,13 +82,30 @@ module.exports = class MonoplasmaOperator {
         }
     }
 
+    async publishBlock(rootchainBlockNumber) {
+        // enqueue publishBlock calls
+        if (this.inProgressPublish) {
+            this.log("Queued block publish", rootchainBlockNumber)
+        }
+        const task = Promise.resolve(this.inProgressPublish)
+            .then(() => this._publishBlock(rootchainBlockNumber))
+            .finally(() => {
+                // last task cleans up
+                if (this.inProgressPublish === task) {
+                    this.inProgressPublish = undefined
+                }
+            })
+        this.inProgressPublish = task
+        return task
+    }
+
     // TODO: call it commit instead. Replace all mentions of "publish" with "commit".
     /**
      * Sync watcher to the given block and publish the state AFTER it into blockchain
      * @param {Number} rootchainBlockNumber to sync up to
      * @returns {Promise<TransactionReceipt>}
      */
-    async publishBlock(rootchainBlockNumber) {
+    async _publishBlock(rootchainBlockNumber) {
         // TODO: would mutex for publishing blocks make sense? Consider (finality wait period + delay) vs block publishing interval
         //if (this.publishBlockInProgress) { throw new Error(`Currently publishing block ${this.publishBlockInProgress}, please wait that it completes before attempting another`) }
         //this.publishBlockInProgress = blockNumber
