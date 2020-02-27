@@ -305,8 +305,19 @@ describe("Withdraw Timing", () => {
         log("4) Withdraw tokens")
 
         const contract = new Contract(communityAddress, CommunityProduct.abi, wallet)
-        log(await contract.proofIsCorrect(member.withdrawableBlockNumber, wallet.address, member.withdrawableEarnings, member.proof))
-        log(await contract.proofIsCorrect(member.withdrawableBlockNumber, member.address, member.withdrawableEarnings, member.proof))
+        const isCorrect = await contract.proofIsCorrect(member.withdrawableBlockNumber, wallet.address, member.withdrawableEarnings, member.proof)
+        if (!isCorrect) {
+            log("    not correct yet")
+            await sleep(5000)
+            const isCorrect2 = await contract.proofIsCorrect(member.withdrawableBlockNumber, wallet.address, member.withdrawableEarnings, member.proof)
+            log("    should be correct now?", isCorrect2)
+            if (!isCorrect2) {
+                member = await GET(`/communities/${communityAddress}/members/${address}`)
+                log("    Member before2", member)
+                const isCorrect3 = await contract.proofIsCorrect(member.withdrawableBlockNumber, wallet.address, member.withdrawableEarnings, member.proof)
+                log("    should be correct now?", isCorrect3)
+            }
+        }
         const withdrawTx = await contract.withdrawAll(member.withdrawableBlockNumber, member.withdrawableEarnings, member.proof)
         log("    withdrawAll done")
         await withdrawTx.wait()
