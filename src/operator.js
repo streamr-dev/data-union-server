@@ -112,7 +112,8 @@ module.exports = class MonoplasmaOperator {
 
         await sleep(0)          // ensure lastObservedBlockNumber is updated since this likely happens as a response to event
         const blockNumber = rootchainBlockNumber || this.watcher.state.lastObservedBlockNumber
-        if (blockNumber <= await this.lastPublishedBlock()) { throw new Error(`Block #${this.lastPublishedBlock} has already been published, can't publish #${blockNumber}`) }
+        const lastPublishedBlock = await this.lastPublishedBlock()
+        if (blockNumber <= lastPublishedBlock) { throw new Error(`Block #${lastPublishedBlock} has already been published, can't publish #${blockNumber}`) }
         const log = this.log.extend(blockNumber)
         log("Publish block", blockNumber)
 
