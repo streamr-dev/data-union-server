@@ -25,30 +25,69 @@ function wrapErrorObject(err, message) {
     return newError
 }
 
-class Worker {
+/**
+ * Encode a Redux-like action for RPC calls
+ * @typedef {Object} Action
+ * @property {String} type Action name
+ * @property {Object} payload Arbitrary value as payload
+ */
+
+/**
+ * Implements RPC between parent and worker process.
+ */
+class RPCWorker {
+    constructor() {
+        /** @property {ChildProcess} proc Worker child process */
+        this.proc = undefined
+    }
+
+    /**
+     * Creates new process if needed.
+     * @returns {ChildProcess}
+     */
+    initIfNeeded() {
+        if (this.proc && this.proc.connected) {
+            return this.proc
+        }
+        this.proc = fork(require.resolve("./worker"))
+        this.proc.once("exit", () => {
+            this.proc = undefined
+        })
+        return this.proc
+    }
+
+    /**
+     * Sends `message` to worker process.
+     * Creates new process if needed.
+     * @param {Object|String} message
+     */
     async send(message) {
         return new Promise((resolve, reject) => {
             let result
-            if (this.proc) {
-                this.proc.kill()
-            }
-            this.proc = fork(require.resolve("./worker"))
-            this.proc.once("exit", (code) => {
-                if (result) {
-                    resolve(result)
-                    return
-                }
+            const proc = this.initIfNeeded()
+                .once("exit", (code) => {
+                    if (result) {
+                        resolve(result)
+                        return
+                    }
 
-                reject(new Error(`Worker exited with code: ${code}`))
-            })
-            this.proc.once("error", reject)
-            this.proc.once("message", (message) => {
-                result = message
-            })
-            this.proc.send(message)
+                    reject(new Error(`Worker exited with code: ${code}`))
+                })
+                .once("error", reject)
+                .once("message", (message) => {
+                    result = message
+                })
+
+            proc.send(message)
         })
     }
 
+    /**
+     * Sends Action to worker process, returns response.
+     * Handles converting rejections into Actions
+     * @param {Action} action
+     * @return {Promise<Action>} Response
+     */
     async sendAction({ type, payload }) {
         return this.send({ type, payload })
             .catch((error) => ({
@@ -57,6 +96,12 @@ class Worker {
             }))
     }
 
+    /**
+     * Workflow for sending tree to worker
+     * Serialize tree -> send -> deserialize response.
+     * @param {Array<MonoplasmaMember>} treeContents
+     * @return {Promise<MerkleTree>} tree data
+     */
     async buildTree(treeContents) {
         const result = await this.sendAction({
             type: BUILD_TREE,
@@ -78,12 +123,15 @@ class Worker {
 }
 
 /**
- * Ensures multiple calls to `fn` with the same first argument
+ * Ensures multiple calls to `fn` with the same *first argument*
  * will only execute `fn` once while `fn` resolves.
+ * @param {AsyncFunction} fn Async function that does work
  */
 
 function limitDuplicateAsyncWork(fn) {
+    // note only supports objects as keys, Map may be sufficient
     const taskCache = new WeakMap()
+    // first parameter treated as key
     return async (key, ...args) => {
         if (taskCache.has(key)) {
             // use cached value
@@ -101,7 +149,11 @@ function limitDuplicateAsyncWork(fn) {
     }
 }
 
-module.exports = class MerkleTreeRPCWrapper extends MerkleTree {
+/**
+ * Reimplements MerkleTree getContents as call to async worker
+ */
+
+module.exports = class MerkleTreeWorkerWrapper extends MerkleTree {
     constructor(...args) {
         super(...args)
         this.buildTree = limitDuplicateAsyncWork(this.buildTree)
@@ -124,6 +176,7 @@ module.exports = class MerkleTreeRPCWrapper extends MerkleTree {
         if (this.contents.length === 0) {
             throw new Error("Can't construct a MerkleTree with empty contents!")
         }
+
         if (this.isDirty) {
             const { contents } = this
 

@@ -209,7 +209,7 @@ describe("Merkle tree", () => {
 
     describe("performance", function () {
         this.timeout(10000)
-        it("does not block while calculating", async () => {
+        it("does not block while calculating large tree", async () => {
             const members = testLarge(10000)
 
 
