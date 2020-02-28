@@ -215,8 +215,9 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         // TODO: maybe state saving function should create the state object instead of continuously mutating "state" member
         await this.saveState()
     }
-    async saveState(){
-        this.store.saveState(this.state)
+
+    async saveState() {
+        return this.store.saveState(this.state)
     }
 
     async stop() {
