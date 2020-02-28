@@ -104,10 +104,20 @@ function limitDuplicateAsyncWork(fn) {
 module.exports = class MerkleTreeRPCWrapper extends MerkleTree {
     constructor(...args) {
         super(...args)
-        this.buildTree = limitDuplicateAsyncWork(async (contents) => {
-            const worker = new Worker()
-            return worker.buildTree(contents)
-        })
+        this.buildTree = limitDuplicateAsyncWork(this.buildTree)
+    }
+
+    async buildTree(contents) {
+        // this method should be wrapped with limitDuplicateAsyncWork
+        // to prevent recalculating duplicate trees
+
+        // just calculate small trees in-process
+        if (contents.length < 100) {
+            return new MerkleTree(contents).getContents()
+        }
+
+        // farm out larger tree calculations to worker process
+        return new RPCWorker().buildTree(contents)
     }
 
     async getContents() {
