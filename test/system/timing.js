@@ -2,6 +2,7 @@ const { spawn } = require("child_process")
 const fetch = require("node-fetch")
 const assert = require("assert")
 const log = require("debug")("Streamr::CPS::test::system::timing")
+const log2 = require("debug")("Streamr::CPS")
 
 const StreamrClient = require("streamr-client") // just for getting session tokens (ethereum-sign-in)...
 
@@ -69,8 +70,8 @@ describe("Withdraw Timing", () => {
                 DEBUG: "Streamr*",
             }
         })
-        operatorProcess.stdout.on("data", data => { log(`<server stdio> ${String(data).trim()}`) })
-        operatorProcess.stderr.on("data", data => { log(`<server stderr> ${String(data).trim()}`) })
+        operatorProcess.stdout.on("data", log2)
+        operatorProcess.stderr.on("data", log2)
         operatorProcess.on("close", (code, signal) => {
             throw new Error(`start_server.js exited with code ${code}, signal ${signal}`)
         })
@@ -298,7 +299,6 @@ describe("Withdraw Timing", () => {
 
         log("    Member before", member)
         log(wallet.address)
-        log(wallet)
 
         const balanceBefore = await token.balanceOf(address)
 
