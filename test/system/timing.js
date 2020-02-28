@@ -67,11 +67,12 @@ describe("Withdraw Timing", () => {
                 WEBSERVER_PORT,
                 BLOCK_FREEZE_SECONDS,
                 RESET: "yesplease",
-                DEBUG: "Streamr*",
+                DEBUG: process.env.DEBUG,
+                DEBUG_COLORS: "true",
             }
         })
-        operatorProcess.stdout.on("data", log2)
-        operatorProcess.stderr.on("data", log2)
+        operatorProcess.stdout.setEncoding("utf8").on("data", (s) => log2(s.trim()))
+        operatorProcess.stderr.setEncoding("utf8").on("data", (s) => log2(s.trim()))
         operatorProcess.on("close", (code, signal) => {
             throw new Error(`start_server.js exited with code ${code}, signal ${signal}`)
         })
