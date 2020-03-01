@@ -1,4 +1,9 @@
 const debug = require("debug")
+const {
+    isMainThread,
+    parentPort,
+    workerData,
+} = require("worker_threads")
 
 const MerkleTree = require("./api")
 
@@ -7,19 +12,22 @@ const SUCCESS = "SUCCESS"
 const ERROR = "ERROR"
 
 const exit = () => {
-    process.removeListener("message", onMessage)
-    process.exitCode = 0
+    parentPort.removeListener("message", onMessage)
+    //process.exitCode = 0
 }
 
 const Log = debug(`Streamr::CPS::merkletree::worker::${process.pid}`)
 
-const isChild = !!process.send
+const isChild = !isMainThread
 
 if (isChild) {
     Log("started")
-    process.on("message", onMessage)
+    parentPort.once("message", onMessage)
+    if (workerData) {
+        onMessage(workerData)
+    }
 
-    process.on("beforeExit", () => Log("done"))
+    parentPort.once("close", () => Log("done"))
 }
 
 
@@ -50,7 +58,7 @@ function onMessage({ type, payload }) {
 
     function onError(error) {
         log("error", error)
-        process.send({
+        parentPort.postMessage({
             type: ERROR,
             payload: Object.assign({}, error, {
                 type: error.constructor.name,
@@ -71,7 +79,7 @@ function onMessage({ type, payload }) {
     log("started")
 
     buildTree(payload).then((tree) => {
-        process.send({
+        parentPort.postMessage({
             type: SUCCESS,
             payload: serialiseTree(tree),
         }, exit)

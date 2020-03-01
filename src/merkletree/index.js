@@ -1,4 +1,4 @@
-const { fork } = require("child_process")
+const { Worker } = require("worker_threads")
 
 const {
     BUILD_TREE,
@@ -49,7 +49,11 @@ class RPCWorker {
         if (this.proc && this.proc.connected) {
             return this.proc
         }
-        this.proc = fork(require.resolve("./worker"))
+        this.proc = new Worker(require.resolve("./worker"), {
+            env: Object.assign({}, process.env, {
+                DEBUG_COLORS: true,
+            })
+        })
         this.proc.once("exit", () => {
             this.proc = undefined
         })
@@ -63,22 +67,14 @@ class RPCWorker {
      */
     async send(message) {
         return new Promise((resolve, reject) => {
-            let result
             const proc = this.initIfNeeded()
+                .once("message", resolve)
+                .once("error", reject)
                 .once("exit", (code) => {
-                    if (result) {
-                        resolve(result)
-                        return
-                    }
-
                     reject(new Error(`Worker exited with code: ${code}`))
                 })
-                .once("error", reject)
-                .once("message", (message) => {
-                    result = message
-                })
 
-            proc.send(message)
+            proc.postMessage(message)
         })
     }
 
