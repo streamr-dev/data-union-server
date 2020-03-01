@@ -42,7 +42,7 @@ Start server script can be modified using the following environment variables:
 
 # Debugging and developing
 
-Use Node 10.14.0 and NPM 6.4.1.
+Use Node 12.16.1 and npm 6.14.1.
 
 Run tests with one of the following:
 * `npm run test` for all tests that should currently pass
