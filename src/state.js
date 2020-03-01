@@ -3,7 +3,7 @@ const MerkleTree = require("monoplasma/src/merkletree")
 const BN = require("bn.js")
 const toBN = require("number-to-bn")
 const {utils: { toWei }} = require("web3")
-const now = require("monoplasma/src/utils/now")
+const now = require("./utils/now")
 const { throwIfBadAddress } = require("./utils/checkArguments")
 
 /**

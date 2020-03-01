@@ -4,7 +4,7 @@ const assert = require("assert")
 const crypto = require("crypto")
 const BN = require("bn.js")
 
-const now = require("monoplasma/src/utils/now")
+const now = require("../../src/utils/now")
 const MonoplasmaState = require("../../src/state")
 
 //const sleep = require("../utils/sleep-promise")
