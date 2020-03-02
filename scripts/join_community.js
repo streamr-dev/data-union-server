@@ -18,13 +18,9 @@ const {
 
     STREAMR_WS_URL,
     STREAMR_HTTP_URL,
-
-    QUIET,
 } = process.env
 
-const log = QUIET ? () => {} : (...args) => {
-    console.log(...args)
-}
+const log = require("debug")("CPS::scripts::join_community")
 const error = (e, ...args) => {
     console.error(e.stack, ...args)
     process.exit(1)
@@ -56,8 +52,9 @@ async function start() {
     if (STREAMR_HTTP_URL) { opts.restUrl = STREAMR_HTTP_URL }
     const client = new StreamrClient(opts)
 
+    log(`secret: ${SECRET}`)
     log(`Adding https://streamr.com/api/v1/communities/${communityAddress}/members/${memberAddress} ...`)
-    const res = await client.joinCommunity(communityAddress, memberAddress, SECRET)
+    const res = await client.joinCommunity(communityAddress, SECRET)
 
     log(`Community join sent, response: ${JSON.stringify(res)}`)
     log(`Network was ${JSON.stringify(network)}`)
