@@ -36,7 +36,7 @@ describe("CommunityProductServer", function () {
     let tokenAddress
     let wallet
 
-    before(async () => {
+    beforeEach(async () => {
         const secretKey = "0x1234567812345678123456781234567812345678123456781234567812345678"
         const provider = new Web3Provider(ganache.provider({
             accounts: [{ secretKey, balance: "0xffffffffffffffffffffffffff" }],
