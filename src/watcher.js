@@ -141,16 +141,14 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             lastBlock = await this.store.loadBlock(lastPublishedBlockNumber)
         }
         */
-        if (await this.store.hasLatestBlock()){
+        if (await this.store.hasLatestBlock()) {
             lastBlock = await this.store.getLatestBlock()
         }
-        this.log(`Starting from block ${lastBlock.blockNumber} (t=${lastBlock.timestamp}, ${new Date((lastBlock.timestamp || 0) * 1000).toISOString()}) with ${lastBlock.members.length} members`)
-        this.plasma = new MonoplasmaState(this.state.blockFreezeSeconds, lastBlock.members, this.store, this.state.adminAddress, this.state.adminFee, lastBlock.blockNumber, lastBlock.timestamp)
+        this.log(`Syncing Monoplasma state starting from block ${lastBlock.blockNumber} (t=${lastBlock.timestamp}) with ${lastBlock.members.length} members`)
+        const playbackStartingTimestampMs = lastBlock.timestamp || lastBlock.blockNumber && await this.getBlockTimestamp(lastBlock.blockNumber) || 0
+        this.plasma = new MonoplasmaState(this.state.blockFreezeSeconds, lastBlock.members, this.store, this.state.adminAddress, this.state.adminFee, lastBlock.blockNumber, playbackStartingTimestampMs / 1000)
 
-        this.log("Syncing Monoplasma state...")
-        const playbackStartingTimestamp = this.state.lastMessageTimestamp || 0
-
-        this.log("Listening to joins/parts from the Channel...")
+        this.log(`Getting joins/parts from the Channel starting from t=${playbackStartingTimestampMs}, ${new Date(playbackStartingTimestampMs).toISOString()}`)
 
         // replay and cache messages until in sync
         // TODO: cache only starting from given block (that operator/validator have loaded state from store)
@@ -160,7 +158,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             const event = { type, addressList, timestamp: meta.messageId.timestamp }
             this.messageCache.push(event)
         })
-        await this.channel.listen(playbackStartingTimestamp)
+        await this.channel.listen(playbackStartingTimestampMs)
         this.log(`Playing back ${this.messageCache.length} messages from joinPartStream`)
 
         // messages are now cached => do the Ethereum event playback, sync up this.plasma
