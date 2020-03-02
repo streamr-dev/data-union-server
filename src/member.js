@@ -1,5 +1,4 @@
-const BN = require("bn.js")
-const { utils: { getAddress }} = require("ethers")
+const { utils: { getAddress, BigNumber: BN }} = require("ethers")
 
 module.exports = class MonoplasmaMember {
     constructor(name, address, earnings, active = true) {
@@ -51,14 +50,12 @@ module.exports = class MonoplasmaMember {
     /** Produces a hashable string representation in hex form (starts with "0x") */
     // TODO: move to merkletree.js:hashLeaf
     toHashableString() {
-        return this.address + this.earnings.toString(16, 64)
+        const earningsString = this.earnings.toHexString().slice(2)
+        const earningsPadded = "0".repeat(64 - earningsString.length) + earningsString
+        return this.address + earningsPadded
     }
 
     getProof(tree) {
         return this.earnings.gt(new BN(0)) ? tree.getPath(this.address) : []
-    }
-
-    static getHashableString(address, earnings) {
-        return address + earnings.toString(16, 64)
     }
 }
