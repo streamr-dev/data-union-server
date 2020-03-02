@@ -1,7 +1,6 @@
 const MonoplasmaMember = require("./member")
-const BN = require("bn.js")
-const toBN = require("number-to-bn")
-const {utils: { toWei }} = require("web3")
+const { utils: { parseEther, BigNumber: BN }} = require("ethers")
+
 const now = require("./utils/now")
 const { throwIfBadAddress } = require("./utils/checkArguments")
 const MerkleTree = require("./merkletree")
@@ -255,14 +254,14 @@ module.exports = class MonoplasmaState {
     setAdminFeeFraction(adminFeeFraction) {
         // convert to BN
         if (typeof adminFeeFraction === "number") {
-            adminFeeFraction = toBN(toWei(adminFeeFraction.toString(10)))
+            adminFeeFraction = parseEther(adminFeeFraction.toString(10))
         } else if (typeof adminFeeFraction === "string" && adminFeeFraction.length > 0) {
-            adminFeeFraction = toBN(adminFeeFraction)
+            adminFeeFraction = new BN(adminFeeFraction)
         } else if (!adminFeeFraction || adminFeeFraction.constructor.name !== "BN") {
             throw new Error("setAdminFeeFraction: expecting a number, a string, or a bn.js bignumber, got " + JSON.stringify(adminFeeFraction))
         }
 
-        if (adminFeeFraction.ltn(0) || adminFeeFraction.gt(toBN(toWei("1")))) {
+        if (adminFeeFraction.ltn(0) || adminFeeFraction.gt(parseEther("1"))) {
             throw Error("setAdminFeeFraction: adminFeeFraction must be between 0 and 1")
         }
         //console.log(`Setting adminFeeFraction = ${adminFeeFraction}`)
@@ -280,7 +279,7 @@ module.exports = class MonoplasmaState {
             this.adminMember.addRevenue(amount)
         } else {
             const amountBN = new BN(amount)
-            const adminFeeBN = amountBN.mul(this.adminFeeFraction).div(new BN(toWei("1", "ether")))
+            const adminFeeBN = amountBN.mul(this.adminFeeFraction).div(parseEther("1", "ether"))
             //console.log("received tokens amount: "+amountBN + " adminFee: "+adminFeeBN +" fraction * 10^18: "+this.adminFeeFraction)
             const share = amountBN.sub(adminFeeBN).divn(activeCount)    // TODO: remainder to admin too, let's not waste them!
             this.adminMember.addRevenue(adminFeeBN)
