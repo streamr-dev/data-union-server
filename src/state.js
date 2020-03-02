@@ -30,7 +30,7 @@ module.exports = class MonoplasmaState {
         /** @property {number} blockFreezeSeconds after which blocks become withdrawable */
         this.blockFreezeSeconds = blockFreezeSeconds
         /** @property {number} totalEarnings by all members together; should equal balanceOf(contract) + contract.totalWithdrawn */
-        this.totalEarnings = initialMembers.reduce((sum, m) => sum.iadd(new BN(m.earnings)), new BN(0))
+        this.totalEarnings = initialMembers.reduce((sum, m) => sum.add(m.earnings), new BN(0))
 
         /** @property {Array<Block>} latestBlocks that have been stored. Kept to figure out  */
         this.latestBlocks = []
@@ -257,11 +257,11 @@ module.exports = class MonoplasmaState {
             adminFeeFraction = parseEther(adminFeeFraction.toString(10))
         } else if (typeof adminFeeFraction === "string" && adminFeeFraction.length > 0) {
             adminFeeFraction = new BN(adminFeeFraction)
-        } else if (!adminFeeFraction || adminFeeFraction.constructor.name !== "BN") {
+        } else if (!adminFeeFraction || adminFeeFraction.constructor !== BN) {
             throw new Error("setAdminFeeFraction: expecting a number, a string, or a bn.js bignumber, got " + JSON.stringify(adminFeeFraction))
         }
 
-        if (adminFeeFraction.ltn(0) || adminFeeFraction.gt(parseEther("1"))) {
+        if (adminFeeFraction.lt(0) || adminFeeFraction.gt(parseEther("1"))) {
             throw Error("setAdminFeeFraction: adminFeeFraction must be between 0 and 1")
         }
         //console.log(`Setting adminFeeFraction = ${adminFeeFraction}`)
@@ -279,12 +279,12 @@ module.exports = class MonoplasmaState {
             this.adminMember.addRevenue(amount)
         } else {
             const amountBN = new BN(amount)
-            const adminFeeBN = amountBN.mul(this.adminFeeFraction).div(parseEther("1", "ether"))
+            const adminFeeBN = amountBN.mul(this.adminFeeFraction).div(parseEther("1"))
             //console.log("received tokens amount: "+amountBN + " adminFee: "+adminFeeBN +" fraction * 10^18: "+this.adminFeeFraction)
-            const share = amountBN.sub(adminFeeBN).divn(activeCount)    // TODO: remainder to admin too, let's not waste them!
+            const share = amountBN.sub(adminFeeBN).div(activeCount)    // TODO: remainder to admin too, let's not waste them!
             this.adminMember.addRevenue(adminFeeBN)
             activeMembers.forEach(m => m.addRevenue(share))
-            this.totalEarnings.iadd(amountBN)
+            this.totalEarnings = this.totalEarnings.add(amountBN)
         }
         this.tree.update(this.members)
     }

@@ -20,7 +20,7 @@ const MockStreamrChannel = require("../utils/mockStreamrChannel")
 const mockStore = require("../utils/mockStore")
 const members = [
     { address: "0x2F428050ea2448ed2e4409bE47e1A50eBac0B2d2", earnings: "50" },
-    { address: "0xb3428050ea2448ed2e4409be47e1a50ebac0b2d2", earnings: "20" },
+    { address: "0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2", earnings: "20" },
 ]
 const initialBlock = {
     blockNumber: 3,
