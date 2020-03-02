@@ -13,7 +13,7 @@ const mockStore = require("../utils/mockStore")
 const MockStreamrChannel = require("../utils/mockStreamrChannel")
 const deployTestToken = require("../utils/deployTestToken")
 const deployTestCommunity = require("../utils/deployTestCommunity")
-const ganacheBlockIntervalSeconds = 4
+const pollingIntervalSeconds = 0.1
 const members = [
     { address: "0x2F428050ea2448ed2e4409bE47e1A50eBac0B2d2", earnings: "50" },
     { address: "0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2", earnings: "20" },
@@ -40,8 +40,9 @@ describe("CommunityProductServer", function () {
         const secretKey = "0x1234567812345678123456781234567812345678123456781234567812345678"
         const provider = new Web3Provider(ganache.provider({
             accounts: [{ secretKey, balance: "0xffffffffffffffffffffffffff" }],
-            logger: { log },
+            logger: console,
         }))
+        provider.pollingInterval = pollingIntervalSeconds * 100
         wallet = new Wallet(secretKey, provider)
         await provider.getNetwork()     // wait until ganache is up and ethers.js ready
 
@@ -55,7 +56,7 @@ describe("CommunityProductServer", function () {
 
     it("notices creation of a new CommunityProduct and starts Operator", async function () {
         log("Starting CommunityProductServer...")
-        const storeDir = path.join(os.tmpdir(), `communitiesRouter-test2-${+new Date()}`)
+        const storeDir = path.join(os.tmpdir(), `server-test-${+new Date()}`)
         const config = {
             tokenAddress,
             operatorAddress: wallet.address,
@@ -71,7 +72,7 @@ describe("CommunityProductServer", function () {
         const contractAddress = contract.address
 
         // give ethers.js time to poll and notice the block, also for server to react
-        await sleep(ganacheBlockIntervalSeconds * 1000)
+        await sleep(pollingIntervalSeconds * 1000)
 
         // Note: this test must run first for the below position-sensitive assertions to pass
         assert(server.onOperatorChangedEventAt.calledOnce)
@@ -89,7 +90,7 @@ describe("CommunityProductServer", function () {
 
     it("stops operators when server is stopped", async function () {
         log("Starting CommunityProductServer...")
-        const storeDir = path.join(os.tmpdir(), `communitiesRouter-test2-${+new Date()}`)
+        const storeDir = path.join(os.tmpdir(), `server-test2-${+new Date()}`)
         const config = {
             tokenAddress,
             operatorAddress: wallet.address,
@@ -102,7 +103,7 @@ describe("CommunityProductServer", function () {
         await server.communityIsRunning(contract.address)
 
         // give ethers.js time to poll and notice the block, also for server to react
-        await sleep(ganacheBlockIntervalSeconds * 1000)
+        await sleep(pollingIntervalSeconds * 1000)
 
         const { communities } = server
         assert(Object.keys(communities), "has at least 1 community")
@@ -117,7 +118,7 @@ describe("CommunityProductServer", function () {
 
     it("resumed operating communities it's operated before (e.g. a crash)", async function () {
         log("Starting CommunityProductServer...")
-        const storeDir = path.join(os.tmpdir(), `communitiesRouter-test1-${+new Date()}`)
+        const storeDir = path.join(os.tmpdir(), `server-test3-${+new Date()}`)
         const config = {
             tokenAddress,
             operatorAddress: wallet.address,
@@ -137,7 +138,7 @@ describe("CommunityProductServer", function () {
 
         await server.stop()
 
-        await sleep(ganacheBlockIntervalSeconds * 1000)
+        await sleep(pollingIntervalSeconds * 1000)
 
         await server.start()
         assert(server.communities[contract.address])
@@ -146,7 +147,7 @@ describe("CommunityProductServer", function () {
 
     it("will not fail to start if there is an error playing back a community", async function () {
         log("Starting CommunityProductServer...")
-        const storeDir = path.join(os.tmpdir(), `communitiesRouter-test1-${+new Date()}`)
+        const storeDir = path.join(os.tmpdir(), `server-test4-${+new Date()}`)
         const config = {
             tokenAddress,
             operatorAddress: wallet.address,
@@ -168,7 +169,7 @@ describe("CommunityProductServer", function () {
         log("Communities running")
 
         await server.stop()
-        await sleep(ganacheBlockIntervalSeconds * 1000)
+        await sleep(pollingIntervalSeconds * 1000)
 
         // force one community startup to fail when getting channel
         server.getChannelFor.withArgs(contract.address).callsFake(async function () {
@@ -179,7 +180,7 @@ describe("CommunityProductServer", function () {
     })
 
     it("will fail to start if there is an error playing back all communities", async function () {
-        const storeDir = path.join(os.tmpdir(), `communitiesRouter-test1-${+new Date()}`)
+        const storeDir = path.join(os.tmpdir(), `server-test5-${+new Date()}`)
         const config = {
             tokenAddress,
             operatorAddress: wallet.address,
@@ -197,7 +198,7 @@ describe("CommunityProductServer", function () {
         log(`Deployed contract at ${contract2.address}`)
 
         await server.stop()
-        await sleep(ganacheBlockIntervalSeconds * 1000)
+        await sleep(pollingIntervalSeconds * 1000)
 
         server.getChannelFor.callsFake(async function () {
             throw new Error("expected fail")
