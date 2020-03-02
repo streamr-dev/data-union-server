@@ -1,10 +1,10 @@
 const BN = require("bn.js")
-const {utils: { isAddress }} = require("web3")
+const { utils: { getAddress }} = require("ethers")
 
 module.exports = class MonoplasmaMember {
     constructor(name, address, earnings, active = true) {
         this.name = name || ""
-        this.address = MonoplasmaMember.validateAddress(address)
+        this.address = getAddress(address)
         this.earnings = earnings ? new BN(earnings) : new BN(0)
         this.active = !!active
     }
@@ -60,16 +60,5 @@ module.exports = class MonoplasmaMember {
 
     static getHashableString(address, earnings) {
         return address + earnings.toString(16, 64)
-    }
-
-    static validateAddress(address) {
-        let extended = address
-        if (address.length === 40) {
-            extended = `0x${address}`
-        }
-        if (!isAddress(extended)) {
-            throw new Error(`Bad Ethereum address: ${address}`)
-        }
-        return extended
     }
 }
