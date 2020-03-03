@@ -256,10 +256,11 @@ describe("Community product demo but through a running E&E instance", () => {
 
         log("2.3) Wait until members have been added")
         let members = []
-        sleepTime = 100
+        sleepTime = 1000
         while (members.length < 2) {
-            await sleep(sleepTime *= 2)
+            await sleep(sleepTime)
             members = await GET(`/communities/${communityAddress}/members`)
+            log("members: ", members)
         }
 
         // TODO: send revenue by purchasing the product on Marketplace
