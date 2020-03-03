@@ -62,6 +62,70 @@ describe("MonoplasmaState", () => {
         plasma.addRevenue(100)
     })
 
+    it("should distribute earnings correctly", () => {
+        const initialMembers = []
+        while (initialMembers.length < 100) {
+            initialMembers.push({
+                address: `0x${crypto.randomBytes(20).toString("hex")}`,
+                earnings: 0,
+            })
+        }
+        const plasma = new MonoplasmaState(0, initialMembers, fileStore, admin, 0)
+        assert(plasma.getMembers().every((m) => (
+            m.earnings === "0"
+        )), "all members should have zero earnings")
+
+        // minimum amount of revenue that will result in members receiving earnings
+        const revenue = initialMembers.length
+        plasma.addRevenue(revenue)
+        assert(plasma.getMembers().every((m) => (
+            m.earnings === "1"
+        )), "all members should have 1 earnings")
+
+        assert.equal(plasma.getTotalRevenue(), revenue, "total revenue should be what was added")
+
+        // add more revenue
+        plasma.addRevenue(revenue)
+
+        assert(plasma.getMembers().every((m) => (
+            m.earnings === "2"
+        )), "all members should have 2 earnings")
+        assert.equal(plasma.getTotalRevenue(), revenue * 2, "total revenue should be what was added")
+    })
+
+    it("does not give earnings if added revenue < members.length", () => {
+        // if the shared revenue isn't > 0 then it's burned
+        // expected behaviour and isn't significant due to
+        // amount burned being negligable e.g. $0.000000000000000001
+        const initialMembers = []
+        while (initialMembers.length < 100) {
+            initialMembers.push({
+                address: `0x${crypto.randomBytes(20).toString("hex")}`,
+                earnings: 0,
+            })
+        }
+        const plasma = new MonoplasmaState(0, initialMembers, fileStore, admin, 0)
+        assert(plasma.getMembers().every((m) => (
+            m.earnings === "0"
+        )), "all members should have zero earnings")
+        // largest amount of revenue that can be added that will result in no earnings.
+        const revenue = initialMembers.length - 1
+        plasma.addRevenue(revenue)
+        assert(plasma.getMembers().every((m) => (
+            m.earnings === "0"
+        )), "all members should still have 0 earnings")
+        // note total revenue may not equal total member earnings due to precision loss
+        assert.equal(plasma.getTotalRevenue(), revenue, "total revenue should be what was added")
+
+        // add more revenue that will be burned
+        plasma.addRevenue(revenue)
+        assert(plasma.getMembers().every((m) => (
+            m.earnings === "0"
+        )), "all members should still have 0 earnings")
+
+        assert.equal(plasma.getTotalRevenue(), revenue * 2, "total revenue should be what was added")
+    })
+
     it("should remember past blocks' earnings", async () => {
         const plasma = new MonoplasmaState(0, [], fileStore, admin, 0)
         plasma.addMember("0xb3428050ea2448ed2e4409be47e1a50ebac0b2d2", "tester1")
