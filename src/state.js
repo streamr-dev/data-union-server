@@ -2,6 +2,8 @@ const MonoplasmaMember = require("./member")
 const MerkleTree = require("monoplasma/src/merkletree")
 const { utils: { parseEther, BigNumber: BN }} = require("ethers")
 const now = require("monoplasma/src/utils/now")
+const log = require("debug")("Streamr::CPS::state")
+
 const { throwIfBadAddress } = require("./utils/checkArguments")
 
 /**
@@ -24,6 +26,7 @@ module.exports = class MonoplasmaState {
         if (!Array.isArray(initialMembers)) {
             initialMembers = []
         }
+        log(`Create state with ${initialMembers} members.`)
         /** @property {fileStore} store persistence for published blocks */
         this.store = store
         /** @property {number} blockFreezeSeconds after which blocks become withdrawable */
@@ -67,6 +70,7 @@ module.exports = class MonoplasmaState {
     }
 
     clone(storeOverride) {
+        log("Clone state.")
         return new MonoplasmaState(
             this.blockFreezeSeconds,
             this.members,
@@ -306,7 +310,12 @@ module.exports = class MonoplasmaState {
             if (!m) { throw new Error(`Bad index ${i}`) }   // TODO: remove in production; this means updating indexOf has been botched
             m.setActive(true)
         }
-        //console.log(`addMember ${i} ${address} ${name} ${isNewAddress}`)
+        log("addMember", {
+            i,
+            address,
+            name,
+            isNewAddress,
+        })
         // tree.update(members)     // no need for update since no revenue allocated
         return isNewAddress
     }
@@ -325,6 +334,11 @@ module.exports = class MonoplasmaState {
             wasActive = m.isActive()
             m.setActive(false)
         }
+        log("removeMember", {
+            i,
+            address,
+            wasActive,
+        })
         // tree.update(members)     // no need for update since no revenue allocated
         return wasActive
     }
@@ -341,6 +355,7 @@ module.exports = class MonoplasmaState {
      * @returns {Array<IncomingMember|string>} members that were actually added
      */
     addMembers(members) {
+        log("addMembers", members.length)
         const added = []
         members.forEach(member => {
             const m = typeof member === "string" ? { address: member } : member
@@ -356,6 +371,7 @@ module.exports = class MonoplasmaState {
      * @returns {Array<string>} addresses of members that were actually removed
      */
     removeMembers(addresses) {
+        log("removeMembers", addresses.length)
         const removed = []
         addresses.forEach(address => {
             const wasActive = this.removeMember(address)
