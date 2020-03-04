@@ -6,6 +6,8 @@ const log = require("debug")("Streamr::CPS::state")
 
 const { throwIfBadAddress } = require("./utils/checkArguments")
 
+let ID = 0
+
 /**
  * Monoplasma state object
  *
@@ -22,11 +24,13 @@ module.exports = class MonoplasmaState {
      * @param {Number} initialTimestamp after which the state is described by this object
      */
     constructor(blockFreezeSeconds, initialMembers, store, adminAddress, adminFeeFraction, initialBlockNumber = 0, initialTimestamp = 0) {
+        this.id = ID++
+        this.log = log.extend(this.id)
         throwIfBadAddress(adminAddress, "MonoplasmaState argument adminAddress")
         if (!Array.isArray(initialMembers)) {
             initialMembers = []
         }
-        log(`Create state with ${initialMembers.length} members.`)
+        this.log(`Create state with ${initialMembers.length} members.`)
         /** @property {fileStore} store persistence for published blocks */
         this.store = store
         /** @property {number} blockFreezeSeconds after which blocks become withdrawable */
@@ -70,7 +74,7 @@ module.exports = class MonoplasmaState {
     }
 
     clone(storeOverride) {
-        log("Clone state.")
+        this.log("Clone state.")
         return new MonoplasmaState(
             this.blockFreezeSeconds,
             this.members,
@@ -267,7 +271,7 @@ module.exports = class MonoplasmaState {
         if (adminFeeFraction.lt(0) || adminFeeFraction.gt(parseEther("1"))) {
             throw Error("setAdminFeeFraction: adminFeeFraction must be between 0 and 1")
         }
-        //console.log(`Setting adminFeeFraction = ${adminFeeFraction}`)
+        this.log(`Setting adminFeeFraction = ${adminFeeFraction}`)
         this.adminFeeFraction = adminFeeFraction
     }
 
@@ -278,12 +282,12 @@ module.exports = class MonoplasmaState {
         const activeMembers = this.members.filter(m => m.isActive())
         const activeCount = activeMembers.length
         if (activeCount === 0) {
-            //console.warn(`No active members in community! Allocating ${amount} to admin account ${this.adminMember.address}`)
+            this.log(`No active members in community! Allocating ${amount} to admin account ${this.adminMember.address}`)
             this.adminMember.addRevenue(amount)
         } else {
             const amountBN = new BN(amount)
             const adminFeeBN = amountBN.mul(this.adminFeeFraction).div(parseEther("1"))
-            //console.log("received tokens amount: "+amountBN + " adminFee: "+adminFeeBN +" fraction * 10^18: "+this.adminFeeFraction)
+            this.log("received tokens amount: " + amountBN + " adminFee: " + adminFeeBN + " fraction * 10^18: " + this.adminFeeFraction)
             const share = amountBN.sub(adminFeeBN).div(activeCount)    // TODO: remainder to admin too, let's not waste them!
             this.adminMember.addRevenue(adminFeeBN)
             activeMembers.forEach(m => m.addRevenue(share))
@@ -310,7 +314,7 @@ module.exports = class MonoplasmaState {
             if (!m) { throw new Error(`Bad index ${i}`) }   // TODO: remove in production; this means updating indexOf has been botched
             m.setActive(true)
         }
-        log("addMember", {
+        this.log("addMember", {
             i,
             address,
             name,
@@ -334,7 +338,7 @@ module.exports = class MonoplasmaState {
             wasActive = m.isActive()
             m.setActive(false)
         }
-        log("removeMember", {
+        this.log("removeMember", {
             i,
             address,
             wasActive,
@@ -355,7 +359,7 @@ module.exports = class MonoplasmaState {
      * @returns {Array<IncomingMember|string>} members that were actually added
      */
     addMembers(members) {
-        log("addMembers", members.length)
+        this.log("addMembers", members.length)
         const added = []
         members.forEach(member => {
             const m = typeof member === "string" ? { address: member } : member
@@ -371,7 +375,7 @@ module.exports = class MonoplasmaState {
      * @returns {Array<string>} addresses of members that were actually removed
      */
     removeMembers(addresses) {
-        log("removeMembers", addresses.length)
+        this.log("removeMembers", addresses.length)
         const removed = []
         addresses.forEach(address => {
             const wasActive = this.removeMember(address)
