@@ -66,6 +66,8 @@ describe("Community product demo but through a running E&E instance", () => {
                 WEBSERVER_PORT,
                 BLOCK_FREEZE_SECONDS,
                 RESET: "yesplease",
+                DEBUG: process.env.DEBUG,
+                DEBUG_COLORS: "true"
             }
         })
         operatorProcess.stdout.on("data", data => { log(`<server stdio> ${String(data).trim()}`) })
