@@ -26,7 +26,7 @@ module.exports = class MonoplasmaState {
         if (!Array.isArray(initialMembers)) {
             initialMembers = []
         }
-        log(`Create state with ${initialMembers} members.`)
+        log(`Create state with ${initialMembers.length} members.`)
         /** @property {fileStore} store persistence for published blocks */
         this.store = store
         /** @property {number} blockFreezeSeconds after which blocks become withdrawable */
