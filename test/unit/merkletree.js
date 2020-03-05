@@ -108,7 +108,7 @@ describe("Merkle tree", () => {
     it("gives a correct path for 5 items", () => {
         const members = testSmall(5)
         const tree = new MerkleTree(members)
-        const path = tree.getPath("0x5f428050ea2448ed2e4409be47e1a50ebac0b2d2")
+        const path = tree.getPath("0x5F428050EA2448ed2E4409BE47E1a50EBAc0b2d2")
         const root = tree.getRootHash()
         assert.deepStrictEqual(path, [
             "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -124,7 +124,7 @@ describe("Merkle tree", () => {
     it("gives a correct path for 100 items", () => {
         const members = testLarge(100)
         const tree = new MerkleTree(members)
-        const path = tree.getPath("0x50428050ea2448ed2e4409be47e1a50ebac0b2d2")
+        const path = tree.getPath("0x50428050EA2448eD2e4409Be47e1A50eBaC0b2D2")
         const root = tree.getRootHash()
         assert.deepStrictEqual(path, [
             "0x3899f1e3196adaca54e5fce47c83478bbc68d82e1c4db340ff4d5be077da5809",
@@ -136,7 +136,7 @@ describe("Merkle tree", () => {
             "0xa697780bec0c72e7a647f0cc067dd2b30732cbbb362d63f2eccee67dee345690"
         ])
 
-        const memberHash = hash(members.find(m => m.address === "0x50428050ea2448ed2e4409be47e1a50ebac0b2d2").toHashableString())
+        const memberHash = hash(members.find(m => m.address === "0x50428050EA2448eD2e4409Be47e1A50eBaC0b2D2").toHashableString())
         const hashed = calculateRootHash(memberHash, path)
         assert.strictEqual(root, `0x${hashed.toString("hex")}`)
     })
@@ -144,10 +144,8 @@ describe("Merkle tree", () => {
     it("includes", () => {
         const members = testLarge(100)
         const tree = new MerkleTree(members)
-        for (let i = 0; i < 100; i++) {
-            const a = buildValidAddress(i)
-            const m = tree.includes(a)
-            assert(m)
-        }
+        members.forEach((m, i) => {
+            assert(tree.includes(m.address), `should include member ${i}: ${m.address}`)
+        })
     })
 })
