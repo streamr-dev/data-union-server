@@ -66,6 +66,8 @@ describe("Community product demo but through a running E&E instance", () => {
                 WEBSERVER_PORT,
                 BLOCK_FREEZE_SECONDS,
                 RESET: "yesplease",
+                DEBUG: process.env.DEBUG,
+                DEBUG_COLORS: "true"
             }
         })
         operatorProcess.stdout.on("data", data => { log(`<server stdio> ${String(data).trim()}`) })
@@ -187,7 +189,7 @@ describe("Community product demo but through a running E&E instance", () => {
             "pricePerSecond": 5,
             "priceCurrency": "DATA",
             "minimumSubscriptionInSeconds": 0,
-            "type": "COMMUNITY",
+            "type": "DATAUNION",
         }
         const productCreateResponse = await POST("/products", product)
         log(`     Response: ${JSON.stringify(productCreateResponse)}`)
@@ -256,10 +258,11 @@ describe("Community product demo but through a running E&E instance", () => {
 
         log("2.3) Wait until members have been added")
         let members = []
-        sleepTime = 100
+        sleepTime = 1000
         while (members.length < 2) {
-            await sleep(sleepTime *= 2)
+            await sleep(sleepTime)
             members = await GET(`/communities/${communityAddress}/members`)
+            log("members: ", members)
         }
 
         // TODO: send revenue by purchasing the product on Marketplace

@@ -1,6 +1,5 @@
 const assert = require("assert")
-const BN = require("bn.js")
-const ethers = require("ethers")
+const { utils: { toUtf8String, BigNumber }} = require("ethers")
 
 /**
  * Assert equality in web3 return value sense, modulo conversions to "normal" JS strings and numbers
@@ -15,7 +14,7 @@ module.exports = function assertEqual(actual, expected) {
         return
     }
     // use BigNumber's own comparator
-    if (BN.isBN(expected)) {
+    if (expected.constructor === BigNumber) {
         //assert.strictEqual(actual.cmp(expected), 0)
         assert.strictEqual(actual.toString(), expected.toString())
         return
@@ -29,7 +28,7 @@ module.exports = function assertEqual(actual, expected) {
     }
     // convert hex bytes to string if expected thing looks like a string and not hex
     if (typeof expected === "string" && Number.isNaN(+expected) && !Number.isNaN(+actual)) {
-        assert.strictEqual(ethers.utils.toUtf8String(actual), expected)
+        assert.strictEqual(toUtf8String(actual), expected)
         return
     }
     // fail now with nice error if didn't hit the filters

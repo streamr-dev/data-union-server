@@ -1,10 +1,9 @@
-const BN = require("bn.js")
-const {utils: { isAddress }} = require("web3")
+const { utils: { getAddress, BigNumber: BN }} = require("ethers")
 
 module.exports = class MonoplasmaMember {
     constructor(name, address, earnings, active = true) {
         this.name = name || ""
-        this.address = MonoplasmaMember.validateAddress(address)
+        this.address = getAddress(address)
         this.earnings = earnings ? new BN(earnings) : new BN(0)
         this.active = !!active
     }
@@ -51,25 +50,12 @@ module.exports = class MonoplasmaMember {
     /** Produces a hashable string representation in hex form (starts with "0x") */
     // TODO: move to merkletree.js:hashLeaf
     toHashableString() {
-        return this.address + this.earnings.toString(16, 64)
+        const earningsString = this.earnings.toHexString().slice(2)
+        const earningsPadded = "0".repeat(64 - earningsString.length) + earningsString
+        return this.address + earningsPadded
     }
 
     getProof(tree) {
         return this.earnings.gt(new BN(0)) ? tree.getPath(this.address) : []
-    }
-
-    static getHashableString(address, earnings) {
-        return address + earnings.toString(16, 64)
-    }
-
-    static validateAddress(address) {
-        let extended = address
-        if (address.length === 40) {
-            extended = `0x${address}`
-        }
-        if (!isAddress(extended)) {
-            throw new Error(`Bad Ethereum address: ${address}`)
-        }
-        return extended
     }
 }

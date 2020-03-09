@@ -1,4 +1,5 @@
-const BN = require("bn.js")
+
+const { utils: { BigNumber: BN }} = require("ethers")
 
 const log = require("debug")("Streamr::CPS::utils::events")
 

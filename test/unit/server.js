@@ -9,39 +9,26 @@ const log = require("debug")("Streamr::CPS::test::unit::server")
 
 const ganache = require("ganache-core")
 
-const mockStore = require("../utils/mockStore")
 const MockStreamrChannel = require("../utils/mockStreamrChannel")
 const deployTestToken = require("../utils/deployTestToken")
 const deployTestCommunity = require("../utils/deployTestCommunity")
-const ganacheBlockIntervalSeconds = 4
-const members = [
-    { address: "0x2F428050ea2448ed2e4409bE47e1A50eBac0B2d2", earnings: "50" },
-    { address: "0xb3428050ea2448ed2e4409be47e1a50ebac0b2d2", earnings: "20" },
-]
-const initialBlock = {
-    blockNumber: 3,
-    members,
-    totalEarnings: 70,
-}
-const startState = {
-    lastBlockNumber: 5,
-    lastPublishedBlock: {
-        blockNumber: 3
-    }
-}
+const pollingIntervalSeconds = 0.1
 
 const CommunityProductServer = require("../../src/server")
+
 describe("CommunityProductServer", function () {
     this.timeout(10000)
     let tokenAddress
     let wallet
+    let server
 
-    before(async () => {
+    beforeEach(async () => {
         const secretKey = "0x1234567812345678123456781234567812345678123456781234567812345678"
         const provider = new Web3Provider(ganache.provider({
             accounts: [{ secretKey, balance: "0xffffffffffffffffffffffffff" }],
-            logger: { log },
+            logger: console,
         }))
+        provider.pollingInterval = pollingIntervalSeconds * 100
         wallet = new Wallet(secretKey, provider)
         await provider.getNetwork()     // wait until ganache is up and ethers.js ready
 
@@ -49,21 +36,34 @@ describe("CommunityProductServer", function () {
         tokenAddress = await deployTestToken(wallet)
     })
 
-    afterEach(() => {
-        sinon.restore()
-    })
+    let storeDir
+    let config
 
-    it("notices creation of a new CommunityProduct and starts Operator", async function () {
-        log("Starting CommunityProductServer...")
-        const storeDir = path.join(os.tmpdir(), `communitiesRouter-test2-${+new Date()}`)
-        const config = {
+    beforeEach(() => {
+        storeDir = path.join(os.tmpdir(), `server-test-${+new Date()}`)
+        config = {
             tokenAddress,
             operatorAddress: wallet.address,
         }
-        const server = new CommunityProductServer(wallet, storeDir, config, log, log)
-        server.getStoreFor = () => mockStore(startState, initialBlock, log)
+        server = new CommunityProductServer(wallet, storeDir, config, log, log)
         server.getChannelFor = () => new MockStreamrChannel("dummy-stream-id")
+    })
 
+    afterEach(async () => {
+        if (server) {
+            await server.stop()
+        }
+    })
+
+    describe("start/stop behaviour", () => {
+        it("errors if starting after stopping", async function () {
+            await server.start()
+            await server.stop()
+            await assert.rejects(() => server.start())
+        })
+    })
+
+    it("notices creation of a new CommunityProduct and starts Operator", async function () {
         sinon.spy(server, "onOperatorChangedEventAt")
         sinon.spy(server, "startOperating")
         await server.start()
@@ -71,7 +71,7 @@ describe("CommunityProductServer", function () {
         const contractAddress = contract.address
 
         // give ethers.js time to poll and notice the block, also for server to react
-        await sleep(ganacheBlockIntervalSeconds * 1000)
+        await sleep(pollingIntervalSeconds * 1000)
 
         // Note: this test must run first for the below position-sensitive assertions to pass
         assert(server.onOperatorChangedEventAt.calledOnce)
@@ -83,26 +83,16 @@ describe("CommunityProductServer", function () {
         const clist = Object.keys(server.communities)
         assert.strictEqual(1, clist.length)
         assert(server.communities[contractAddress])
-
         await server.stop()
     })
 
     it("stops operators when server is stopped", async function () {
-        log("Starting CommunityProductServer...")
-        const storeDir = path.join(os.tmpdir(), `communitiesRouter-test2-${+new Date()}`)
-        const config = {
-            tokenAddress,
-            operatorAddress: wallet.address,
-        }
-        const server = new CommunityProductServer(wallet, storeDir, config, log, log)
-        server.getStoreFor = () => mockStore(startState, initialBlock, log)
-        server.getChannelFor = () => new MockStreamrChannel("dummy-stream-id")
         await server.start()
         const contract = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
         await server.communityIsRunning(contract.address)
 
         // give ethers.js time to poll and notice the block, also for server to react
-        await sleep(ganacheBlockIntervalSeconds * 1000)
+        await sleep(pollingIntervalSeconds * 1000)
 
         const { communities } = server
         assert(Object.keys(communities), "has at least 1 community")
@@ -115,16 +105,65 @@ describe("CommunityProductServer", function () {
         })
     })
 
-    it("resumed operating communities it's operated before (e.g. a crash)", async function () {
-        log("Starting CommunityProductServer...")
-        const storeDir = path.join(os.tmpdir(), `communitiesRouter-test1-${+new Date()}`)
-        const config = {
-            tokenAddress,
-            operatorAddress: wallet.address,
-        }
-        const server = new CommunityProductServer(wallet, storeDir, config, log, log)
-        server.getStoreFor = () => mockStore(startState, initialBlock, log)
-        server.getChannelFor = () => new MockStreamrChannel("dummy-stream-id")
+    describe("ignores communities with different operator addresses", function () {
+        it("ignores if changed before startup", async () => {
+            const onError = sinon.spy(server, "error")
+
+            const contract = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
+            log(`Deployed contract at ${contract.address}`)
+
+            const contract2 = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
+            log(`Deployed contract at ${contract2.address}`)
+
+            // should ignore this contract
+            await contract2.setOperator("0x0000000000000000000000000000000000000001")
+
+            // NOTE start AFTER operator is changed
+            await server.start()
+            await server.communityIsRunning(contract.address)
+            await server.communityIsRunning(contract2.address) // I guess?
+
+            await sleep(pollingIntervalSeconds * 1000)
+
+            assert.strictEqual(onError.callCount, 0, "should not have called error handler")
+            assert(server.communities[contract.address], "contract1 should be handled")
+            assert(!server.communities[contract2.address], "contract2 should be ignored")
+            await server.stop()
+            assert.strictEqual(onError.callCount, 0, "should not have called error handler")
+        })
+
+        it("ignores if changed after startup", async () => {
+            const onError = sinon.spy(server, "error")
+            await server.start()
+
+            const contract = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
+            log(`Deployed contract at ${contract.address}`)
+
+            const contract2 = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
+            log(`Deployed contract at ${contract2.address}`)
+
+            await server.communityIsRunning(contract.address)
+            await server.communityIsRunning(contract2.address)
+
+            assert(server.communities[contract.address], "contract1 should be handled")
+            assert(server.communities[contract2.address], "contract2 should be handled")
+
+            // should ignore this contract
+            await contract2.setOperator("0x0000000000000000000000000000000000000001")
+
+            await sleep(pollingIntervalSeconds * 1000)
+
+            assert.strictEqual(onError.callCount, 0, "should not have called error handler")
+            assert(server.communities[contract.address], "contract1 should be handled")
+            // contract should no longer be handled
+            assert(!server.communities[contract2.address], "contract2 should be ignored")
+            await server.stop()
+            assert.strictEqual(onError.callCount, 0, "should not have called error handler")
+        })
+    })
+
+    it("resumes operating communities it's operated before (e.g. a crash)", async function () {
+        const onError = sinon.spy(server, "error")
         await server.start()
 
         const contract = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
@@ -133,27 +172,32 @@ describe("CommunityProductServer", function () {
         const contract2 = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
         log(`Deployed contract at ${contract2.address}`)
 
+        await server.communityIsRunning(contract.address)
+        await server.communityIsRunning(contract2.address)
+
+        // should ignore this contract
         await contract2.setOperator("0x0000000000000000000000000000000000000001")
 
         await server.stop()
 
-        await sleep(ganacheBlockIntervalSeconds * 1000)
+        await sleep(pollingIntervalSeconds * 1000)
 
-        await server.start()
-        assert(server.communities[contract.address])
-        assert(!server.communities[contract2.address])
+        assert.strictEqual(onError.callCount, 0, "should not have called error handler")
+
+        // create a second server
+        const server2 = new CommunityProductServer(wallet, storeDir, config, log, log)
+        server2.getChannelFor = () => new MockStreamrChannel("dummy-stream-id")
+        const onError2 = sinon.spy(server2, "error")
+        await server2.start()
+
+        assert(server2.communities[contract.address], "contract1 should be handled")
+        assert(!server2.communities[contract2.address], "contract2 should be ignored")
+        assert.strictEqual(onError2.callCount, 0, "should not have called error handler")
+        await server2.stop()
     })
 
     it("will not fail to start if there is an error playing back a community", async function () {
-        log("Starting CommunityProductServer...")
-        const storeDir = path.join(os.tmpdir(), `communitiesRouter-test1-${+new Date()}`)
-        const config = {
-            tokenAddress,
-            operatorAddress: wallet.address,
-        }
-        const server = new CommunityProductServer(wallet, storeDir, config, log, log)
-        sinon.stub(server, "getStoreFor").callsFake(() => mockStore(startState, initialBlock, log))
-        sinon.stub(server, "getChannelFor").callsFake(() => new MockStreamrChannel("dummy-stream-id"))
+        const onError = sinon.spy(server, "error")
 
         await server.start()
 
@@ -168,26 +212,27 @@ describe("CommunityProductServer", function () {
         log("Communities running")
 
         await server.stop()
-        await sleep(ganacheBlockIntervalSeconds * 1000)
+        await sleep(pollingIntervalSeconds * 1000)
+        assert.strictEqual(onError.callCount, 0, "should not have called error handler")
 
-        // force one community startup to fail when getting channel
-        server.getChannelFor.withArgs(contract.address).callsFake(async function () {
-            throw new Error("expected fail")
-        })
-        await assert.doesNotReject(() => server.start())
-        await server.stop()
+        // create a second server
+        //
+        const server2 = new CommunityProductServer(wallet, storeDir, config, log, log)
+        sinon.stub(server2, "getChannelFor")
+            .callsFake(() => new MockStreamrChannel("dummy-stream-id"))
+            // force one community startup to fail when getting channel
+            .withArgs(contract.address).callsFake(async function (add) {
+                throw new Error("expected fail " + add)
+            })
+
+        const onError2 = sinon.spy(server2, "error")
+        await assert.doesNotReject(() => server2.start())
+        await server2.stop()
+        assert.strictEqual(onError2.callCount, 1, "should have called error handler once")
     })
 
     it("will fail to start if there is an error playing back all communities", async function () {
-        const storeDir = path.join(os.tmpdir(), `communitiesRouter-test1-${+new Date()}`)
-        const config = {
-            tokenAddress,
-            operatorAddress: wallet.address,
-        }
-        const server = new CommunityProductServer(wallet, storeDir, config, log, log)
-        sinon.stub(server, "getStoreFor").callsFake(() => mockStore(startState, initialBlock, log))
-        sinon.stub(server, "getChannelFor").callsFake(() => new MockStreamrChannel("dummy-stream-id"))
-
+        const onError = sinon.spy(server, "error")
         await server.start()
 
         const contract = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
@@ -197,11 +242,14 @@ describe("CommunityProductServer", function () {
         log(`Deployed contract at ${contract2.address}`)
 
         await server.stop()
-        await sleep(ganacheBlockIntervalSeconds * 1000)
-
-        server.getChannelFor.callsFake(async function () {
+        await sleep(pollingIntervalSeconds * 1000)
+        assert.strictEqual(onError.callCount, 0, "should not have called error handler")
+        const server2 = new CommunityProductServer(wallet, storeDir, config, log, log)
+        const onError2 = sinon.spy(server2, "error")
+        sinon.stub(server2, "getChannelFor").callsFake(async function () {
             throw new Error("expected fail")
         })
-        await assert.rejects(() => server.start())
+        await assert.rejects(() => server2.start())
+        assert.strictEqual(onError2.callCount, 2, "should have called error handler twice")
     })
 })
