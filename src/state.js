@@ -286,11 +286,7 @@ module.exports = class MonoplasmaState {
         } else {
             const amountBN = new BN(amount)
             const adminFeeBN = amountBN.mul(this.adminFeeFraction).div(parseEther("1"))
-<<<<<<< HEAD
-            //console.log("received tokens amount: "+amountBN + " adminFee: "+adminFeeBN +" fraction * 10^18: "+this.adminFeeFraction)
-=======
             this.log("received tokens amount: " + amountBN + " adminFee: " + adminFeeBN + " fraction * 10^18: " + this.adminFeeFraction)
->>>>>>> master
             const share = amountBN.sub(adminFeeBN).div(activeCount)    // TODO: remainder to admin too, let's not waste them!
             this.adminMember.addRevenue(adminFeeBN)
             activeMembers.forEach(m => m.addRevenue(share))
