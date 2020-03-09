@@ -40,8 +40,8 @@
   "devDependencies": {
     "etherlime": "2.2.4",
     "eslint": "6.8.0",
-    "ganache-core": "2.9.2",
     "ganache-cli": "6.8.2",
+    "ganache-core": "2.10.2",
     "husky": "4.2.1",
     "mocha": "7.0.1",
     "node-fetch": "2.6.0",
