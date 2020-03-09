@@ -15,8 +15,7 @@
     "integration-tests": "mocha test/integration --exit",
     "system-tests": "mocha test/system/engine-and-editor-api.js --exit",
     "contract-tests": "npm run build-contracts && etherlime test --solcVersion=0.4.24 test/contracts",
-    "test": "npm run unit-tests && npm run integration-tests && npm run contract-tests",
-    "preinstall": "npx npm-force-resolutions || true # ignore failure"
+    "test": "npm run unit-tests && npm run integration-tests && npm run contract-tests"
   },
   "author": "Streamr Network AG",
   "license": "AGPL-3.0",
@@ -24,20 +23,14 @@
     "node": ">= 10.14.0",
     "npm": ">= 6.4.1"
   },
-  "resolutions": {
-    "scrypt.js": "0.3.0"
-  },
   "dependencies": {
     "@sentry/node": "5.11.2",
     "body-parser": "1.19.0",
     "cors": "2.8.5",
     "debug": "4.1.1",
     "dotenv": "8.2.0",
-    "etherlime": "2.2.4",
     "ethers": "4.0.43",
-    "exit-hook": "2.2.0",
     "express": "4.17.1",
-    "ganache-cli": "6.8.2",
     "monoplasma": "0.2.0",
     "morgan": "1.9.1",
     "mz": "2.7.0",
@@ -45,8 +38,10 @@
     "streamr-client": "3.1.3"
   },
   "devDependencies": {
+    "etherlime": "2.2.4",
     "eslint": "6.8.0",
     "ganache-core": "2.9.2",
+    "ganache-cli": "6.8.2",
     "husky": "4.2.1",
     "mocha": "7.0.1",
     "node-fetch": "2.6.0",

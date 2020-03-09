@@ -5,7 +5,6 @@ const express = require("express")
 const cors = require("cors")
 const bodyParser = require("body-parser")
 const morgan = require("morgan")
-const onProcessExit = require("exit-hook")
 
 const {
     Contract,
@@ -82,16 +81,6 @@ const error = (e, ...args) => {
 }
 
 const storeDir = fs.existsSync(STORE_DIR) ? STORE_DIR : __dirname + "/store"
-
-let ganache = null
-function stopGanache() {
-    if (ganache) {
-        log("Shutting down Ethereum simulator...")
-        ganache.shutdown()
-        ganache = null
-    }
-}
-onProcessExit(stopGanache)
 
 async function start() {
 
