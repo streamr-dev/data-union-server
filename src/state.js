@@ -5,6 +5,8 @@ const now = require("./utils/now")
 const { throwIfBadAddress } = require("./utils/checkArguments")
 const MerkleTree = require("./merkletree")
 
+const log = require("debug")("Streamr::CPS::MonoplasmaState")
+
 let ID = 0
 
 /**
