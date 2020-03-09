@@ -4,36 +4,36 @@ const sinon = require("sinon")
 
 describe("MonoplasmaMember", () => {
     it("should add revenue to initially undefined balance", () => {
-        const m = new MonoplasmaMember("tester1", "0xb3428050ea2448ed2e4409be47e1a50ebac0b2d2")
+        const m = new MonoplasmaMember("tester1", "0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2")
         m.addRevenue(100)
         assert.strictEqual(m.getEarningsAsInt(), 100)
     })
     it("should add revenue to initially defined balance", () => {
-        const m = new MonoplasmaMember("tester1", "0xb3428050ea2448ed2e4409be47e1a50ebac0b2d2", 100)
+        const m = new MonoplasmaMember("tester1", "0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2", 100)
         m.addRevenue(100)
         assert.strictEqual(m.getEarningsAsInt(), 200)
     })
     it("should initially be active", () => {
-        const m = new MonoplasmaMember("tester1", "0xb3428050ea2448ed2e4409be47e1a50ebac0b2d2")
+        const m = new MonoplasmaMember("tester1", "0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2")
         assert.strictEqual(m.isActive(), true)
     })
     it("should allow active to be specified", () => {
-        const m = new MonoplasmaMember("tester1", "0xb3428050ea2448ed2e4409be47e1a50ebac0b2d2", 100, false)
+        const m = new MonoplasmaMember("tester1", "0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2", 100, false)
         assert.strictEqual(m.isActive(), false, "should not be active")
     })
     it("should return correct object representation", () => {
         const m = new MonoplasmaMember("tester1", "b3428050ea2448ed2e4409be47e1a50ebac0b2d2", 100)
         const obj = {
             name: "tester1",
-            address: "0xb3428050ea2448ed2e4409be47e1a50ebac0b2d2",
+            address: "0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2",
             earnings: "100",
             active: true
         }
         assert.deepStrictEqual(m.toObject(), obj)
     })
     it("should return correct string data representation (to be hashed in the merkle tree)", () => {
-        const m = new MonoplasmaMember("tester1", "0xb3428050ea2448ed2e4409be47e1a50ebac0b2d2", 100)
-        const data = "0xb3428050ea2448ed2e4409be47e1a50ebac0b2d20000000000000000000000000000000000000000000000000000000000000064"
+        const m = new MonoplasmaMember("tester1", "0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2", 100)
+        const data = "0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d20000000000000000000000000000000000000000000000000000000000000064"
         assert.deepStrictEqual(m.toHashableString(), data)
     })
     it("should return empty proof if earnings is zero", async () => {

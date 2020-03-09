@@ -1,10 +1,13 @@
 const MonoplasmaMember = require("./member")
-const BN = require("bn.js")
-const toBN = require("number-to-bn")
-const {utils: { toWei }} = require("web3")
+const { utils: { parseEther, BigNumber: BN }} = require("ethers")
+
 const now = require("./utils/now")
 const { throwIfBadAddress } = require("./utils/checkArguments")
 const MerkleTree = require("./merkletree")
+
+const log = require("debug")("Streamr::CPS::MonoplasmaState")
+
+let ID = 0
 
 /**
  * Monoplasma state object
@@ -22,16 +25,19 @@ module.exports = class MonoplasmaState {
      * @param {Number} initialTimestamp after which the state is described by this object
      */
     constructor(blockFreezeSeconds, initialMembers, store, adminAddress, adminFeeFraction, initialBlockNumber = 0, initialTimestamp = 0) {
+        this.id = ID++
+        this.log = log.extend(this.id)
         throwIfBadAddress(adminAddress, "MonoplasmaState argument adminAddress")
         if (!Array.isArray(initialMembers)) {
             initialMembers = []
         }
+        this.log(`Create state with ${initialMembers.length} members.`)
         /** @property {fileStore} store persistence for published blocks */
         this.store = store
         /** @property {number} blockFreezeSeconds after which blocks become withdrawable */
         this.blockFreezeSeconds = blockFreezeSeconds
         /** @property {number} totalEarnings by all members together; should equal balanceOf(contract) + contract.totalWithdrawn */
-        this.totalEarnings = initialMembers.reduce((sum, m) => sum.iadd(new BN(m.earnings)), new BN(0))
+        this.totalEarnings = initialMembers.reduce((sum, m) => sum.add(m.earnings), new BN(0))
 
         /** @property {Array<Block>} latestBlocks that have been stored. Kept to figure out  */
         this.latestBlocks = []
@@ -69,6 +75,7 @@ module.exports = class MonoplasmaState {
     }
 
     clone(storeOverride) {
+        this.log("Clone state.")
         return new MonoplasmaState(
             this.blockFreezeSeconds,
             this.members,
@@ -253,17 +260,17 @@ module.exports = class MonoplasmaState {
     setAdminFeeFraction(adminFeeFraction) {
         // convert to BN
         if (typeof adminFeeFraction === "number") {
-            adminFeeFraction = toBN(toWei(adminFeeFraction.toString(10)))
+            adminFeeFraction = parseEther(adminFeeFraction.toString(10))
         } else if (typeof adminFeeFraction === "string" && adminFeeFraction.length > 0) {
-            adminFeeFraction = toBN(adminFeeFraction)
-        } else if (!adminFeeFraction || adminFeeFraction.constructor.name !== "BN") {
+            adminFeeFraction = new BN(adminFeeFraction)
+        } else if (!adminFeeFraction || adminFeeFraction.constructor !== BN) {
             throw new Error("setAdminFeeFraction: expecting a number, a string, or a bn.js bignumber, got " + JSON.stringify(adminFeeFraction))
         }
 
-        if (adminFeeFraction.ltn(0) || adminFeeFraction.gt(toBN(toWei("1")))) {
+        if (adminFeeFraction.lt(0) || adminFeeFraction.gt(parseEther("1"))) {
             throw Error("setAdminFeeFraction: adminFeeFraction must be between 0 and 1")
         }
-        //console.log(`Setting adminFeeFraction = ${adminFeeFraction}`)
+        this.log(`Setting adminFeeFraction = ${adminFeeFraction}`)
         this.adminFeeFraction = adminFeeFraction
     }
 
@@ -274,16 +281,16 @@ module.exports = class MonoplasmaState {
         const activeMembers = this.members.filter(m => m.isActive())
         const activeCount = activeMembers.length
         if (activeCount === 0) {
-            //console.warn(`No active members in community! Allocating ${amount} to admin account ${this.adminMember.address}`)
+            this.log(`No active members in community! Allocating ${amount} to admin account ${this.adminMember.address}`)
             this.adminMember.addRevenue(amount)
         } else {
             const amountBN = new BN(amount)
-            const adminFeeBN = amountBN.mul(this.adminFeeFraction).div(new BN(toWei("1", "ether")))
-            //console.log("received tokens amount: "+amountBN + " adminFee: "+adminFeeBN +" fraction * 10^18: "+this.adminFeeFraction)
-            const share = amountBN.sub(adminFeeBN).divn(activeCount)    // TODO: remainder to admin too, let's not waste them!
+            const adminFeeBN = amountBN.mul(this.adminFeeFraction).div(parseEther("1"))
+            this.log("received tokens amount: " + amountBN + " adminFee: " + adminFeeBN + " fraction * 10^18: " + this.adminFeeFraction)
+            const share = amountBN.sub(adminFeeBN).div(activeCount)    // TODO: remainder to admin too, let's not waste them!
             this.adminMember.addRevenue(adminFeeBN)
             activeMembers.forEach(m => m.addRevenue(share))
-            this.totalEarnings.iadd(amountBN)
+            this.totalEarnings = this.totalEarnings.add(amountBN)
         }
         this.tree.update(this.members)
     }
@@ -306,7 +313,12 @@ module.exports = class MonoplasmaState {
             if (!m) { throw new Error(`Bad index ${i}`) }   // TODO: remove in production; this means updating indexOf has been botched
             m.setActive(true)
         }
-        //console.log(`addMember ${i} ${address} ${name} ${isNewAddress}`)
+        this.log("addMember", {
+            i,
+            address,
+            name,
+            isNewAddress,
+        })
         // tree.update(members)     // no need for update since no revenue allocated
         return isNewAddress
     }
@@ -325,6 +337,11 @@ module.exports = class MonoplasmaState {
             wasActive = m.isActive()
             m.setActive(false)
         }
+        this.log("removeMember", {
+            i,
+            address,
+            wasActive,
+        })
         // tree.update(members)     // no need for update since no revenue allocated
         return wasActive
     }
@@ -341,6 +358,7 @@ module.exports = class MonoplasmaState {
      * @returns {Array<IncomingMember|string>} members that were actually added
      */
     addMembers(members) {
+        this.log("addMembers", members.length)
         const added = []
         members.forEach(member => {
             const m = typeof member === "string" ? { address: member } : member
@@ -356,6 +374,7 @@ module.exports = class MonoplasmaState {
      * @returns {Array<string>} addresses of members that were actually removed
      */
     removeMembers(addresses) {
+        this.log("removeMembers", addresses.length)
         const removed = []
         addresses.forEach(address => {
             const wasActive = this.removeMember(address)

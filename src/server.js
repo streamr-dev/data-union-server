@@ -44,9 +44,12 @@ module.exports = class CommunityProductServer {
         this.communityIsRunningPromises = {}
         //this.whitelist = whitelist    // TODO
         //this.blacklist = blacklist
+        this.startCalled = false
     }
 
     async start() {
+        if (this.startCalled) { throw new Error("Cannot re-start stopped server.") }
+        this.startCalled = true // guard against starting multiple times
         await this.playbackPastOperatorChangedEvents()
 
         this.eth.on({ topics: [operatorChangedEventTopic] }, log => {
@@ -77,6 +80,8 @@ module.exports = class CommunityProductServer {
             toBlock: "latest",
             topics: [operatorChangedEventTopic, hexZeroPad(this.wallet.address, 32).toLowerCase()]
         }
+
+        // TODO: remove communities that have been switched away, so not to (start and) stop operators during playback
 
         const logs = await this.eth.getLogs(filter)
 
@@ -122,35 +127,45 @@ module.exports = class CommunityProductServer {
      */
     async onOperatorChangedEventAt(address) {
         const contract = new Contract(address, CommunityProductJson.abi, this.eth)
+        // create the promise to prevent later (duplicate) creation
+        const isRunningPromise = this.communityIsRunning(address)
+        const status = this.communityIsRunningPromises[address]
+        const { communities } = this
+        const community = communities[address]
         const newOperatorAddress = getAddress(await contract.operator())
         const weShouldOperate = newOperatorAddress === this.wallet.address
-        const community = this.communities[address]
         if (!community) {
             if (weShouldOperate) {
                 // rapid event spam stopper (from one contract)
-                this.communities[address] = {
+                communities[address] = {
                     state: "launching",
                     eventDetectedAt: Date.now(),
                 }
 
-                // create the promise to prevent later (duplicate) creation
-                const isRunningPromise = this.communityIsRunning(address)
+                let result
+                let error
                 try {
-                    const result = await this.startOperating(address)
-                    this.communityIsRunningPromises[address].setRunning(result)
-                } catch (error) {
-                    this.communities[address] = {
-                        state: "failed",
-                        error,
-                        eventDetectedAt: this.communities[address].eventDetectedAt,
-                        failedAt: Date.now(),
-                    }
-                    this.communityIsRunningPromises[address].setFailed(error)
+                    result = await this.startOperating(address)
+                } catch (err) {
+                    error = err
                 }
-                // forward community start success/failure
-                return isRunningPromise
+
+                if (error) {
+                    if (communities[address]) {
+                        communities[address] = {
+                            state: "failed",
+                            error,
+                            eventDetectedAt: communities[address].eventDetectedAt,
+                            failedAt: Date.now(),
+                        }
+                    }
+                    status.setFailed(error)
+                } else {
+                    status.setRunning(result)
+                }
             } else {
                 this.log(`Detected a community for operator ${newOperatorAddress}, ignoring.`)
+                status.setRunning() // I guess?
             }
         } else {
             if (!community.operator || !community.operator.contract) {
@@ -165,9 +180,12 @@ module.exports = class CommunityProductServer {
             }
 
             // operator was changed, we can stop running the operator process
+            // TODO: make sure the operator was in fact started first
             await community.operator.shutdown()
-            delete this.communities[address]
+            delete communities[address]
         }
+        // forward community start success/failure
+        return isRunningPromise
     }
 
     /**
@@ -227,6 +245,7 @@ module.exports = class CommunityProductServer {
 
         const operatorAddress = getAddress(await contract.operator())
         if (operatorAddress !== this.wallet.address) {
+            // TODO: reconsider throwing here, since no way to *atomically* check operator before starting
             throw new Error(`startOperating: Community requesting operator ${operatorAddress}, not a job for me (${this.wallet.address})`)
         }
 
