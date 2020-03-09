@@ -6,12 +6,16 @@
 // TODO: following should also be a more modern drop-in replacement:
 //const createKeccakHash = require("keccak")
 
-const { utils: ethersUtils } = require("ethers")
-const BN = require("bn.js")
+const {
+    utils: {
+        keccak256,
+        BigNumber,
+    },
+} = require("ethers")
 
 const sleep = require("../utils/sleep-promise")
 
-const { keccak256 } = ethersUtils
+const ZERO = Buffer.alloc(32)
 
 /**
  * @param data to hash; a {String} or a {Buffer}
@@ -24,6 +28,13 @@ function hash(data) {
     return Buffer.from(keccak256(data).slice(2), "hex")
 }
 
+/** Pad numbers to 32 bytes, like abi.encodePacked in Solidity does (see BalanceVerifier.sol) */
+function padTo32bytes(bigNumber) {
+    const str = new BigNumber(bigNumber).toHexString().slice(2)
+    const padded = "0".repeat(64 - str.length) + str
+    return padded
+}
+
 /**
  * Hash a merkle tree leaf
  * Corresponding code in BalanceVerifier.sol:
@@ -32,16 +43,15 @@ function hash(data) {
  * @param {Number} blockNumber
  */
 function hashLeaf(member, blockNumber) {    // eslint-disable-line no-unused-vars
-    const data = blockNumber + member.address + new BN(member.earnings).toString(16, 64)
+    const data = "0x" + padTo32bytes(blockNumber) + member.address.slice(2) + padTo32bytes(member.earnings)
     return hash(data)
 }
 
 /**
  * Hash intermediate branch nodes together
- * Corresponding code in BalanceVerifier.sol:
- *     root = keccak256(abi.encodePacked(root, other));
- * @param {Buffer} data1
- * @param {Buffer} data2
+ * @param {Buffer} data1 left branch
+ * @param {Buffer} data2 right branch
+ * @returns {Buffer} keccak256 hash
  */
 function hashCombined(data1, data2) {
     if (typeof data1 === "string") {
@@ -50,7 +60,10 @@ function hashCombined(data1, data2) {
     if (typeof data2 === "string") {
         data2 = Buffer.from(data2.startsWith("0x") ? data2.slice(2) : data2, "hex")
     }
-    return hash(Buffer.concat([data1, data2]))
+    const combined = data1.compare(data2) === -1 ?
+        Buffer.concat([data1, data2]) :
+        Buffer.concat([data2, data1])
+    return hash(combined)
 }
 
 const MAX_POW_2 = Math.pow(2, 32)
@@ -79,7 +92,7 @@ function roundUpToPowerOfTwo(x) {
  */
 // TODO: --omg-optimisation: tree contents could be one big Buffer too! Hash digests are constant 32 bytes in length.
 //          Currently the tree contents is Array<MonoplasmaMember>
-async function buildMerkleTree(leafContents) {
+async function buildMerkleTree(leafContents, salt) {
     const leafCount = leafContents.length + (leafContents.length % 2)   // room for zero next to odd leaf
     const branchCount = roundUpToPowerOfTwo(leafCount)
     const treeSize = branchCount + leafCount
@@ -89,13 +102,10 @@ async function buildMerkleTree(leafContents) {
 
     // leaf hashes: hash(blockNumber + address + balance)
     let i = branchCount
-    leafContents.forEach(m => {
-        indexOf[m.address] = i
-        // TODO: move toHashableString back to this file, into a function hashLeaf
-        // TODO: add relevant blockNumber everywhere (used for salt)
-        hashes[i++] = hashLeaf(m, "")
+    leafContents.forEach(member => {
+        indexOf[member.address] = i
+        hashes[i++] = hashLeaf(member, salt) // eslint-disable-line no-plusplus
     })
-
 
     // Branch hashes: start from leaves, populate branches with hash(hash of left + right child)
     // Iterate start...end each level in tree, that is, indices 2^(n-1)...2^n
@@ -112,7 +122,7 @@ async function buildMerkleTree(leafContents) {
                 hashes[targetI] = hash1     // no need to hash since no new information was added
                 break
             } else {
-                hashes[targetI] = (hash1.compare(hash2) === -1) ? hashCombined(hash1, hash2) : hashCombined(hash2, hash1)
+                hashes[targetI] = hashCombined(hash1, hash2)
             }
             sourceI += 2
             targetI += 1
@@ -124,17 +134,19 @@ async function buildMerkleTree(leafContents) {
 }
 
 class MerkleTree {
-    constructor(initialContents) {
-        this.update(initialContents || [])
+    constructor(initialContents = [], initialSalt = 0) {
+        this.update(initialContents, initialSalt)
     }
 
     /**
      * Lazy update, the merkle tree is recalculated only when info is asked from it
-     * @param newContents
+     * @param newContents list of MonoplasmaMembers
+     * @param {String | Number} newSalt a number or hex string, e.g. blockNumber
      */
-    update(newContents) {
+    update(newContents, newSalt) {
         this.isDirty = true
         this.contents = newContents
+        this.salt = newSalt
     }
 
     async getContents() {
@@ -143,7 +155,7 @@ class MerkleTree {
         }
         if (this.isDirty) {
             // TODO: sort, to enforce determinism?
-            this.cached = await buildMerkleTree(this.contents)
+            this.cached = await buildMerkleTree(this.contents, this.salt)
             this.isDirty = false
         }
         return this.cached
@@ -156,10 +168,6 @@ class MerkleTree {
     /**
      * Construct a "Merkle path", that is list of "other" hashes along the way from leaf to root
      * This will be sent to the root chain contract as a proof of balance
-     * TODO: --omg-optimisation: the path could be compacted for paths containing odd nodes
-     *        main benefit from that would be shorter proofs (no need to send 32-byte 0x0's)
-     *        second benefit: no need to check for 0x0 in smart contract
-     *        drawback: the reported index would not be "real" index (bad for debugging maybe)
      * @param address of the balance that the path is supposed to verify
      * @returns {Array} of bytes32 hashes ["0x123...", "0xabc..."]
      */
@@ -171,7 +179,10 @@ class MerkleTree {
         }
         const path = []
         for (let i = index; i > 1; i >>= 1) {
-            path.push(hashes[i ^ 1])  // the other sibling
+            const otherSibling = hashes[i ^ 1]
+            if (!otherSibling.equals(ZERO)) {
+                path.push(otherSibling)
+            }
         }
         return path.map(buffer => `0x${buffer.toString("hex")}`)
     }
@@ -183,7 +194,7 @@ class MerkleTree {
 }
 
 MerkleTree.hash = hash
-MerkleTree.hashCombined = hashCombined
 MerkleTree.hashLeaf = hashLeaf
+MerkleTree.hashCombined = hashCombined
 
 module.exports = MerkleTree

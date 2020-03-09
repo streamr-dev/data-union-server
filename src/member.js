@@ -47,14 +47,6 @@ module.exports = class MonoplasmaMember {
         return new MonoplasmaMember(obj.name, obj.address, obj.earnings, obj.active)
     }
 
-    /** Produces a hashable string representation in hex form (starts with "0x") */
-    // TODO: move to merkletree.js:hashLeaf
-    toHashableString() {
-        const earningsString = this.earnings.toHexString().slice(2)
-        const earningsPadded = "0".repeat(64 - earningsString.length) + earningsString
-        return this.address + earningsPadded
-    }
-
     async getProof(tree) {
         return this.earnings.gt(new BN(0)) ? await tree.getPath(this.address) : []
     }

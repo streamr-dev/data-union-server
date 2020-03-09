@@ -31,11 +31,6 @@ describe("MonoplasmaMember", () => {
         }
         assert.deepStrictEqual(m.toObject(), obj)
     })
-    it("should return correct string data representation (to be hashed in the merkle tree)", () => {
-        const m = new MonoplasmaMember("tester1", "0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2", 100)
-        const data = "0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d20000000000000000000000000000000000000000000000000000000000000064"
-        assert.deepStrictEqual(m.toHashableString(), data)
-    })
     it("should return empty proof if earnings is zero", async () => {
         const m = new MonoplasmaMember("tester1", "0xb3428050ea2448ed2e4409be47e1a50ebac0b2d2")
         assert.deepStrictEqual(await m.getProof(), [])
