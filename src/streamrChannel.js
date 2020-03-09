@@ -108,7 +108,9 @@ module.exports = class StreamrChannel extends EventEmitter {
         }
 
         log(`Starting playback of ${this.stream.id}`)
-        const playbackSub = await this.client.resend({
+
+        const queue = []
+        const sub = this.client.subscribe({
             stream: this.stream.id,
             resend: {
                 from: {
@@ -116,22 +118,17 @@ module.exports = class StreamrChannel extends EventEmitter {
                     sequenceNumber: 0,
                 },
             },
-        }, emitMessage)
-
-        const queue = []
-        this.client.subscribe({
-            stream: this.stream.id
         }, (msg, meta) => {
             const len = queue.push({msg, meta})
             log(`Got message ${JSON.stringify(msg)}, queue length = ${len}}`)
         })
 
-        playbackSub.on("error", this.emit.bind(this, "error"))
+        sub.on("error", this.emit.bind(this, "error"))
 
         await new Promise((done, fail) => {
-            playbackSub.on("error", fail)
-            playbackSub.on("resent", done)
-            playbackSub.on("no_resend", done)
+            sub.on("error", fail)
+            sub.on("resent", done)
+            sub.on("no_resend", done)
             setTimeout(fail, playbackTimeoutMs)
         })
         log(`Playback of ${this.stream.id} done`)

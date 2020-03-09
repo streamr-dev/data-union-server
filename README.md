@@ -1,6 +1,6 @@
-# Streamr community products server
+# Streamr Data Union server
 
-[![Build Status](https://travis-ci.com/streamr-dev/streamr-community-products.svg?token=9unddqKugX2cPcyhtVxp&branch=master)](https://travis-ci.com/streamr-dev/streamr-community-products)
+[![Build Status](https://travis-ci.com/streamr-dev/data-union-server.svg?token=9unddqKugX2cPcyhtVxp&branch=master)](https://travis-ci.com/streamr-dev/data-union-server)
 
 # Running
 

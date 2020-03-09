@@ -5,6 +5,8 @@ const now = require("./utils/now")
 const { throwIfBadAddress } = require("./utils/checkArguments")
 const MerkleTree = require("./merkletree")
 
+let ID = 0
+
 /**
  * Monoplasma state object
  *
@@ -21,10 +23,13 @@ module.exports = class MonoplasmaState {
      * @param {Number} initialTimestamp after which the state is described by this object
      */
     constructor(blockFreezeSeconds, initialMembers, store, adminAddress, adminFeeFraction, initialBlockNumber = 0, initialTimestamp = 0) {
+        this.id = ID++
+        this.log = log.extend(this.id)
         throwIfBadAddress(adminAddress, "MonoplasmaState argument adminAddress")
         if (!Array.isArray(initialMembers)) {
             initialMembers = []
         }
+        this.log(`Create state with ${initialMembers.length} members.`)
         /** @property {fileStore} store persistence for published blocks */
         this.store = store
         /** @property {number} blockFreezeSeconds after which blocks become withdrawable */
@@ -68,6 +73,7 @@ module.exports = class MonoplasmaState {
     }
 
     clone(storeOverride) {
+        this.log("Clone state.")
         return new MonoplasmaState(
             this.blockFreezeSeconds,
             this.members,
@@ -264,7 +270,7 @@ module.exports = class MonoplasmaState {
         if (adminFeeFraction.lt(0) || adminFeeFraction.gt(parseEther("1"))) {
             throw Error("setAdminFeeFraction: adminFeeFraction must be between 0 and 1")
         }
-        //console.log(`Setting adminFeeFraction = ${adminFeeFraction}`)
+        this.log(`Setting adminFeeFraction = ${adminFeeFraction}`)
         this.adminFeeFraction = adminFeeFraction
     }
 
@@ -275,12 +281,16 @@ module.exports = class MonoplasmaState {
         const activeMembers = this.members.filter(m => m.isActive())
         const activeCount = activeMembers.length
         if (activeCount === 0) {
-            //console.warn(`No active members in community! Allocating ${amount} to admin account ${this.adminMember.address}`)
+            this.log(`No active members in community! Allocating ${amount} to admin account ${this.adminMember.address}`)
             this.adminMember.addRevenue(amount)
         } else {
             const amountBN = new BN(amount)
             const adminFeeBN = amountBN.mul(this.adminFeeFraction).div(parseEther("1"))
+<<<<<<< HEAD
             //console.log("received tokens amount: "+amountBN + " adminFee: "+adminFeeBN +" fraction * 10^18: "+this.adminFeeFraction)
+=======
+            this.log("received tokens amount: " + amountBN + " adminFee: " + adminFeeBN + " fraction * 10^18: " + this.adminFeeFraction)
+>>>>>>> master
             const share = amountBN.sub(adminFeeBN).div(activeCount)    // TODO: remainder to admin too, let's not waste them!
             this.adminMember.addRevenue(adminFeeBN)
             activeMembers.forEach(m => m.addRevenue(share))
@@ -307,7 +317,12 @@ module.exports = class MonoplasmaState {
             if (!m) { throw new Error(`Bad index ${i}`) }   // TODO: remove in production; this means updating indexOf has been botched
             m.setActive(true)
         }
-        //console.log(`addMember ${i} ${address} ${name} ${isNewAddress}`)
+        this.log("addMember", {
+            i,
+            address,
+            name,
+            isNewAddress,
+        })
         // tree.update(members)     // no need for update since no revenue allocated
         return isNewAddress
     }
@@ -326,6 +341,11 @@ module.exports = class MonoplasmaState {
             wasActive = m.isActive()
             m.setActive(false)
         }
+        this.log("removeMember", {
+            i,
+            address,
+            wasActive,
+        })
         // tree.update(members)     // no need for update since no revenue allocated
         return wasActive
     }
@@ -342,6 +362,7 @@ module.exports = class MonoplasmaState {
      * @returns {Array<IncomingMember|string>} members that were actually added
      */
     addMembers(members) {
+        this.log("addMembers", members.length)
         const added = []
         members.forEach(member => {
             const m = typeof member === "string" ? { address: member } : member
@@ -357,6 +378,7 @@ module.exports = class MonoplasmaState {
      * @returns {Array<string>} addresses of members that were actually removed
      */
     removeMembers(addresses) {
+        this.log("removeMembers", addresses.length)
         const removed = []
         addresses.forEach(address => {
             const wasActive = this.removeMember(address)

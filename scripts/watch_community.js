@@ -82,6 +82,9 @@ async function start() {
     app.use(bodyParser.json({limit: "50mb"}))
     app.use("/api", getMemberRouter(watcher.plasma.getMemberApi()))
     app.get("/config", (req, res) => { res.send(config) })
+
+    // TODO: these probably should not be part of "public HTTP server" of Data Unions
+    app.get("/timestamps", (req, res) => { res.send(watcher.blockTimestampCache) })
     //app.use("/analytics", analysisRouter())
 
     app.listen(port, () => log(`Web server started at ${serverURL}`))
