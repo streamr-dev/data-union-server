@@ -107,7 +107,7 @@ module.exports = class MonoplasmaState {
     }
 
     getTotalRevenue() {
-        return this.totalEarnings.toString(10)
+        return this.totalEarnings.toString()
     }
 
     getLatestBlock() {
@@ -260,7 +260,7 @@ module.exports = class MonoplasmaState {
     setAdminFeeFraction(adminFeeFraction) {
         // convert to BN
         if (typeof adminFeeFraction === "number") {
-            adminFeeFraction = parseEther(adminFeeFraction.toString(10))
+            adminFeeFraction = parseEther(adminFeeFraction.toString())
         } else if (typeof adminFeeFraction === "string" && adminFeeFraction.length > 0) {
             adminFeeFraction = new BN(adminFeeFraction)
         } else if (!adminFeeFraction || adminFeeFraction.constructor !== BN) {
@@ -396,7 +396,7 @@ module.exports = class MonoplasmaState {
             storeTimestamp: now(),
             totalEarnings: this.getTotalRevenue(),
             owner: this.adminAddress,
-            adminFeeFractionWeiString: this.adminFeeFraction.toString(10),
+            adminFeeFractionWeiString: this.adminFeeFraction.toString(),
         }
         this.latestBlocks.unshift(latestBlock)  // = insert to beginning
         await this.store.saveBlock(latestBlock)

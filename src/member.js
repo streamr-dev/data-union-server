@@ -26,7 +26,7 @@ module.exports = class MonoplasmaMember {
     toObject() {
         const obj = {
             address: this.address,
-            earnings: this.earnings.toString(10),
+            earnings: this.earnings.toString(),
             active: !!this.active
         }
         if (this.name) {
