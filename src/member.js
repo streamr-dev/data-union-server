@@ -8,14 +8,6 @@ module.exports = class MonoplasmaMember {
         this.active = !!active
     }
 
-    getEarningsAsString() {
-        return this.earnings.toString(10)
-    }
-
-    getEarningsAsInt() {
-        return this.earnings.toNumber()
-    }
-
     addRevenue(amount) {
         this.earnings = this.earnings.add(new BN(amount))
     }
@@ -45,9 +37,5 @@ module.exports = class MonoplasmaMember {
 
     static fromObject(obj) {
         return new MonoplasmaMember(obj.name, obj.address, obj.earnings, obj.active)
-    }
-
-    async getProof(tree) {
-        return this.earnings.gt(new BN(0)) ? await tree.getPath(this.address) : []
     }
 }

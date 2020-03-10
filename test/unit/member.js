@@ -1,17 +1,16 @@
 const MonoplasmaMember = require("../../src/member")
 const assert = require("assert")
-const sinon = require("sinon")
 
 describe("MonoplasmaMember", () => {
     it("should add revenue to initially undefined balance", () => {
         const m = new MonoplasmaMember("tester1", "0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2")
         m.addRevenue(100)
-        assert.strictEqual(m.getEarningsAsInt(), 100)
+        assert.strictEqual(m.earnings.toString(), "100")
     })
     it("should add revenue to initially defined balance", () => {
         const m = new MonoplasmaMember("tester1", "0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2", 100)
         m.addRevenue(100)
-        assert.strictEqual(m.getEarningsAsInt(), 200)
+        assert.strictEqual(m.earnings.toString(), "200")
     })
     it("should initially be active", () => {
         const m = new MonoplasmaMember("tester1", "0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2")
@@ -30,24 +29,6 @@ describe("MonoplasmaMember", () => {
             active: true
         }
         assert.deepStrictEqual(m.toObject(), obj)
-    })
-    it("should return empty proof if earnings is zero", async () => {
-        const m = new MonoplasmaMember("tester1", "0xb3428050ea2448ed2e4409be47e1a50ebac0b2d2")
-        assert.deepStrictEqual(await m.getProof(), [])
-    })
-    it("should return proof", async () => {
-        const m = new MonoplasmaMember("tester1", "0xb3428050ea2448ed2e4409be47e1a50ebac0b2d2", 100)
-        const tree = {}
-        const proof = ["0x30b397c3eb0e07b7f1b8b39420c49f60c455a1a602f1a91486656870e3f8f74c"]
-        tree.getPath = sinon.stub().resolves(proof)
-        assert.deepStrictEqual(await m.getProof(tree), proof)
-    })
-    it("should return proof", async () => {
-        const m = new MonoplasmaMember("tester1", "0xb3428050ea2448ed2e4409be47e1a50ebac0b2d2", 100)
-        const tree = {}
-        const proof = ["0x30b397c3eb0e07b7f1b8b39420c49f60c455a1a602f1a91486656870e3f8f74c"]
-        tree.getPath = sinon.stub().resolves(proof)
-        assert.deepStrictEqual(await m.getProof(tree), proof)
     })
     it("should throw when invalid address", () => {
         assert.throws(() => new MonoplasmaMember("tester1", "0xbe47e1ac0b2d2"))
