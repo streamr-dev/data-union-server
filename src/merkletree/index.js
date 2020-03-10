@@ -102,16 +102,19 @@ class RPCWorker {
      * @param {Array<MonoplasmaMember>} treeContents
      * @return {Promise<MerkleTree>} tree data
      */
-    async buildTree(treeContents) {
+    async buildTree(treeContents, salt) {
         const result = await this.sendAction({
             type: BUILD_TREE,
-            payload: treeContents.map((m) => (
-                // convert Member instances to member Objects
-                // support both as when members are read from disk
-                // block.members are just JSON, no point converting
-                // to instances just to convert them back to Objects
-                m.toObject ? m.toObject() : m
-            )),
+            payload: {
+                salt,
+                tree: treeContents.map((m) => (
+                    // convert Member instances to member Objects
+                    // support both as when members are read from disk
+                    // block.members are just JSON, no point converting
+                    // to instances just to convert them back to Objects
+                    m.toObject ? m.toObject() : m
+                )),
+            },
         })
         if (result.type === SUCCESS) {
             return deserialiseTree(result.payload)
@@ -159,17 +162,17 @@ module.exports = class MerkleTreeWorkerWrapper extends MerkleTree {
         this.buildTree = limitDuplicateAsyncWork(this.buildTree)
     }
 
-    async buildTree(contents) {
+    async buildTree(contents, salt) {
         // this method should be wrapped with limitDuplicateAsyncWork
         // to prevent recalculating duplicate trees
 
         // just calculate small trees in-process
         if (contents.length < 100) {
-            return new MerkleTree(contents).getContents()
+            return new MerkleTree(contents, salt).getContents()
         }
 
         // farm out larger tree calculations to worker process
-        return new RPCWorker().buildTree(contents)
+        return new RPCWorker().buildTree(contents, salt)
     }
 
     async getContents() {
@@ -178,15 +181,15 @@ module.exports = class MerkleTreeWorkerWrapper extends MerkleTree {
         }
 
         if (this.isDirty) {
-            const { contents } = this
+            const { contents, salt } = this
 
 
             // TODO: sort, to enforce determinism?
-            const cached = await this.buildTree(contents)
+            const cached = await this.buildTree(contents, salt)
 
             // check for subsequent updates during build
             // only update state if no change
-            if (this.contents === contents) {
+            if (this.contents === contents && this.salt === salt) {
                 this.cached = cached
                 this.isDirty = false
             }

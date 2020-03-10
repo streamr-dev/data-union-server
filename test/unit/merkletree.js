@@ -37,7 +37,7 @@ describe("Merkle tree", () => {
     it("is constructed correctly for 3 items", async () => {
         const tree = new MerkleTree(testSmall(3), 1234)
         const { hashes } = await tree.getContents()
-        const hashList = hashes.map(buf => (typeof buf === "object" ? buf.toString("hex") : buf))
+        const hashList = hashes.map(buf => (typeof buf === "object" ? `0x${buf.toString("hex")}` : buf))
         assert.deepStrictEqual(hashList, [4,  // "branchCount", i.e. the index where leaf hashes start
             "0x88a894579dc1ac11242da55444d92e406ff2686556630c81162a27965157deac",     //     root
             "0xe9d23210548554e271f8ff4a5208cf5233bb56d6e7294c78fcad5ecc42e096bd",   //  left
@@ -58,7 +58,7 @@ describe("Merkle tree", () => {
     it("is constructed correctly for 5 items", async () => {
         const tree = new MerkleTree(testSmall(5), 3456)
         const { hashes } = await tree.getContents()
-        const hashList = hashes.map(buf => (typeof buf === "object" ? buf.toString("hex") : buf))
+        const hashList = hashes.map(buf => (typeof buf === "object" ? `0x${buf.toString("hex")}` : buf))
         assert.deepStrictEqual(hashList, [8,  // "branchCount", i.e. the index where leaf hashes start
             "0x1b6cd614f4f2c86ccc82cd3c8df23c794790e22cf8e56f3255611950a681efe3",             //       root
             "0xa4eb1454b3e945355a5a23d1562f21c54367f9a315ff2793c530b5c1f9bec559",         //     left
@@ -91,7 +91,7 @@ describe("Merkle tree", () => {
     it("is constructed correctly for 1 item", async () => {
         const tree = new MerkleTree(testSmall(1), 5678)
         const { hashes } = await tree.getContents()
-        const hashList = hashes.map(buf => (typeof buf === "object" ? buf.toString("hex") : buf))
+        const hashList = hashes.map(buf => (typeof buf === "object" ? `0x${buf.toString("hex")}` : buf))
         assert.deepStrictEqual(hashList, [2,
             "0x0152b424402445bb5c05369975e54ce015caf6142f50f740a8a740182e93da87",
             "0x0152b424402445bb5c05369975e54ce015caf6142f50f740a8a740182e93da87",
@@ -99,17 +99,15 @@ describe("Merkle tree", () => {
         ])
     })
 
-    it("fails for 0 items", done => {
+    it("fails for 0 items", async () => {
         const tree = new MerkleTree(testSmall(0), 123)
-        tree.getContents()
-            .then(done(new Error("Should have errored!")))
-            .catch(done)
+        await assert.rejects(() => tree.getContents())
     })
 
     it("gives a correct path for 5 items", async () => {
         const members = testSmall(5)
         const tree = new MerkleTree(members, 4321)
-        const paths = Promise.all(members.map(m => tree.getPath(m.address)))
+        const paths = await Promise.all(members.map(m => tree.getPath(m.address)))
         const root = await tree.getRootHash()
         assert.deepStrictEqual(paths, [
             [
@@ -139,13 +137,13 @@ describe("Merkle tree", () => {
 
         const memberHash = hashLeaf(e, tree.salt)
         const hashed = calculateRootHash(memberHash, paths[4])
-        assert.strictEqual(root, `0x${hashed.toString("hex")}`)
+        assert.strictEqual(root, hashed)
     })
 
     it("gives a correct path for 100 items", async () => {
         const members = testLarge(100)
         const tree = new MerkleTree(members, 2020)
-        const path = await tree.getPath("0x50428050ea2448ed2e4409be47e1a50ebac0b2d2")
+        const path = await tree.getPath(members[50].address)
         const root = await tree.getRootHash()
         assert.deepStrictEqual(path, [
             "0xb8c4babc1431a10d6935da7d76278e433a58b9c70304bcb365e7de7fa3f2e6ff",
@@ -157,17 +155,79 @@ describe("Merkle tree", () => {
             "0x583e976f703c0c398f95f8eed803c6dece9153a76d4d22a18f2c3fc8669cc973"
         ])
 
-        const memberHash = hashLeaf(members.find(m => m.address === "0x50428050ea2448ed2e4409be47e1a50ebac0b2d2"), tree.salt)
+        const memberHash = hashLeaf(members[50], tree.salt)
         const hashed = calculateRootHash(memberHash, path)
-        assert.strictEqual(root, `0x${hashed.toString("hex")}`)
+        assert.strictEqual(root, hashed)
     })
 
-    it("includes", () => {
-        const members = testLarge(100)
-        const tree = new MerkleTree(members, 6453)
-        for (let i = 0; i < 100; i++) {
-            const a = buildValidAddress(i)
-            assert(tree.includes(a), "Member not found")
-        }
+    describe("includes", () => {
+        it("is true when member is in tree", () => {
+            const members = testLarge(100)
+            const tree = new MerkleTree(members, 6453)
+            members.forEach(m => {
+                assert(tree.includes(m.address), `Member ${m.address} should be found`)
+            })
+        })
+
+        it("is false when member is not in tree", () => {
+            const members = testSmall(10)
+            const tree = new MerkleTree(members, 6453)
+            members.forEach(m => {
+                assert(!tree.includes(m.address + "a"), `Member ${m.address + "a"} should be found`)
+            })
+        })
+    })
+
+    describe("performance", function () {
+        this.timeout(10000)
+        it("does not block while calculating large tree", async () => {
+            const members = testLarge(10000)
+
+            // ticks in a loop
+            // returns a function that cancels next tick and returns count
+            function tick(n = 0) {
+                let end
+                const t = setTimeout(() => {
+                    end = tick(n + 1)
+                })
+
+                return () => {
+                    clearTimeout(t)
+                    if (end) {
+                        return end()
+                    }
+                    return n
+                }
+            }
+
+            for (const m of members.slice(0, 1)) {
+                const stopTick = tick()
+                const tree = new MerkleTree(members, 125)
+                await tree.getPath(m.address).then(() => {
+                    const count = stopTick()
+                    const expectedCount = 50 // roughly?
+                    assert(count > expectedCount, `Should have ticked more while getting path. Expected: ${expectedCount},  Actual: ${count}`)
+                })
+            }
+        })
+
+        it("takes a similar duration to getPath for 1 member as it does for n members simultaneously", async () => {
+            // checks we don't try start new processes while initial task is in progress
+            const members = testLarge(10000)
+            // measure duration of getPath for a single member
+            const start1 = Date.now()
+            await new MerkleTree(members, 123).getPath(members[0].address)
+            const singleDuration = Date.now() - start1
+
+            const start2 = Date.now()
+            const tree2 = new MerkleTree(members, 123) // new tree so not cached
+            // getPath for n members simultaneously on uncached tree
+            await Promise.all(members.slice(0, 10).map((m) => (
+                tree2.getPath(m.address)
+            )))
+            const simultaneousDuration = Date.now() - start2
+            // duration for n should be less than time to get 2 paths
+            assert(simultaneousDuration < (singleDuration * 2))
+        })
     })
 })

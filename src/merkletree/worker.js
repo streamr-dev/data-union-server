@@ -33,14 +33,7 @@ function serialiseTree(tree) {
 }
 
 function deserialiseTree(tree) {
-    return Object.assign({}, tree, {
-        hashes: [
-            tree.hashes[0],
-            ...tree.hashes.slice(1).map((h) => (
-                h && Buffer.from(h, "hex")
-            ))
-        ]
-    })
+    return tree
 }
 
 let nextMessageId = 0
@@ -70,7 +63,7 @@ function onMessage({ type, payload }) {
 
     log("started")
 
-    buildTree(payload).then((tree) => {
+    buildTree(payload.tree, payload.salt).then((tree) => {
         process.send({
             type: SUCCESS,
             payload: serialiseTree(tree),
@@ -80,8 +73,8 @@ function onMessage({ type, payload }) {
     })
 }
 
-async function buildTree(contents) {
-    const tree = new MerkleTree(contents)
+async function buildTree(contents, salt) {
+    const tree = new MerkleTree(contents, salt)
     return tree.getContents()
 }
 

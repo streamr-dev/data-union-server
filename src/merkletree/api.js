@@ -1,10 +1,6 @@
 /* eslint-disable no-bitwise */
 
-const {
-    utils: {
-        solidityKeccak256,
-    }
-} = require("ethers")
+const { utils: { solidityKeccak256, } } = require("ethers")
 
 const sleep = require("../utils/sleep-promise")
 
@@ -145,7 +141,7 @@ class MerkleTree {
         }
         const path = []
         for (let i = index; i > 1; i >>= 1) {
-            const otherSibling = hashes[i ^ 1]
+            let otherSibling = hashes[i ^ 1]
             if (otherSibling !== ZERO) {
                 path.push(otherSibling)
             }
