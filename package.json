@@ -16,16 +16,13 @@
     "system-tests": "mocha test/system/engine-and-editor-api.js --exit",
     "contract-tests": "npm run build-contracts && etherlime test --solcVersion=0.4.24 test/contracts",
     "test": "npm run unit-tests && npm run integration-tests && npm run contract-tests",
-    "preinstall": "npx npm-force-resolutions || true # ignore failure"
+    "preinstall": "node scripts/fix_package_lock.js || true"
   },
   "author": "Streamr Network AG",
   "license": "AGPL-3.0",
   "engines": {
     "node": ">= 10.14.0",
     "npm": ">= 6.4.1"
-  },
-  "resolutions": {
-    "scrypt.js": "0.3.0"
   },
   "dependencies": {
     "@sentry/node": "5.11.2",
