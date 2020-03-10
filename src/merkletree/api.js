@@ -1,6 +1,6 @@
 /* eslint-disable no-bitwise */
 
-const { utils: { solidityKeccak256, } } = require("ethers")
+const { utils: { solidityKeccak256 } } = require("ethers")
 
 const sleep = require("../utils/sleep-promise")
 

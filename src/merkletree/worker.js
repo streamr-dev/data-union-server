@@ -24,12 +24,7 @@ if (isChild) {
 
 
 function serialiseTree(tree) {
-    return Object.assign({}, tree, {
-        hashes: [
-            tree.hashes[0],
-            ...tree.hashes.slice(1).map((h) => h.toString("hex"))
-        ]
-    })
+    return tree
 }
 
 function deserialiseTree(tree) {

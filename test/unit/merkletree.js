@@ -37,7 +37,7 @@ describe("Merkle tree", () => {
     it("is constructed correctly for 3 items", async () => {
         const tree = new MerkleTree(testSmall(3), 1234)
         const { hashes } = await tree.getContents()
-        const hashList = hashes.map(buf => (typeof buf === "object" ? `0x${buf.toString("hex")}` : buf))
+        const hashList = hashes
         assert.deepStrictEqual(hashList, [4,  // "branchCount", i.e. the index where leaf hashes start
             "0x88a894579dc1ac11242da55444d92e406ff2686556630c81162a27965157deac",     //     root
             "0xe9d23210548554e271f8ff4a5208cf5233bb56d6e7294c78fcad5ecc42e096bd",   //  left
@@ -47,18 +47,18 @@ describe("Merkle tree", () => {
             "0x814b26e10015a87381c08291f2b16577c101d87fc66157ed237b88f67257c76a", //              C
             "0x0000000000000000000000000000000000000000000000000000000000000000"  //                 (missing)
         ])
-        assert.strictEqual(hashList[4], hashLeaf(a, tree.salt).toString("hex"))
-        assert.strictEqual(hashList[5], hashLeaf(b, tree.salt).toString("hex"))
-        assert.strictEqual(hashList[6], hashLeaf(c, tree.salt).toString("hex"))
-        assert.strictEqual(hashList[3], hashList[6].toString("hex"))
-        assert.strictEqual(hashList[2], hashCombined(hashList[4], hashList[5]).toString("hex"))
-        assert.strictEqual(hashList[1], hashCombined(hashList[2], hashList[3]).toString("hex"))
+        assert.strictEqual(hashList[4], hashLeaf(a, tree.salt))
+        assert.strictEqual(hashList[5], hashLeaf(b, tree.salt))
+        assert.strictEqual(hashList[6], hashLeaf(c, tree.salt))
+        assert.strictEqual(hashList[3], hashList[6])
+        assert.strictEqual(hashList[2], hashCombined(hashList[4], hashList[5]))
+        assert.strictEqual(hashList[1], hashCombined(hashList[2], hashList[3]))
     })
 
     it("is constructed correctly for 5 items", async () => {
         const tree = new MerkleTree(testSmall(5), 3456)
         const { hashes } = await tree.getContents()
-        const hashList = hashes.map(buf => (typeof buf === "object" ? `0x${buf.toString("hex")}` : buf))
+        const hashList = hashes
         assert.deepStrictEqual(hashList, [8,  // "branchCount", i.e. the index where leaf hashes start
             "0x1b6cd614f4f2c86ccc82cd3c8df23c794790e22cf8e56f3255611950a681efe3",             //       root
             "0xa4eb1454b3e945355a5a23d1562f21c54367f9a315ff2793c530b5c1f9bec559",         //     left
@@ -75,23 +75,23 @@ describe("Merkle tree", () => {
             "0x0000000000000000000000000000000000000000000000000000000000000000", //                   (missing)
         ])
 
-        assert.strictEqual(hashList[8], hashLeaf(a, tree.salt).toString("hex"))
-        assert.strictEqual(hashList[9], hashLeaf(b, tree.salt).toString("hex"))
-        assert.strictEqual(hashList[10], hashLeaf(c, tree.salt).toString("hex"))
-        assert.strictEqual(hashList[11], hashLeaf(d, tree.salt).toString("hex"))
-        assert.strictEqual(hashList[12], hashLeaf(e, tree.salt).toString("hex"))
-        assert.strictEqual(hashList[1], hashCombined(hashList[2],  hashList[3]).toString("hex"))
-        assert.strictEqual(hashList[2], hashCombined(hashList[4],  hashList[5]).toString("hex"))
+        assert.strictEqual(hashList[8], hashLeaf(a, tree.salt))
+        assert.strictEqual(hashList[9], hashLeaf(b, tree.salt))
+        assert.strictEqual(hashList[10], hashLeaf(c, tree.salt))
+        assert.strictEqual(hashList[11], hashLeaf(d, tree.salt))
+        assert.strictEqual(hashList[12], hashLeaf(e, tree.salt))
+        assert.strictEqual(hashList[1], hashCombined(hashList[2],  hashList[3]))
+        assert.strictEqual(hashList[2], hashCombined(hashList[4],  hashList[5]))
         assert.strictEqual(hashList[3], hashList[6])    // odd needs no hashing
-        assert.strictEqual(hashList[4], hashCombined(hashList[8],  hashList[9]).toString("hex"))
-        assert.strictEqual(hashList[5], hashCombined(hashList[10], hashList[11]).toString("hex"))
+        assert.strictEqual(hashList[4], hashCombined(hashList[8],  hashList[9]))
+        assert.strictEqual(hashList[5], hashCombined(hashList[10], hashList[11]))
         assert.strictEqual(hashList[6], hashList[12])    // odd needs no hashing
     })
 
     it("is constructed correctly for 1 item", async () => {
         const tree = new MerkleTree(testSmall(1), 5678)
         const { hashes } = await tree.getContents()
-        const hashList = hashes.map(buf => (typeof buf === "object" ? `0x${buf.toString("hex")}` : buf))
+        const hashList = hashes
         assert.deepStrictEqual(hashList, [2,
             "0x0152b424402445bb5c05369975e54ce015caf6142f50f740a8a740182e93da87",
             "0x0152b424402445bb5c05369975e54ce015caf6142f50f740a8a740182e93da87",
