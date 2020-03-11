@@ -18,7 +18,7 @@ const deployCommunity = require("../../src/utils/deployCommunity")
 
 const CommunityJson = require("../../build/CommunityProduct")
 
-const { streamrWs, streamrHttp, streamrNodeAddress } = require("./CONFIG")
+const { streamrWs, streamrHttp, streamrNodeAddress } = require("../integration/CONFIG")
 
 const STORE_DIR = __dirname + `/test-store-${+new Date()}`
 const GANACHE_PORT = 8549
