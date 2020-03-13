@@ -201,7 +201,7 @@ module.exports = class MonoplasmaState {
             }
 
             const block = await this.getBlock(blockNumber)
-            const tree = new MerkleTree(block.members)
+            const tree = new MerkleTree(block.members, blockNumber)
             cached = {
                 blockNumber,
                 tree,
@@ -292,7 +292,8 @@ module.exports = class MonoplasmaState {
             activeMembers.forEach(m => m.addRevenue(share))
             this.totalEarnings = this.totalEarnings.add(amountBN)
         }
-        this.tree.update(this.members)
+        const latestBlock = this.getLatestBlock()
+        this.tree.update(this.members, latestBlock ? latestBlock.blockNumber : this.currentBlock)
     }
 
     /**

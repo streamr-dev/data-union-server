@@ -59,9 +59,35 @@ describe("MonoplasmaState", () => {
         // add same members to two states with different initial block numbers
         const plasma1 = new MonoplasmaState(0, initialMembers, fileStore, admin, 0, 0)
         const plasma2 = new MonoplasmaState(0, initialMembers, fileStore, admin, 0, 1)
+
+        const { address } = plasma1.members[10] // random member
         // proofs should be different
-        const member1Proof = await plasma1.getProof(plasma1.members[10].address)
-        const member2Proof = await plasma2.getProof(plasma2.members[10].address)
+        const member1Proof = await plasma1.getProof(address)
+        const member2Proof = await plasma2.getProof(address)
+        assert(member1Proof, "should have proof")
+        assert(member2Proof, "should have proof")
+        assert.notDeepEqual(member1Proof, member2Proof, "should make different proofs")
+    })
+
+    it("should produce different proofs for different block numbers", async () => {
+        const initialMembers = []
+        while (initialMembers.length < 100) {
+            initialMembers.push({
+                address: `0x${crypto.randomBytes(20).toString("hex")}`,
+                earnings: 100,
+            })
+        }
+        // add same members to two states with same initial block numbers
+        // but saved at different block numbers
+        const plasma1 = new MonoplasmaState(0, initialMembers, fileStore, admin, 0, 0)
+        await plasma1.storeBlock(3, now())
+        const plasma2 = new MonoplasmaState(0, initialMembers, fileStore, admin, 0, 0)
+        await plasma2.storeBlock(4, now())
+        const { address } = plasma1.members[10]
+        // proofs should be different
+        // TODO: getProof should also be different but it not
+        const member1Proof = await plasma1.getProofAt(address, 3)
+        const member2Proof = await plasma2.getProofAt(address, 4)
         assert(member1Proof, "should have proof")
         assert(member2Proof, "should have proof")
         assert.notDeepEqual(member1Proof, member2Proof, "should make different proofs")
