@@ -85,12 +85,17 @@ describe("MonoplasmaState", () => {
         await plasma2.storeBlock(4, now())
         const { address } = plasma1.members[10]
         // proofs should be different
-        // TODO: getProof should also be different but it not
-        const member1Proof = await plasma1.getProofAt(address, 3)
-        const member2Proof = await plasma2.getProofAt(address, 4)
+        const member1ProofAt = await plasma1.getProofAt(address, 3)
+        const member2ProofAt = await plasma2.getProofAt(address, 4)
+        assert(member1ProofAt, "should have proof")
+        assert(member2ProofAt, "should have proof")
+        assert.notDeepEqual(member1ProofAt, member2ProofAt, "should make different proofs")
+        const member1Proof = await plasma1.getProof(address)
+        const member2Proof = await plasma2.getProof(address)
         assert(member1Proof, "should have proof")
         assert(member2Proof, "should have proof")
-        assert.notDeepEqual(member1Proof, member2Proof, "should make different proofs")
+        // TODO: getProof should also be different but it not
+        // assert.notDeepEqual(member1Proof, member2Proof, "should make different proofs")
     })
 
     it("produces consistent results with getProof/getMember getProofAt/getMemberAt", async () => {
