@@ -120,6 +120,17 @@ describe("MonoplasmaState", () => {
         // assert.deepEqual(memberProof, memberProofAt, "getProofAt/getProof should have same proof")
     })
 
+    it("should not be able to get member proof if no revenue added", async () => {
+        const plasma = new MonoplasmaState(0, [], fileStore, admin, 0)
+        plasma.addMember("0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2", "tester1")
+        plasma.addRevenue(100)
+        plasma.addMember("0xE5019d79c3Fc34c811E68e68c9Bd9966F22370eF", "tester2")
+        const member1 = await plasma.getMember("0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2")
+        const member2 = await plasma.getMember("0xE5019d79c3Fc34c811E68e68c9Bd9966F22370eF")
+        assert(member1.proof, "should have proof")
+        assert(member2.proof == null, "should not have proof if no revenue")
+    })
+
     it("should distribute earnings correctly", () => {
         const initialMembers = []
         while (initialMembers.length < 100) {

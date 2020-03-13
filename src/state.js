@@ -307,8 +307,8 @@ module.exports = class MonoplasmaState {
         const isNewAddress = i === undefined
         if (isNewAddress) {
             const m = new MonoplasmaMember(name, address)
-            const newI = this.members.push(m) - 1
-            this.indexOf[address] = newI
+            this.members = this.members.concat(m)
+            this.indexOf[address] = this.members.length - 1
         } else {
             const m = this.members[i]
             if (!m) { throw new Error(`Bad index ${i}`) }   // TODO: remove in production; this means updating indexOf has been botched
@@ -333,10 +333,13 @@ module.exports = class MonoplasmaState {
         let wasActive = false
         const i = this.indexOf[address]
         if (i !== undefined) {
-            const m = this.members[i]
+            let m = this.members[i]
             if (!m) { throw new Error(`Bad index ${i}`) }   // TODO: remove in production; this means updating indexOf has been botched
+            m = m.clone()
             wasActive = m.isActive()
             m.setActive(false)
+            this.members = this.members.slice()
+            this.members[i] = m
         }
         this.log("removeMember", {
             i,

@@ -35,6 +35,10 @@ module.exports = class MonoplasmaMember {
         return obj
     }
 
+    clone() {
+        return this.constructor.fromObject(this.toObject())
+    }
+
     static fromObject(obj) {
         return new MonoplasmaMember(obj.name, obj.address, obj.earnings, obj.active)
     }
