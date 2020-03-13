@@ -8,14 +8,6 @@ module.exports = class MonoplasmaMember {
         this.active = !!active
     }
 
-    getEarningsAsString() {
-        return this.earnings.toString(10)
-    }
-
-    getEarningsAsInt() {
-        return this.earnings.toNumber()
-    }
-
     addRevenue(amount) {
         this.earnings = this.earnings.add(new BN(amount))
     }
@@ -34,7 +26,7 @@ module.exports = class MonoplasmaMember {
     toObject() {
         const obj = {
             address: this.address,
-            earnings: this.earnings.toString(10),
+            earnings: this.earnings.toString(),
             active: !!this.active
         }
         if (this.name) {
@@ -45,17 +37,5 @@ module.exports = class MonoplasmaMember {
 
     static fromObject(obj) {
         return new MonoplasmaMember(obj.name, obj.address, obj.earnings, obj.active)
-    }
-
-    /** Produces a hashable string representation in hex form (starts with "0x") */
-    // TODO: move to merkletree.js:hashLeaf
-    toHashableString() {
-        const earningsString = this.earnings.toHexString().slice(2)
-        const earningsPadded = "0".repeat(64 - earningsString.length) + earningsString
-        return this.address + earningsPadded
-    }
-
-    getProof(tree) {
-        return this.earnings.gt(new BN(0)) ? tree.getPath(this.address) : []
     }
 }

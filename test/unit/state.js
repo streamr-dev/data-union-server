@@ -4,7 +4,7 @@ const assert = require("assert")
 const crypto = require("crypto")
 const { utils: { getAddress, BigNumber }} = require("ethers")
 
-const now = require("monoplasma/src/utils/now")
+const now = require("../../src/utils/now")
 const MonoplasmaState = require("../../src/state")
 
 // this is a unit test, but still it's better to use the "real" file store and not mock it,
@@ -49,7 +49,7 @@ describe("MonoplasmaState", () => {
     })
 
     it("should not crash with large number of members", function () {
-        this.timeout(60000)
+        this.timeout(20000)
         const initialMembers = []
         while (initialMembers.length < 200000) {
             initialMembers.push({
@@ -141,7 +141,7 @@ describe("MonoplasmaState", () => {
         assert.strictEqual("50", m.earnings)
         assert.strictEqual("100", (await plasma.getMemberAt("0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2", 5)).earnings)
         assert.strictEqual("200", (await plasma.getMemberAt("0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2", 7)).earnings)
-        assert.strictEqual("250", (plasma.getMember("0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2")).earnings)
+        assert.strictEqual("250", (await plasma.getMember("0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2")).earnings)
     })
     /* TODO: fix this test; it's ok to wait until monoplasma 0.2 lands, because it will again jumble the proof literals
     it("should remember past blocks' proofs", async () => {
@@ -159,7 +159,7 @@ describe("MonoplasmaState", () => {
         assert.deepStrictEqual(await plasma.getProofAt("0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2", 10), ["0x8620ab3c4df51cebd7ae1cd533c8824220db518d2a143e603e608eab62b169f7", "0x30b397c3eb0e07b7f1b8b39420c49f60c455a1a602f1a91486656870e3f8f74c"])
         assert.deepStrictEqual(await plasma.getProofAt("0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2", 12), ["0x8620ab3c4df51cebd7ae1cd533c8824220db518d2a143e603e608eab62b169f7", "0x1c3d277e4a94f6fc647ae9ffc2176165d8b90bf954f64fa536b6beedb34301a3"])
         assert.deepStrictEqual(await plasma.getProofAt("0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2", 15), ["0x8620ab3c4df51cebd7ae1cd533c8824220db518d2a143e603e608eab62b169f7", "0xce54ad18b934665680ccc22f7db77ede2144519d5178736111611e745085dec6"])
-        assert.deepStrictEqual(plasma.getProof("0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2"), ["0x8620ab3c4df51cebd7ae1cd533c8824220db518d2a143e603e608eab62b169f7", "0x91360deed2f511a8503790083c6de21efbb1006b460d5024863ead9de5448927"])
+        assert.deepStrictEqual(await plasma.getProof("0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2"), ["0x8620ab3c4df51cebd7ae1cd533c8824220db518d2a143e603e608eab62b169f7", "0x91360deed2f511a8503790083c6de21efbb1006b460d5024863ead9de5448927"])
     })
     */
     // The idea of this test is to make sure the merkletrees are cached between getProofAt queries
@@ -195,13 +195,13 @@ describe("MonoplasmaState", () => {
     it("should give revenue to adminAccount if no members present", async () => {
         const plasma = new MonoplasmaState(0, [], fileStore, "0x1234567890123456789012345678901234567890", 0)
         plasma.addRevenue(100)
-        assert.strictEqual(plasma.getMember("0x1234567890123456789012345678901234567890").earnings, "100")
+        assert.strictEqual((await plasma.getMember("0x1234567890123456789012345678901234567890")).earnings, "100")
     })
     it("should give no revenue to adminAccount if members present", async () => {
         const plasma = new MonoplasmaState(0, [], fileStore, "0x1234567890123456789012345678901234567890", 0)
         plasma.addMember("0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2", "tester1")
         plasma.addRevenue(100)
-        assert.strictEqual(plasma.getMember("0x1234567890123456789012345678901234567890").earnings, "0")
+        assert.strictEqual((await plasma.getMember("0x1234567890123456789012345678901234567890")).earnings, "0")
     })
 
     describe("changing the admin fee", () => {
@@ -255,16 +255,16 @@ describe("MonoplasmaState", () => {
                 active: true
             }])
             /* TODO: fix this test; it's ok to wait until monoplasma 0.2 lands, because it will again jumble the proof literals
-            assert.deepStrictEqual(plasma.getMember("0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2"), {
+            assert.deepStrictEqual(await plasma.getMember("0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2"), {
                 name: "tester1",
                 address: "0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2",
                 earnings: "50",
                 proof: ["0x8620ab3c4df51cebd7ae1cd533c8824220db518d2a143e603e608eab62b169f7", "0x30b397c3eb0e07b7f1b8b39420c49f60c455a1a602f1a91486656870e3f8f74c"],
                 active: true,
             })
-            assert.strictEqual(plasma.getRootHash(), "0xe259a647fd9c91d31a98daa8185e28181d20ea0aeb9253718b10fcb074794582")
+            assert.strictEqual(await plasma.getRootHash(), "0xe259a647fd9c91d31a98daa8185e28181d20ea0aeb9253718b10fcb074794582")
             assert.deepStrictEqual(
-                plasma.getProof("0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2"),
+                await plasma.getProof("0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2"),
                 ["0x8620ab3c4df51cebd7ae1cd533c8824220db518d2a143e603e608eab62b169f7", "0x30b397c3eb0e07b7f1b8b39420c49f60c455a1a602f1a91486656870e3f8f74c"],
             )
             */

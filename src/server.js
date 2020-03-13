@@ -81,6 +81,8 @@ module.exports = class CommunityProductServer {
             topics: [operatorChangedEventTopic, hexZeroPad(this.wallet.address, 32).toLowerCase()]
         }
 
+        // TODO: remove communities that have been switched away, so not to (start and) stop operators during playback
+
         const logs = await this.eth.getLogs(filter)
 
         // get unique addresses
@@ -178,6 +180,7 @@ module.exports = class CommunityProductServer {
             }
 
             // operator was changed, we can stop running the operator process
+            // TODO: make sure the operator was in fact started first
             await community.operator.shutdown()
             delete communities[address]
         }
