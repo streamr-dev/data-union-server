@@ -48,6 +48,25 @@ describe("MonoplasmaState", () => {
         ])
     })
 
+    it("should produce different proofs for different initial block numbers", async () => {
+        const initialMembers = []
+        while (initialMembers.length < 100) {
+            initialMembers.push({
+                address: `0x${crypto.randomBytes(20).toString("hex")}`,
+                earnings: 100,
+            })
+        }
+        // add same members to two states with different initial block numbers
+        const plasma1 = new MonoplasmaState(0, initialMembers, fileStore, admin, 0, 0)
+        const plasma2 = new MonoplasmaState(0, initialMembers, fileStore, admin, 0, 1)
+        // proofs should be different
+        const member1Proof = await plasma1.getProof(plasma1.members[10].address)
+        const member2Proof = await plasma2.getProof(plasma2.members[10].address)
+        assert(member1Proof, "should have proof")
+        assert(member2Proof, "should have proof")
+        assert.notDeepEqual(member1Proof, member2Proof, "should make different proofs")
+    })
+
     it("should distribute earnings correctly", () => {
         const initialMembers = []
         while (initialMembers.length < 100) {

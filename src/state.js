@@ -55,7 +55,7 @@ module.exports = class MonoplasmaState {
         /** @property {Array<MonoplasmaMember>} members */
         this.members = initialMembers.map(m => new MonoplasmaMember(m.name, m.address, m.earnings, m.active))
         /** @property {MerkleTree} tree The MerkleTree for calculating the hashes */
-        this.tree = new MerkleTree()
+        this.tree = new MerkleTree(this.members, this.currentBlock)
         /** @property {string}  adminAddress the owner address who receives the admin fee and the default payee if no memebers */
         this.adminAddress = adminAddress
         /** @property {BN}  adminFeeFraction fraction of revenue that goes to admin */
