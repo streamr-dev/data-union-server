@@ -93,6 +93,28 @@ describe("MonoplasmaState", () => {
         assert.notDeepEqual(member1Proof, member2Proof, "should make different proofs")
     })
 
+    it("produces consistent results with getProof/getMember getProofAt/getMemberAt", async () => {
+        const initialMembers = []
+        while (initialMembers.length < 100) {
+            initialMembers.push({
+                address: `0x${crypto.randomBytes(20).toString("hex")}`,
+                earnings: 100,
+            })
+        }
+        const plasma = new MonoplasmaState(0, initialMembers, fileStore, admin, 0, 0)
+        await plasma.storeBlock(3, now())
+        const { address } = plasma.members[10]
+        const memberProofAt = await plasma.getProofAt(address, 3)
+        const memberAt = await plasma.getMemberAt(address, 3)
+        assert.deepEqual(memberProofAt, memberAt.proof, "getMemberAt/getProofAt should have same proof")
+
+        const member = await plasma.getMember(address)
+        const memberProof = await plasma.getProof(address)
+        assert.deepEqual(memberProof, member.proof, "getMember/getProof should have same proof")
+        // TODO: proofs here should be same, but not because block number not updated in tree
+        // assert.deepEqual(memberProof, memberProofAt, "getProofAt/getProof should have same proof")
+    })
+
     it("should distribute earnings correctly", () => {
         const initialMembers = []
         while (initialMembers.length < 100) {

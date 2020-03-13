@@ -171,7 +171,7 @@ module.exports = class MonoplasmaState {
         if (!member) {
             throw new Error(`Member ${address} not found in block ${blockNumber}`)
         }
-        const tree = new MerkleTree(block.members)
+        const tree = new MerkleTree(block.members, blockNumber)
         member.proof = await tree.getPath(address)
         return member
     }
