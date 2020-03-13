@@ -48,19 +48,6 @@ describe("MonoplasmaState", () => {
         ])
     })
 
-    it("should not crash with large number of members", function () {
-        this.timeout(20000)
-        const initialMembers = []
-        while (initialMembers.length < 200000) {
-            initialMembers.push({
-                address: getAddress(`0x${crypto.randomBytes(20).toString("hex")}`),
-                earnings: 0,
-            })
-        }
-        const plasma = new MonoplasmaState(0, initialMembers, fileStore, admin, 0)
-        plasma.addRevenue(100)
-    })
-
     it("should distribute earnings correctly", () => {
         const initialMembers = []
         while (initialMembers.length < 100) {
@@ -162,35 +149,6 @@ describe("MonoplasmaState", () => {
         assert.deepStrictEqual(await plasma.getProof("0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2"), ["0x8620ab3c4df51cebd7ae1cd533c8824220db518d2a143e603e608eab62b169f7", "0x91360deed2f511a8503790083c6de21efbb1006b460d5024863ead9de5448927"])
     })
     */
-    // The idea of this test is to make sure the merkletrees are cached between getProofAt queries
-    //   so that the tree isn't recalculated every time
-    it("should perform fine with LOTS of queries of recent past blocks' proofs", async () => {
-        const initialMembers = []
-        while (initialMembers.length < 1000) {
-            initialMembers.push({
-                address: getAddress(`0x${crypto.randomBytes(20).toString("hex")}`),
-                earnings: 0,
-            })
-        }
-        const plasma = new MonoplasmaState(0, initialMembers, fileStore, admin, 0)
-        plasma.addRevenue(100)
-        await plasma.storeBlock(100, now())
-        plasma.addRevenue(100)
-        await plasma.storeBlock(101, now())
-        plasma.addRevenue(100)
-        plasma.addRevenue(100)
-        await plasma.storeBlock(102, now())
-        plasma.addRevenue(100)
-
-        const startTime = Date.now()
-        for (let i = 0; i < 1000; i++) {
-            const bnum = 100 + i % 3
-            const { address } = initialMembers[(50 * i) % initialMembers.length]
-            await plasma.getProofAt(address, bnum)
-            const timeTaken = Date.now() - startTime
-            assert(timeTaken < 5000, "too slow!")
-        }
-    })
 
     it("should give revenue to adminAccount if no members present", async () => {
         const plasma = new MonoplasmaState(0, [], fileStore, "0x1234567890123456789012345678901234567890", 0)
@@ -274,6 +232,52 @@ describe("MonoplasmaState", () => {
             assert.strictEqual(plasma.removeMember, undefined)
             assert.strictEqual(plasma.addRevenue, undefined)
             assert.strictEqual(plasma.getMemberApi, undefined)
+        })
+    })
+
+    describe("performance", () => {
+        it("should not crash with large number of members", function () {
+            this.timeout(20000)
+            const initialMembers = []
+            while (initialMembers.length < 200000) {
+                initialMembers.push({
+                    address: getAddress(`0x${crypto.randomBytes(20).toString("hex")}`),
+                    earnings: 0,
+                })
+            }
+            const plasma = new MonoplasmaState(0, initialMembers, fileStore, admin, 0)
+            plasma.addRevenue(100)
+        })
+
+
+        // The idea of this test is to make sure the merkletrees are cached between getProofAt queries
+        //   so that the tree isn't recalculated every time
+        it("should perform fine with LOTS of queries of recent past blocks' proofs", async () => {
+            const initialMembers = []
+            while (initialMembers.length < 1000) {
+                initialMembers.push({
+                    address: getAddress(`0x${crypto.randomBytes(20).toString("hex")}`),
+                    earnings: 0,
+                })
+            }
+            const plasma = new MonoplasmaState(0, initialMembers, fileStore, admin, 0)
+            plasma.addRevenue(100)
+            await plasma.storeBlock(100, now())
+            plasma.addRevenue(100)
+            await plasma.storeBlock(101, now())
+            plasma.addRevenue(100)
+            plasma.addRevenue(100)
+            await plasma.storeBlock(102, now())
+            plasma.addRevenue(100)
+
+            const startTime = Date.now()
+            for (let i = 0; i < 1000; i++) {
+                const bnum = 100 + i % 3
+                const { address } = initialMembers[(50 * i) % initialMembers.length]
+                await plasma.getProofAt(address, bnum)
+                const timeTaken = Date.now() - startTime
+                assert(timeTaken < 5000, "too slow!")
+            }
         })
     })
 })
