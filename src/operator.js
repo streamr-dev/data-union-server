@@ -40,15 +40,15 @@ module.exports = class MonoplasmaOperator {
                 this.lastSavedBlock = block
             }
         }
-        this.finalPlasma = new MonoplasmaState(
-            0,
-            this.watcher.plasma.members,
-            finalPlasmaStore,
-            this.watcher.plasma.adminAddress,
-            this.watcher.plasma.adminFeeFraction,
-            this.watcher.plasma.currentBlock,
-            this.watcher.plasma.currentTimestamp
-        )
+        this.finalPlasma = new MonoplasmaState({
+            blockFreezeSeconds: 0,
+            initialMembers: this.watcher.plasma.members,
+            store: finalPlasmaStore,
+            adminAddress: this.watcher.plasma.adminAddress,
+            adminFeeFraction: this.watcher.plasma.adminFeeFraction,
+            initialBlockNumber: this.watcher.plasma.currentBlock,
+            initialTimestamp: this.watcher.plasma.currentTimestamp
+        })
 
         const self = this
         this.watcher.on("tokensReceived", async event => self.onTokensReceived(event).catch(self.error))

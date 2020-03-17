@@ -26,11 +26,19 @@ module.exports = class MonoplasmaValidator {
         this.contract = new Contract(config.contractAddress, MonoplasmaJson.abi, this.wallet)
         await this.watcher.start(config)
 
-        this.validatedPlasma = new MonoplasmaState(0, [], {
-            saveBlock: async block => {
-                this.lastSavedBlock = block
-            }
-        }, this.watcher.plasma.adminAddress, this.watcher.plasma.adminFeeFraction, this.watcher.plasma.currentBlock, this.watcher.plasma.currentTimestamp)
+        this.validatedPlasma = new MonoplasmaState({
+            blockFreezeSeconds: 0,
+            initialMembers: [],
+            store: {
+                saveBlock: async block => {
+                    this.lastSavedBlock = block
+                },
+            },
+            adminAddress: this.watcher.plasma.adminAddress,
+            adminFeeFraction: this.watcher.plasma.adminFeeFraction,
+            initialBlockNumber: this.watcher.plasma.currentBlock,
+            initialTimestamp: this.watcher.plasma.currentTimestamp,
+        })
 
         const self = this
         this.log("Starting validator's BlockCreated listener")

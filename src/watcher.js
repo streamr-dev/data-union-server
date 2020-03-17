@@ -146,7 +146,15 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         }
         this.log(`Syncing Monoplasma state starting from block ${lastBlock.blockNumber} (t=${lastBlock.timestamp}) with ${lastBlock.members.length} members`)
         const playbackStartingTimestampMs = lastBlock.timestamp || lastBlock.blockNumber && await this.getBlockTimestamp(lastBlock.blockNumber) || 0
-        this.plasma = new MonoplasmaState(this.state.blockFreezeSeconds, lastBlock.members, this.store, this.state.adminAddress, this.state.adminFee, lastBlock.blockNumber, playbackStartingTimestampMs / 1000)
+        this.plasma = new MonoplasmaState({
+            blockFreezeSeconds: this.state.blockFreezeSeconds,
+            initialMembers: lastBlock.members,
+            store: this.store,
+            adminAddress: this.state.adminAddress,
+            adminFeeFraction: this.state.adminFee,
+            initialBlockNumber: lastBlock.blockNumber,
+            initialTimestamp: playbackStartingTimestampMs / 1000,
+        })
 
         this.log(`Getting joins/parts from the Channel starting from t=${playbackStartingTimestampMs}, ${new Date(playbackStartingTimestampMs).toISOString()}`)
 
@@ -226,15 +234,15 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
      * @param {MonoplasmaState} monoplasmaState original to be copied
      */
     setState(monoplasmaState) {
-        this.plasma = new MonoplasmaState(
-            this.state.blockFreezeSeconds,
-            monoplasmaState.members,
-            this.store,
-            this.state.adminAddress,
-            this.state.adminFee,
-            monoplasmaState.blockNumber,
-            monoplasmaState.timestamp
-        )
+        this.plasma = new MonoplasmaState({
+            blockFreezeSeconds: this.state.blockFreezeSeconds,
+            initialMembers: monoplasmaState.members,
+            store: this.store,
+            adminAddress: this.state.adminAddress,
+            adminFeeFraction: this.state.adminFee,
+            initialBlockNumber: monoplasmaState.blockNumber,
+            initialTimestamp: monoplasmaState.timestamp,
+        })
     }
 
     /**

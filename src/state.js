@@ -24,7 +24,15 @@ module.exports = class MonoplasmaState {
      * @param {Number} initialBlockNumber after which the state is described by this object
      * @param {Number} initialTimestamp after which the state is described by this object
      */
-    constructor(blockFreezeSeconds, initialMembers, store, adminAddress, adminFeeFraction, initialBlockNumber = 0, initialTimestamp = 0) {
+    constructor({
+        blockFreezeSeconds,
+        initialMembers,
+        store,
+        adminAddress,
+        adminFeeFraction,
+        initialBlockNumber = 0,
+        initialTimestamp = 0
+    }) {
         this.id = ID++
         this.log = log.extend(this.id)
         throwIfBadAddress(adminAddress, "MonoplasmaState argument adminAddress")
@@ -74,13 +82,15 @@ module.exports = class MonoplasmaState {
 
     clone(storeOverride) {
         this.log("Clone state.")
-        return new MonoplasmaState(
-            this.blockFreezeSeconds,
-            this.members,
-            storeOverride || this.store,
-            this.adminAddress,
-            this.adminFeeFraction,
-        )
+        return new MonoplasmaState({
+            blockFreezeSeconds: this.blockFreezeSeconds,
+            initialMembers: this.members,
+            store: storeOverride || this.store,
+            adminAddress: this.adminAddress,
+            adminFeeFraction: this.adminFeeFraction,
+            initialBlockNumber: this.currentBlock,
+            currentTimestamp: this.currentTimestamp
+        })
     }
 
     // ///////////////////////////////////
