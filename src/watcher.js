@@ -121,7 +121,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
 
         // TODO: next time a new event is added, DRY this (there's like 6 repetitions of listened events)
         this.adminFeeFilter = this.contract.filters.AdminFeeChanged()
-        this.blockCreateFilter = this.contract.filters.BlockCreated()
+        this.blockCreateFilter = this.contract.filters.NewCommit()
         this.tokenTransferFilter = this.token.filters.Transfer(null, this.contract.address)
 
         // let lastPublishedBlockNumber = this.state.lastPublishedBlock && this.state.lastPublishedBlock.blockNumber

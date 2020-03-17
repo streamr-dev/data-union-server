@@ -21,7 +21,7 @@ async function replayEvent(plasma, event) {
             plasma.addRevenue(revenueBN)
         } break
         // event BlockCreated(uint blockNumber, bytes32 rootHash, string ipfsHash);
-        case "BlockCreated": {
+        case "NewCommit": {
             const blockNumber = +event.args.blockNumber
             log(`Storing block ${blockNumber}`)
             await plasma.storeBlock(blockNumber)
