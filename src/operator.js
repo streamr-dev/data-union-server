@@ -45,7 +45,7 @@ module.exports = class MonoplasmaOperator {
             this.watcher.plasma.members,
             finalPlasmaStore,
             this.watcher.plasma.adminAddress,
-            this.watcher.plasma.adminFee,
+            this.watcher.plasma.adminFeeFraction,
             this.watcher.plasma.currentBlock,
             this.watcher.plasma.currentTimestamp
         )

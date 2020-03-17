@@ -30,7 +30,7 @@ module.exports = class MonoplasmaValidator {
             saveBlock: async block => {
                 this.lastSavedBlock = block
             }
-        }, this.watcher.plasma.adminAddress, this.watcher.plasma.adminFee, this.watcher.plasma.currentBlock, this.watcher.plasma.currentTimestamp)
+        }, this.watcher.plasma.adminAddress, this.watcher.plasma.adminFeeFraction, this.watcher.plasma.currentBlock, this.watcher.plasma.currentTimestamp)
 
         const self = this
         this.log("Starting validator's BlockCreated listener")
