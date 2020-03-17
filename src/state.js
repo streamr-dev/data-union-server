@@ -236,6 +236,11 @@ module.exports = class MonoplasmaState {
         return path
     }
 
+    async prepareRootHash(blockNumber) {
+        const tree = new MerkleTree(this.members, blockNumber)
+        return tree.getRootHash()
+    }
+
     async getRootHashAt(blockNumber) {
         if (!this.store.blockExists(blockNumber)) { throw new Error(`Block #${blockNumber} not found in published blocks`) }
         const tree = await this.getTreeAt(blockNumber)
@@ -393,7 +398,8 @@ module.exports = class MonoplasmaState {
             owner: this.adminAddress,
             adminFeeFractionWeiString: this.adminFeeFraction.toString(),
         }
-        this.latestBlocks.unshift(latestBlock)  // = insert to beginning
+        this.latestBlocks.unshift(latestBlock) // = insert to beginning
+        this.latestBlocks.sort((a, b) => b.blockNumber - a.blockNumber)
         await this.store.saveBlock(latestBlock)
         return latestBlock
     }
