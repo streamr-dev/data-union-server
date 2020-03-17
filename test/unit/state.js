@@ -57,13 +57,15 @@ describe("MonoplasmaState", () => {
             })
         }
         // add same members to two states with different initial block numbers
-        const plasma1 = new MonoplasmaState(0, initialMembers, fileStore, admin, 0, 0)
-        const plasma2 = new MonoplasmaState(0, initialMembers, fileStore, admin, 0, 1)
+        const plasma1 = new MonoplasmaState(0, initialMembers, fileStore, admin, 0, 1)
+        await plasma1.storeBlock(1, now())
+        const plasma2 = new MonoplasmaState(0, initialMembers, fileStore, admin, 0, 2)
+        await plasma1.storeBlock(2, now())
 
         const { address } = plasma1.members[10] // random member
         // proofs should be different
-        const member1Proof = await plasma1.getProof(address)
-        const member2Proof = await plasma2.getProof(address)
+        const member1Proof = await plasma1.getProofAt(address, 1)
+        const member2Proof = await plasma2.getProofAt(address, 2)
         assert(member1Proof, "should have proof")
         assert(member2Proof, "should have proof")
         assert.notDeepEqual(member1Proof, member2Proof, "should make different proofs")
@@ -90,15 +92,9 @@ describe("MonoplasmaState", () => {
         assert(member1ProofAt, "should have proof")
         assert(member2ProofAt, "should have proof")
         assert.notDeepEqual(member1ProofAt, member2ProofAt, "should make different proofs")
-        const member1Proof = await plasma1.getProof(address)
-        const member2Proof = await plasma2.getProof(address)
-        assert(member1Proof, "should have proof")
-        assert(member2Proof, "should have proof")
-        // TODO: getProof should also be different but it not
-        // assert.notDeepEqual(member1Proof, member2Proof, "should make different proofs")
     })
 
-    it("produces consistent results with getProof/getMember getProofAt/getMemberAt", async () => {
+    it("produces consistent results with getProofAt/getMemberAt", async () => {
         const initialMembers = []
         while (initialMembers.length < 100) {
             initialMembers.push({
@@ -112,23 +108,19 @@ describe("MonoplasmaState", () => {
         const memberProofAt = await plasma.getProofAt(address, 3)
         const memberAt = await plasma.getMemberAt(address, 3)
         assert.deepEqual(memberProofAt, memberAt.proof, "getMemberAt/getProofAt should have same proof")
-
-        const member = await plasma.getMember(address)
-        const memberProof = await plasma.getProof(address)
-        assert.deepEqual(memberProof, member.proof, "getMember/getProof should have same proof")
-        // TODO: proofs here should be same, but not because block number not updated in tree
-        // assert.deepEqual(memberProof, memberProofAt, "getProofAt/getProof should have same proof")
     })
 
-    it("should not be able to get member proof if no revenue added", async () => {
+    it("should be able to get member proof even if no revenue added", async () => {
         const plasma = new MonoplasmaState(0, [], fileStore, admin, 0)
         plasma.addMember("0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2", "tester1")
         plasma.addRevenue(100)
         plasma.addMember("0xE5019d79c3Fc34c811E68e68c9Bd9966F22370eF", "tester2")
-        const member1 = await plasma.getMember("0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2")
-        const member2 = await plasma.getMember("0xE5019d79c3Fc34c811E68e68c9Bd9966F22370eF")
+        const blockNumber = 3
+        await plasma.storeBlock(blockNumber, now())
+        const member1 = await plasma.getMemberAt("0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2", blockNumber)
+        const member2 = await plasma.getMemberAt("0xE5019d79c3Fc34c811E68e68c9Bd9966F22370eF", blockNumber)
         assert(member1.proof, "should have proof")
-        assert(member2.proof == null, "should not have proof if no revenue")
+        assert(member2.proof, "should have proof even if no revenue")
     })
 
     it("should distribute earnings correctly", () => {

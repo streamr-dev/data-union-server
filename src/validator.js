@@ -51,7 +51,7 @@ module.exports = class MonoplasmaValidator {
         // check that the hash at that point in history matches
         // TODO: get hash from this.lastSavedBlock
         // TODO: if there's a Transfer after BlockCreated in same block, current approach breaks
-        const hash = this.validatedPlasma.getRootHash()
+        const hash = await this.validatedPlasma.getRootHashAt(blockNumber)
         if (hash === block.rootHash) {
             this.log(`Root hash @ ${blockNumber} validated.`)
             this.lastValidatedBlock = blockNumber

@@ -54,8 +54,6 @@ module.exports = class MonoplasmaState {
 
         /** @property {Array<MonoplasmaMember>} members */
         this.members = initialMembers.map(m => new MonoplasmaMember(m.name, m.address, m.earnings, m.active))
-        /** @property {MerkleTree} tree The MerkleTree for calculating the hashes */
-        this.tree = new MerkleTree(this.members, this.currentBlock)
         /** @property {string}  adminAddress the owner address who receives the admin fee and the default payee if no memebers */
         this.adminAddress = adminAddress
         /** @property {BN}  adminFeeFraction fraction of revenue that goes to admin */
@@ -156,7 +154,6 @@ module.exports = class MonoplasmaState {
         if (!m) { throw new Error(`Bad index ${i}`) }   // TODO: change to return null in production
         const obj = m.toObject()
         obj.active = m.isActive()
-        obj.proof = await this.getProof(address)
         return obj
     }
 
@@ -171,8 +168,7 @@ module.exports = class MonoplasmaState {
         if (!member) {
             throw new Error(`Member ${address} not found in block ${blockNumber}`)
         }
-        const tree = new MerkleTree(block.members, blockNumber)
-        member.proof = await tree.getPath(address)
+        member.proof = await this.getProofAt(address, blockNumber)
         return member
     }
 
@@ -214,15 +210,6 @@ module.exports = class MonoplasmaState {
     }
 
     /**
-     * Get hypothetical proof of earnings from current status
-     * @param {string} address with earnings to be verified
-     * @returns {Array|null} of bytes32 hashes ["0x123...", "0xabc..."], or null if address not found
-     */
-    async getProof(address) {
-        return this.tree.includes(address) ? await this.tree.getPath(address) : null
-    }
-
-    /**
      * Get proof of earnings for withdrawal ("payslip") from specific (published) block
      * @param {string} address with earnings to be verified
      * @param {number} blockNumber at which (published) block
@@ -237,10 +224,6 @@ module.exports = class MonoplasmaState {
         const tree = await this.getTreeAt(blockNumber)
         const path = await tree.getPath(address)
         return path
-    }
-
-    async getRootHash() {
-        return this.tree.getRootHash()
     }
 
     async getRootHashAt(blockNumber) {
@@ -292,8 +275,6 @@ module.exports = class MonoplasmaState {
             activeMembers.forEach(m => m.addRevenue(share))
             this.totalEarnings = this.totalEarnings.add(amountBN)
         }
-        const latestBlock = this.getLatestBlock()
-        this.tree.update(this.members, latestBlock ? latestBlock.blockNumber : this.currentBlock)
     }
 
     /**
@@ -416,9 +397,8 @@ module.exports = class MonoplasmaState {
             getMember: this.getMember.bind(this),
             getMemberCount: this.getMemberCount.bind(this),
             getTotalRevenue: this.getTotalRevenue.bind(this),
-            getProof: this.getProof.bind(this),
             getProofAt: this.getProofAt.bind(this),
-            getRootHash: this.getRootHash.bind(this),
+            getRootHashAt: this.getRootHashAt.bind(this),
             getBlock: this.getBlock.bind(this),
             getLatestBlock: this.getLatestBlock.bind(this),
             getLatestWithdrawableBlock: this.getLatestWithdrawableBlock.bind(this),
