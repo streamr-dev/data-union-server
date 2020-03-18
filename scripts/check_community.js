@@ -77,7 +77,7 @@ async function start() {
     const client = new StreamrClient(opts)
 
     log("Community stats from CPS")
-    const stats = await client.communityStats(community.address)
+    const stats = await client.getCommunityStats(community.address)
     log(`  Members: ${stats.memberCount.active} active / ${stats.memberCount.total} total`)
     log(`  Latest unfrozen block: ${stats.latestWithdrawableBlock.blockNumber} (${stats.latestWithdrawableBlock.memberCount} members)`)
     log(`  Total earnings received: ${formatEther(stats.totalEarnings)}`)

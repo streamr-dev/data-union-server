@@ -64,7 +64,7 @@ async function start() {
     const client = new StreamrClient(opts)
 
     log(`Member stats for ${memberAddress}...`)
-    const stats = await client.memberStats(communityAddress, memberAddress)
+    const stats = await client.getMemberStats(communityAddress, memberAddress)
     if (stats.error) {
         log(`Error from server: ${JSON.stringify(stats)}`)
         return
