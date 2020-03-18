@@ -10,8 +10,6 @@ const {
     providers: { Web3Provider }
 } = require("ethers")
 const ganache = require("ganache-core")
-//const { Wallet, ContractFactory, providers: { JsonRpcProvider } } = require("ethers")
-//const startGanache = require("monoplasma/src/utils/startGanache")
 
 const CommunityJson = require("../../build/CommunityProduct")
 const TokenJson = require("../../build/TestToken")
