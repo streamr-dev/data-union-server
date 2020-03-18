@@ -1,3 +1,5 @@
+/* eslint-disable */
+
 require("dotenv/config")
 //
 // testing how ethers.js does getPastEvents
@@ -35,7 +37,6 @@ async function start() {
     const wallet = new Wallet(secretKey, provider)
     await provider.getNetwork()     // wait until ganache is up and ethers.js ready
 
-    const provider = new JsonRpcProvider(ganache.httpUrl)
     provider.pollingInterval = 500
     const wallets = ganache.privateKeys.map(key => new Wallet(key, provider))
     const network = await provider.getNetwork()

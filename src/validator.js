@@ -26,11 +26,19 @@ module.exports = class MonoplasmaValidator {
         this.contract = new Contract(config.contractAddress, MonoplasmaJson.abi, this.wallet)
         await this.watcher.start(config)
 
-        this.validatedPlasma = new MonoplasmaState(0, [], {
-            saveBlock: async block => {
-                this.lastSavedBlock = block
-            }
-        }, this.watcher.plasma.adminAddress, this.watcher.plasma.adminFee, this.watcher.plasma.currentBlock, this.watcher.plasma.currentTimestamp)
+        this.validatedPlasma = new MonoplasmaState({
+            blockFreezeSeconds: 0,
+            initialMembers: [],
+            store: {
+                saveBlock: async block => {
+                    this.lastSavedBlock = block
+                },
+            },
+            adminAddress: this.watcher.plasma.adminAddress,
+            adminFeeFraction: this.watcher.plasma.adminFeeFraction,
+            initialBlockNumber: this.watcher.plasma.currentBlock,
+            initialTimestamp: this.watcher.plasma.currentTimestamp,
+        })
 
         const self = this
         this.log("Starting validator's BlockCreated listener")
@@ -51,7 +59,7 @@ module.exports = class MonoplasmaValidator {
         // check that the hash at that point in history matches
         // TODO: get hash from this.lastSavedBlock
         // TODO: if there's a Transfer after BlockCreated in same block, current approach breaks
-        const hash = this.validatedPlasma.getRootHash()
+        const hash = await this.validatedPlasma.getRootHashAt(blockNumber)
         if (hash === block.rootHash) {
             this.log(`Root hash @ ${blockNumber} validated.`)
             this.lastValidatedBlock = blockNumber

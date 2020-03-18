@@ -16,12 +16,12 @@ async function replayEvent(plasma, event) {
     switch (type) {
         // event Transfer(address indexed from, address indexed to, uint256 value);
         case "Transfer": {
-            const revenueBN = new BN(event.args.value.toString(10))
+            const revenueBN = new BN(event.args.value.toString())
             log(`${revenueBN} tokens received @ block ${event.blockNumber}`)
             plasma.addRevenue(revenueBN)
         } break
         // event BlockCreated(uint blockNumber, bytes32 rootHash, string ipfsHash);
-        case "BlockCreated": {
+        case "NewCommit": {
             const blockNumber = +event.args.blockNumber
             log(`Storing block ${blockNumber}`)
             await plasma.storeBlock(blockNumber)
