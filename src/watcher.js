@@ -324,10 +324,12 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
     async getBlockTimestamp(blockNumber) {
         if (!(blockNumber in this.blockTimestampCache)) {
             this.log(`blockTimestampCache miss for block number ${blockNumber}`)
-            const block = await this.eth.getBlock(blockNumber)
-            this.blockTimestampCache[blockNumber] = block.timestamp * 1000
+            this.blockTimestampCache[blockNumber] = (async () => {
+                const block = await this.eth.getBlock(blockNumber)
+                return block.timestamp * 1000
+            })()
         }
-        return this.blockTimestampCache[blockNumber]
+        return await this.blockTimestampCache[blockNumber]
     }
 
     /**
