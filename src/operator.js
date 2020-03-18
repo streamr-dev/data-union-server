@@ -50,8 +50,7 @@ module.exports = class MonoplasmaOperator {
             initialTimestamp: this.watcher.plasma.currentTimestamp
         })
 
-        const self = this
-        this.watcher.on("tokensReceived", async event => self.onTokensReceived(event).catch(self.error))
+        this.watcher.on("tokensReceived", event => this.onTokensReceived(event).catch(this.log))
     }
 
     async shutdown() {
@@ -79,13 +78,30 @@ module.exports = class MonoplasmaOperator {
         }
     }
 
+    async publishBlock(rootchainBlockNumber) {
+        // enqueue publishBlock calls
+        if (this.inProgressPublish) {
+            this.log("Queued block publish", rootchainBlockNumber)
+        }
+        const task = Promise.resolve(this.inProgressPublish)
+            .then(() => this._publishBlock(rootchainBlockNumber))
+            .finally(() => {
+                // last task cleans up
+                if (this.inProgressPublish === task) {
+                    this.inProgressPublish = undefined
+                }
+            })
+        this.inProgressPublish = task
+        return task
+    }
+
     // TODO: call it commit instead. Replace all mentions of "publish" with "commit".
     /**
      * Sync watcher to the given block and publish the state AFTER it into blockchain
      * @param {Number} rootchainBlockNumber to sync up to
      * @returns {Promise<TransactionReceipt>}
      */
-    async publishBlock(rootchainBlockNumber) {
+    async _publishBlock(rootchainBlockNumber) {
         // TODO: would mutex for publishing blocks make sense? Consider (finality wait period + delay) vs block publishing interval
         //if (this.publishBlockInProgress) { throw new Error(`Currently publishing block ${this.publishBlockInProgress}, please wait that it completes before attempting another`) }
         //this.publishBlockInProgress = blockNumber
@@ -94,11 +110,9 @@ module.exports = class MonoplasmaOperator {
         await sleep(0)          // ensure lastObservedBlockNumber is updated since this likely happens as a response to event
         const blockNumber = rootchainBlockNumber || this.watcher.state.lastObservedBlockNumber
         const lastPublishedBlock = await this.lastPublishedBlock()
-        this.log("Publish block", {
-            blockNumber,
-            lastPublishedBlock,
-        })
         if (blockNumber <= lastPublishedBlock) { throw new Error(`Block #${lastPublishedBlock} has already been published, can't publish #${blockNumber}`) }
+        const log = this.log.extend(blockNumber)
+        log("Publish block", blockNumber)
 
         // see https://streamr.atlassian.net/browse/CPS-20
         // TODO: separate finalPlasma currently is so much out of sync with watcher.plasma that proofs turn out wrong
@@ -114,12 +128,14 @@ module.exports = class MonoplasmaOperator {
         const ipfsHash = ""     // TODO: upload this.finalPlasma to IPFS while waiting for finality
 
         const tx = await this.contract.commit(blockNumber, hash, ipfsHash)
-        const tr = await tx.wait(1)        // confirmations
+        const tr = await tx.wait()        // confirmations
 
         // TODO https://streamr.atlassian.net/browse/CPS-82 should be instead:
         // await this.finalPlasma.storeBlock(blockNumber) // TODO: give a timestamp
         // this.watcher.state.lastPublishedBlock = {blockNumber: blockNumber}
-        const block = await state.storeBlock(blockNumber)
+        const commitTimestamp = (await this.contract.blockTimestamp(blockNumber)).toNumber()
+        const block = await state.storeBlock(blockNumber, commitTimestamp)
+
         // update watcher plasma's block list
         this.watcher.plasma.latestBlocks.unshift(block)
         // ensure blocks are in order

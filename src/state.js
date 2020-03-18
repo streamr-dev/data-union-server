@@ -388,11 +388,17 @@ module.exports = class MonoplasmaState {
      * @param {number} blockNumber root-chain block number after which this block state is valid
      */
     async storeBlock(blockNumber, timestamp) {
-        if (!Number.isInteger(blockNumber) || !(blockNumber > 0)) { throw new Error("blockNumber must be a positive integer")}
+        if (!Number.isSafeInteger(timestamp)) { throw new Error("Timestamp should be a positive Number, got: " + timestamp) }
+        if (!Number.isSafeInteger(blockNumber) || !(blockNumber > 0)) { throw new Error("blockNumber must be a positive integer")}
+        const newerBlock = this.latestBlocks.find((block) => block.blockNumber >= blockNumber)
+        if (newerBlock) {
+            throw new Error(`Already stored same or newer block. Found: ${newerBlock.blockNumber} Storing: ${blockNumber}.`)
+        }
+        this.log(`Storing block ${blockNumber} at timestamp ${timestamp}`)
         const latestBlock = {
             blockNumber,
             members: this.members.map(m => m.toObject()),
-            timestamp: timestamp || "",
+            timestamp,
             storeTimestamp: now(),
             totalEarnings: this.getTotalRevenue(),
             owner: this.adminAddress,

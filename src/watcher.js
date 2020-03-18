@@ -187,16 +187,19 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         this.log("Listening to Ethereum events...")
         this.contract.on(this.adminFeeFilter, async (adminFee, event) => {
             this.log(`Admin fee changed to ${utils.formatEther(adminFee)} at block ${event.blockNumber}`)
+            event.timestamp = await this.getBlockTimestamp(event.blockNumber)
             await replayOn(this.plasma, [event])
             this.emit("adminFeeChanged", event)
         })
-        this.contract.on(this.blockCreateFilter, (blockNumber, rootHash, ipfsHash, event) => {
+        this.contract.on(this.blockCreateFilter, async (blockNumber, rootHash, ipfsHash, event) => {
             this.log(`Observed creation of block ${+blockNumber} at block ${event.blockNumber} (root ${rootHash}, ipfs "${ipfsHash}")`)
+            event.timestamp = await this.getBlockTimestamp(event.blockNumber)
             //this.state.lastPublishedBlock = event.args
             this.emit("blockCreated", event)
         })
         this.token.on(this.tokenTransferFilter, async (to, from, amount, event) => {
             this.log(`Received ${utils.formatEther(event.args.value)} DATA`)
+            event.timestamp = await this.getBlockTimestamp(event.blockNumber)
             await replayOn(this.plasma, [event])
             this.emit("tokensReceived", event)
         })
@@ -220,8 +223,9 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         // TODO: maybe state saving function should create the state object instead of continuously mutating "state" member
         await this.saveState()
     }
-    async saveState(){
-        this.store.saveState(this.state)
+
+    async saveState() {
+        return this.store.saveState(this.state)
     }
 
     async stop() {
@@ -320,10 +324,12 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
     async getBlockTimestamp(blockNumber) {
         if (!(blockNumber in this.blockTimestampCache)) {
             this.log(`blockTimestampCache miss for block number ${blockNumber}`)
-            const block = await this.eth.getBlock(blockNumber)
-            this.blockTimestampCache[blockNumber] = block.timestamp * 1000
+            this.blockTimestampCache[blockNumber] = (async () => {
+                const block = await this.eth.getBlock(blockNumber)
+                return block.timestamp * 1000
+            })()
         }
-        return this.blockTimestampCache[blockNumber]
+        return await this.blockTimestampCache[blockNumber]
     }
 
     /**
