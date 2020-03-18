@@ -17,10 +17,16 @@ const admin = "0x0000000000000000000000000000000000123564"
 
 describe("MonoplasmaState", () => {
     it("should return member passed to constructor and then remove it successfully", () => {
-        const plasmaAdmin = new MonoplasmaState(0, [{
-            address: "0xfF019d79C31114c811e68e68C9863966F22370ef",
-            earnings: 10
-        }], fileStore, admin, 0)
+        const plasmaAdmin = new MonoplasmaState({
+            blockFreezeSeconds: 0,
+            initialMembers: [{
+                address: "0xfF019d79C31114c811e68e68C9863966F22370ef",
+                earnings: 10
+            }],
+            store: fileStore,
+            adminAddress: admin,
+            adminFeeFraction: 0
+        })
         assert.deepStrictEqual(plasmaAdmin.getMembers(), [{
             address: "0xfF019d79C31114c811e68e68C9863966F22370ef",
             earnings: "10",
@@ -31,7 +37,13 @@ describe("MonoplasmaState", () => {
     })
 
     it("should return correct members and member count", () => {
-        const plasma = new MonoplasmaState(0, [], fileStore, admin, 0)
+        const plasma = new MonoplasmaState({
+            blockFreezeSeconds: 0,
+            initialMembers: [],
+            store: fileStore,
+            adminAddress: admin,
+            adminFeeFraction: 0,
+        })
         plasma.addMember("0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2", "tester1")
         plasma.addMember("0xE5019d79c3Fc34c811E68e68c9Bd9966F22370eF", "tester2")
         plasma.addRevenue(100)
@@ -48,17 +60,120 @@ describe("MonoplasmaState", () => {
         ])
     })
 
-    it("should not crash with large number of members", function () {
-        this.timeout(20000)
+    it("should produce different proofs for different initial block numbers", async () => {
         const initialMembers = []
-        while (initialMembers.length < 200000) {
+        while (initialMembers.length < 100) {
             initialMembers.push({
-                address: getAddress(`0x${crypto.randomBytes(20).toString("hex")}`),
-                earnings: 0,
+                address: `0x${crypto.randomBytes(20).toString("hex")}`,
+                earnings: 100,
             })
         }
-        const plasma = new MonoplasmaState(0, initialMembers, fileStore, admin, 0)
+        // add same members to two states with different initial block numbers
+        const plasma1 = new MonoplasmaState({
+            blockFreezeSeconds: 0,
+            initialMembers,
+            store: fileStore,
+            adminAddress: admin,
+            adminFeeFraction: 0,
+            initialBlockNumber: 1,
+        })
+        await plasma1.storeBlock(1, now())
+        const plasma2 = new MonoplasmaState({
+            blockFreezeSeconds: 0,
+            initialMembers,
+            store: fileStore,
+            adminAddress: admin,
+            adminFeeFraction: 0,
+            initialBlockNumber: 2,
+        })
+        await plasma1.storeBlock(2, now())
+
+        const { address } = plasma1.members[10] // random member
+        // proofs should be different
+        const member1Proof = await plasma1.getProofAt(address, 1)
+        const member2Proof = await plasma2.getProofAt(address, 2)
+        assert(member1Proof, "should have proof")
+        assert(member2Proof, "should have proof")
+        assert.notDeepEqual(member1Proof, member2Proof, "should make different proofs")
+    })
+
+    it("should produce different proofs for different block numbers", async () => {
+        const initialMembers = []
+        while (initialMembers.length < 100) {
+            initialMembers.push({
+                address: `0x${crypto.randomBytes(20).toString("hex")}`,
+                earnings: 100,
+            })
+        }
+        // add same members to two states with same initial block numbers
+        // but saved at different block numbers
+        const plasma1 = new MonoplasmaState({
+            blockFreezeSeconds: 0,
+            initialMembers,
+            store: fileStore,
+            adminAddress: admin,
+            adminFeeFraction: 0,
+            initialBlockNumber: 0,
+        })
+        const plasma2 = new MonoplasmaState({
+            blockFreezeSeconds: 0,
+            initialMembers,
+            store: fileStore,
+            adminAddress: admin,
+            adminFeeFraction: 0,
+            initialBlockNumber: 0,
+        })
+        await plasma1.storeBlock(3, now())
+        await plasma2.storeBlock(4, now())
+        const { address } = plasma1.members[10]
+        // proofs should be different
+        const member1ProofAt = await plasma1.getProofAt(address, 3)
+        const member2ProofAt = await plasma2.getProofAt(address, 4)
+        assert(member1ProofAt, "should have proof")
+        assert(member2ProofAt, "should have proof")
+        assert.notDeepEqual(member1ProofAt, member2ProofAt, "should make different proofs")
+    })
+
+    it("produces consistent results with getProofAt/getMemberAt", async () => {
+        const initialMembers = []
+        while (initialMembers.length < 100) {
+            initialMembers.push({
+                address: `0x${crypto.randomBytes(20).toString("hex")}`,
+                earnings: 100,
+            })
+        }
+        const plasma = new MonoplasmaState({
+            blockFreezeSeconds: 0,
+            initialMembers,
+            store: fileStore,
+            adminAddress: admin,
+            adminFeeFraction: 0,
+            initialBlockNumber: 0,
+        })
+        await plasma.storeBlock(3, now())
+        const { address } = plasma.members[10]
+        const memberProofAt = await plasma.getProofAt(address, 3)
+        const memberAt = await plasma.getMemberAt(address, 3)
+        assert.deepEqual(memberProofAt, memberAt.proof, "getMemberAt/getProofAt should have same proof")
+    })
+
+    it("should be able to get member proof even if no revenue added", async () => {
+        const plasma = new MonoplasmaState({
+            blockFreezeSeconds: 0,
+            initialMembers: [],
+            store: fileStore,
+            adminAddress: admin,
+            adminFeeFraction: 0,
+        })
+        plasma.addMember("0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2", "tester1")
         plasma.addRevenue(100)
+        plasma.addMember("0xE5019d79c3Fc34c811E68e68c9Bd9966F22370eF", "tester2")
+        const blockNumber = 3
+        await plasma.storeBlock(blockNumber, now())
+        const member1 = await plasma.getMemberAt("0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2", blockNumber)
+        const member2 = await plasma.getMemberAt("0xE5019d79c3Fc34c811E68e68c9Bd9966F22370eF", blockNumber)
+        assert(member1.proof, "should have proof")
+        assert(member2.proof, "should have proof even if no revenue")
     })
 
     it("should distribute earnings correctly", () => {
@@ -69,7 +184,13 @@ describe("MonoplasmaState", () => {
                 earnings: 0,
             })
         }
-        const plasma = new MonoplasmaState(0, initialMembers, fileStore, admin, 0)
+        const plasma = new MonoplasmaState({
+            blockFreezeSeconds: 0,
+            initialMembers,
+            store: fileStore,
+            adminAddress: admin,
+            adminFeeFraction: 0,
+        })
         assert(plasma.getMembers().every((m) => (
             m.earnings === "0"
         )), "all members should have zero earnings")
@@ -103,7 +224,13 @@ describe("MonoplasmaState", () => {
                 earnings: 0,
             })
         }
-        const plasma = new MonoplasmaState(0, initialMembers, fileStore, admin, 0)
+        const plasma = new MonoplasmaState({
+            blockFreezeSeconds: 0,
+            initialMembers,
+            store: fileStore,
+            adminAddress: admin,
+            adminFeeFraction: 0,
+        })
         assert(plasma.getMembers().every((m) => (
             m.earnings === "0"
         )), "all members should have zero earnings")
@@ -126,7 +253,13 @@ describe("MonoplasmaState", () => {
     })
 
     it("should remember past blocks' earnings", async () => {
-        const plasma = new MonoplasmaState(0, [], fileStore, admin, 0)
+        const plasma = new MonoplasmaState({
+            blockFreezeSeconds: 0,
+            initialMembers: [],
+            store: fileStore,
+            adminAddress: admin,
+            adminFeeFraction: 0,
+        })
         plasma.addMember("0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2", "tester1")
         plasma.addMember("0xE5019d79c3Fc34c811E68e68c9Bd9966F22370eF", "tester2")
         plasma.addRevenue(100)
@@ -145,7 +278,13 @@ describe("MonoplasmaState", () => {
     })
     /* TODO: fix this test; it's ok to wait until monoplasma 0.2 lands, because it will again jumble the proof literals
     it("should remember past blocks' proofs", async () => {
-        const plasma = new MonoplasmaState(0, [], fileStore, admin, 0)
+        const plasma = new MonoplasmaState({
+            blockFreezeSeconds: 0,
+            initialMembers: [],
+            store: fileStore,
+            adminAddress: admin,
+            adminFeeFraction: 0,
+        })
         plasma.addMember("0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2", "tester1")
         plasma.addMember("0xE5019d79c3Fc34c811E68e68c9Bd9966F22370eF", "tester2")
         plasma.addRevenue(100)
@@ -162,43 +301,26 @@ describe("MonoplasmaState", () => {
         assert.deepStrictEqual(await plasma.getProof("0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2"), ["0x8620ab3c4df51cebd7ae1cd533c8824220db518d2a143e603e608eab62b169f7", "0x91360deed2f511a8503790083c6de21efbb1006b460d5024863ead9de5448927"])
     })
     */
-    // The idea of this test is to make sure the merkletrees are cached between getProofAt queries
-    //   so that the tree isn't recalculated every time
-    it("should perform fine with LOTS of queries of recent past blocks' proofs", async () => {
-        const initialMembers = []
-        while (initialMembers.length < 1000) {
-            initialMembers.push({
-                address: getAddress(`0x${crypto.randomBytes(20).toString("hex")}`),
-                earnings: 0,
-            })
-        }
-        const plasma = new MonoplasmaState(0, initialMembers, fileStore, admin, 0)
-        plasma.addRevenue(100)
-        await plasma.storeBlock(100, now())
-        plasma.addRevenue(100)
-        await plasma.storeBlock(101, now())
-        plasma.addRevenue(100)
-        plasma.addRevenue(100)
-        await plasma.storeBlock(102, now())
-        plasma.addRevenue(100)
-
-        const startTime = Date.now()
-        for (let i = 0; i < 1000; i++) {
-            const bnum = 100 + i % 3
-            const { address } = initialMembers[(50 * i) % initialMembers.length]
-            await plasma.getProofAt(address, bnum)
-            const timeTaken = Date.now() - startTime
-            assert(timeTaken < 5000, "too slow!")
-        }
-    })
 
     it("should give revenue to adminAccount if no members present", async () => {
-        const plasma = new MonoplasmaState(0, [], fileStore, "0x1234567890123456789012345678901234567890", 0)
+        const plasma = new MonoplasmaState({
+            blockFreezeSeconds: 0,
+            initialMembers: [],
+            store: fileStore,
+            adminAddress: "0x1234567890123456789012345678901234567890",
+            adminFeeFraction: 0,
+        })
         plasma.addRevenue(100)
         assert.strictEqual((await plasma.getMember("0x1234567890123456789012345678901234567890")).earnings, "100")
     })
     it("should give no revenue to adminAccount if members present", async () => {
-        const plasma = new MonoplasmaState(0, [], fileStore, "0x1234567890123456789012345678901234567890", 0)
+        const plasma = new MonoplasmaState({
+            blockFreezeSeconds: 0,
+            initialMembers: [],
+            store: fileStore,
+            adminAddress: "0x1234567890123456789012345678901234567890",
+            adminFeeFraction: 0,
+        })
         plasma.addMember("0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2", "tester1")
         plasma.addRevenue(100)
         assert.strictEqual((await plasma.getMember("0x1234567890123456789012345678901234567890")).earnings, "0")
@@ -206,7 +328,13 @@ describe("MonoplasmaState", () => {
 
     describe("changing the admin fee", () => {
         it("should accept valid values", () => {
-            const plasma = new MonoplasmaState(0, [], fileStore, admin, 0)
+            const plasma = new MonoplasmaState({
+                blockFreezeSeconds: 0,
+                initialMembers: [],
+                store: fileStore,
+                adminAddress: "0x1234567890123456789012345678901234567890",
+                adminFeeFraction: 0,
+            })
             plasma.setAdminFeeFraction(0.3)
             assert.strictEqual(plasma.adminFeeFraction.toString(), "300000000000000000")
             plasma.setAdminFeeFraction("400000000000000000")
@@ -215,7 +343,13 @@ describe("MonoplasmaState", () => {
             assert.strictEqual(plasma.adminFeeFraction.toString(), "500000000000000000")
         })
         it("should not accept numbers from wrong range", () => {
-            const plasma = new MonoplasmaState(0, [], fileStore, admin, 0)
+            const plasma = new MonoplasmaState({
+                blockFreezeSeconds: 0,
+                initialMembers: [],
+                store: fileStore,
+                adminAddress: "0x1234567890123456789012345678901234567890",
+                adminFeeFraction: 0,
+            })
             assert.throws(() => plasma.setAdminFeeFraction(-0.3))
             assert.throws(() => plasma.setAdminFeeFraction("-400000000000000000"))
             assert.throws(() => plasma.setAdminFeeFraction(new BigNumber("-500000000000000000")))
@@ -224,7 +358,13 @@ describe("MonoplasmaState", () => {
             assert.throws(() => plasma.setAdminFeeFraction(new BigNumber("1500000000000000000")))
         })
         it("should not accept bad values", () => {
-            const plasma = new MonoplasmaState(0, [], fileStore, admin, 0)
+            const plasma = new MonoplasmaState({
+                blockFreezeSeconds: 0,
+                initialMembers: [],
+                store: fileStore,
+                adminAddress: "0x1234567890123456789012345678901234567890",
+                adminFeeFraction: 0,
+            })
             assert.throws(() => plasma.setAdminFeeFraction("bad hex"))
             assert.throws(() => plasma.setAdminFeeFraction(""))
             assert.throws(() => plasma.setAdminFeeFraction({}))
@@ -236,7 +376,13 @@ describe("MonoplasmaState", () => {
     describe("getMemberApi", () => {
         let plasma
         beforeEach(() => {
-            const plasmaAdmin = new MonoplasmaState(0, [], fileStore, admin, 0)
+            const plasmaAdmin = new MonoplasmaState({
+                blockFreezeSeconds: 0,
+                initialMembers: [],
+                store: fileStore,
+                adminAddress: "0x1234567890123456789012345678901234567890",
+                adminFeeFraction: 0,
+            })
             plasmaAdmin.addMember("0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2", "tester1")
             plasmaAdmin.addMember("0xE5019d79c3Fc34c811E68e68c9Bd9966F22370eF", "tester2")
             plasmaAdmin.addRevenue(100)
@@ -274,6 +420,63 @@ describe("MonoplasmaState", () => {
             assert.strictEqual(plasma.removeMember, undefined)
             assert.strictEqual(plasma.addRevenue, undefined)
             assert.strictEqual(plasma.getMemberApi, undefined)
+        })
+    })
+
+    describe("performance", () => {
+        it("should not crash with large number of members", function () {
+            this.timeout(20000)
+            const initialMembers = []
+            while (initialMembers.length < 200000) {
+                initialMembers.push({
+                    address: getAddress(`0x${crypto.randomBytes(20).toString("hex")}`),
+                    earnings: 0,
+                })
+            }
+            const plasma = new MonoplasmaState({
+                blockFreezeSeconds: 0,
+                initialMembers,
+                store: fileStore,
+                adminAddress: "0x1234567890123456789012345678901234567890",
+                adminFeeFraction: 0,
+            })
+            plasma.addRevenue(100)
+        })
+
+        // The idea of this test is to make sure the merkletrees are cached between getProofAt queries
+        //   so that the tree isn't recalculated every time
+        it("should perform fine with LOTS of queries of recent past blocks' proofs", async () => {
+            const initialMembers = []
+            while (initialMembers.length < 1000) {
+                initialMembers.push({
+                    address: getAddress(`0x${crypto.randomBytes(20).toString("hex")}`),
+                    earnings: 0,
+                })
+            }
+            const plasma = new MonoplasmaState({
+                blockFreezeSeconds: 0,
+                initialMembers,
+                store: fileStore,
+                adminAddress: "0x1234567890123456789012345678901234567890",
+                adminFeeFraction: 0,
+            })
+            plasma.addRevenue(100)
+            await plasma.storeBlock(100, now())
+            plasma.addRevenue(100)
+            await plasma.storeBlock(101, now())
+            plasma.addRevenue(100)
+            plasma.addRevenue(100)
+            await plasma.storeBlock(102, now())
+            plasma.addRevenue(100)
+
+            const startTime = Date.now()
+            for (let i = 0; i < 1000; i++) {
+                const bnum = 100 + i % 3
+                const { address } = initialMembers[(50 * i) % initialMembers.length]
+                await plasma.getProofAt(address, bnum)
+                const timeTaken = Date.now() - startTime
+                assert(timeTaken < 5000, "too slow!")
+            }
         })
     })
 })

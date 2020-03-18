@@ -53,6 +53,15 @@ describe("Community product demo but through a running E&E instance", () => {
         spawn("rm", ["-rf", STORE_DIR])
     })
 
+    function onClose(code, signal) {
+        throw new Error(`start_server.js exited with code ${code}, signal ${signal}`)
+    }
+
+    function onError(err) {
+        log(`start_server.js ERROR: ${err}`)
+        process.exitCode = 1
+    }
+
     async function startServer() {
         log("--- Running start_server.js ---")
         operatorProcess = spawn(process.execPath, ["scripts/start_server.js"], {
@@ -72,13 +81,8 @@ describe("Community product demo but through a running E&E instance", () => {
         })
         operatorProcess.stdout.on("data", data => { log(`<server stdio> ${String(data).trim()}`) })
         operatorProcess.stderr.on("data", data => { log(`<server stderr> ${String(data).trim()}`) })
-        operatorProcess.on("close", (code, signal) => {
-            throw new Error(`start_server.js exited with code ${code}, signal ${signal}`)
-        })
-        operatorProcess.on("error", err => {
-            log(`start_server.js ERROR: ${err}`)
-            process.exitCode = 1
-        })
+        operatorProcess.on("close", onClose)
+        operatorProcess.on("error", onError)
 
         await untilStreamContains(operatorProcess.stdout, "[DONE]")
 
@@ -348,6 +352,8 @@ describe("Community product demo but through a running E&E instance", () => {
 
     afterEach(() => {
         if (operatorProcess) {
+            operatorProcess.removeListener("close", onClose)
+            operatorProcess.removeListener("error", onError)
             operatorProcess.kill()
             operatorProcess = null
         }

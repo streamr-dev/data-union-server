@@ -40,15 +40,15 @@ module.exports = class MonoplasmaOperator {
                 this.lastSavedBlock = block
             }
         }
-        this.finalPlasma = new MonoplasmaState(
-            0,
-            this.watcher.plasma.members,
-            finalPlasmaStore,
-            this.watcher.plasma.adminAddress,
-            this.watcher.plasma.adminFee,
-            this.watcher.plasma.currentBlock,
-            this.watcher.plasma.currentTimestamp
-        )
+        this.finalPlasma = new MonoplasmaState({
+            blockFreezeSeconds: 0,
+            initialMembers: this.watcher.plasma.members,
+            store: finalPlasmaStore,
+            adminAddress: this.watcher.plasma.adminAddress,
+            adminFeeFraction: this.watcher.plasma.adminFeeFraction,
+            initialBlockNumber: this.watcher.plasma.currentBlock,
+            initialTimestamp: this.watcher.plasma.currentTimestamp
+        })
 
         this.watcher.on("tokensReceived", event => this.onTokensReceived(event))
     }
@@ -109,6 +109,7 @@ module.exports = class MonoplasmaOperator {
         // TODO: would mutex for publishing blocks make sense? Consider (finality wait period + delay) vs block publishing interval
         //if (this.publishBlockInProgress) { throw new Error(`Currently publishing block ${this.publishBlockInProgress}, please wait that it completes before attempting another`) }
         //this.publishBlockInProgress = blockNumber
+        const state = this.watcher.plasma.clone()
 
         await sleep(0)          // ensure lastObservedBlockNumber is updated since this likely happens as a response to event
         const blockNumber = rootchainBlockNumber || this.watcher.state.lastObservedBlockNumber
@@ -127,7 +128,7 @@ module.exports = class MonoplasmaOperator {
 
         //await this.watcher.playbackUntilBlock(blockNumber, this.finalPlasma)
         //const hash = this.finalPlasma.getRootHash()
-        const hash = await this.watcher.plasma.getRootHash()  // TODO: remove, uncomment above
+        const hash = await state.prepareRootHash(blockNumber)  // TODO: remove, uncomment above
         const ipfsHash = ""     // TODO: upload this.finalPlasma to IPFS while waiting for finality
 
         const tx = await this.contract.commit(blockNumber, hash, ipfsHash)
@@ -137,10 +138,14 @@ module.exports = class MonoplasmaOperator {
         // await this.finalPlasma.storeBlock(blockNumber) // TODO: give a timestamp
         // this.watcher.state.lastPublishedBlock = {blockNumber: blockNumber}
         const commitTimestamp = (await this.contract.blockTimestamp(blockNumber)).toNumber()
-        await this.watcher.plasma.storeBlock(blockNumber, commitTimestamp)
-        await this.watcher.saveState()
+        const block = await state.storeBlock(blockNumber, commitTimestamp)
 
-        log("Commit sent, receipt:", tr)
+        // update watcher plasma's block list
+        this.watcher.plasma.latestBlocks.unshift(block)
+        // ensure blocks are in order
+        this.watcher.plasma.latestBlocks.sort((a, b) => b.blockNumber - a.blockNumber)
+
+        this.log(`Commit sent, receipt: ${JSON.stringify(tr)}`)
 
         // TODO: something causes events to be replayed many times, resulting in wrong balances. It could have something to do with the state cloning that happens here
         // replace watcher's MonoplasmaState with the final "true" state that was just committed to blockchain

@@ -1,5 +1,6 @@
 const fs = require("mz/fs")
 const path = require("path")
+const debug = require("debug")
 
 /**
  * @typedef {Object} OperatorState
@@ -11,7 +12,7 @@ const path = require("path")
 module.exports = class FileStore {
 
     constructor(storeDir, log, maxLogLen) {
-        this.log = log || (() => {})
+        this.log = log || debug("Streamr::CPS::FileStore")
         this.maxLogLen = maxLogLen || 840
 
         this.log(`Setting up fileStore directories under ${storeDir}...`)
