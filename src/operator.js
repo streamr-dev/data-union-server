@@ -50,7 +50,7 @@ module.exports = class MonoplasmaOperator {
             initialTimestamp: this.watcher.plasma.currentTimestamp
         })
 
-        this.watcher.on("tokensReceived", event => this.onTokensReceived(event))
+        this.watcher.on("tokensReceived", event => this.onTokensReceived(event).catch(this.log))
     }
 
     async shutdown() {
@@ -66,13 +66,9 @@ module.exports = class MonoplasmaOperator {
         return lb.blockNumber
     }
 
-    async onTokensReceived(...args) {
-        return this._onTokensReceived(...args).catch((error) => this.log(error))
-    }
-
     // TODO: block publishing should be based on value-at-risk, that is, publish after so-and-so many tokens received
     // see https://streamr.atlassian.net/browse/CPS-39
-    async _onTokensReceived(event) {
+    async onTokensReceived(event) {
         const last = await this.lastPublishedBlock()
         const blockNumber = event.blockNumber
         if (last == undefined || +blockNumber >= last + +this.minIntervalBlocks) {
