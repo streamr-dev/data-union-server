@@ -98,7 +98,7 @@ describe("Community product server /dataunions router", () => {
                 tokenAddress: "0x8688966AE53807c273D8B9fCcf667F0A0a91b1d3",
                 operatorAddress: "0x8D7f03FdE1A626223364E592740a233b72395235"
             },
-            communities: {
+            dataunions: {
                 "0xfb5755567e071663F2DA276aC1D6167B093f00f4": {
                     memberCount: { total: 2, active: 2, inactive: 0 },
                     totalEarnings: "70",
