@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable */
 
 require("dotenv/config")
 
@@ -7,13 +8,12 @@ const path = require("path")
 const express = require("express")
 const cors = require("cors")
 const bodyParser = require("body-parser")
-const onProcessExit = require("exit-hook")
 
 const { Wallet, Contract, providers: { JsonRpcProvider } } = require("ethers")
 
 const DataUnionJson = require("../build/DataUnion.json")
 
-const FileStore = require("monoplasma/src/fileStore")
+const FileStore = require("../src/fileStore")
 const Operator = require("../src/operator")
 const { throwIfSetButNotContract /*, throwIfNotSet */ } = require("../src/utils/checkArguments")
 const deployCommunity = require("../src/utils/deploy")
@@ -65,16 +65,6 @@ const error = (e, ...args) => {
 const storeDir = fs.existsSync(STORE_DIR) ? STORE_DIR : __dirname + "/demo/public/data"
 const fileStore = new FileStore(storeDir)
 
-let ganache = null
-function stopGanache() {
-    if (ganache) {
-        log("Shutting down Ethereum simulator...")
-        ganache.shutdown()
-        ganache = null
-    }
-}
-onProcessExit(stopGanache)
-
 async function start() {
     let privateKey
     let ethereumServer = ETHEREUM_SERVER
@@ -88,8 +78,9 @@ async function start() {
         log("Starting Ethereum simulator...")
         const ganachePort = GANACHE_PORT || 8545
         const ganacheLog = msg => { log(" <Ganache> " + msg) }
-        ganache = await require("monoplasma/src/utils/startGanache")(ganachePort, ganacheLog, error)
-        ethereumServer = ganache.httpUrl
+        // TODO: start ganache using ganache.provider()
+        // ganache = await require("monoplasma/src/utils/startGanache")(ganachePort, ganacheLog, error)
+        // ethereumServer = ganache.httpUrl
     }
 
     log(`Connecting to ${ethereumServer}`)

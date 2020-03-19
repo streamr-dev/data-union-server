@@ -2,7 +2,7 @@ const EventEmitter = require("events")
 
 const { Contract, utils } = require("ethers")
 
-const MonoplasmaState = require("monoplasma/src/state")
+const MonoplasmaState = require("./state")
 const { replayOn, mergeEventLists } = require("./utils/events")
 const { throwIfSetButNotContract, throwIfSetButBadAddress } = require("./utils/checkArguments")
 const bisectFindFirstIndex = require("./utils/bisectFindFirstIndex")
@@ -105,6 +105,13 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             adminFee: 0,
         }, savedState, config)
 
+
+        this.eth.on("block", blockNumber => {
+            if (blockNumber % 10 === 0) { this.log(`Block ${blockNumber} observed`) }
+            this.state.lastObservedBlockNumber = blockNumber
+        })
+
+
         // get initial state from contracts, also works as a sanity check for the config
         this.contract = new Contract(this.state.contractAddress, MonoplasmaJson.abi, this.eth)
         this.state.tokenAddress = await this.contract.token()
@@ -115,15 +122,16 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
 
         // TODO: next time a new event is added, DRY this (there's like 6 repetitions of listened events)
         this.adminFeeFilter = this.contract.filters.AdminFeeChanged()
-        this.blockCreateFilter = this.contract.filters.BlockCreated()
+        this.blockCreateFilter = this.contract.filters.NewCommit()
         this.tokenTransferFilter = this.token.filters.Transfer(null, this.contract.address)
 
-        let lastPublishedBlockNumber = this.state.lastPublishedBlock && this.state.lastPublishedBlock.blockNumber
+        // let lastPublishedBlockNumber = this.state.lastPublishedBlock && this.state.lastPublishedBlock.blockNumber
         let lastBlock = {
             members: [],
             blockNumber: 0,
             timestamp: 0,
         }
+        /*
         if (lastPublishedBlockNumber) {
             // quick fix for BigNumbers that have ended up in the store.json:
             //   they get serialized as {"_hex":"0x863a0a"}
@@ -133,15 +141,23 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             this.log(`Reading from store lastPublishedBlockNumber ${lastPublishedBlockNumber}`)
             lastBlock = await this.store.loadBlock(lastPublishedBlockNumber)
         }
+        */
+        if (await this.store.hasLatestBlock()) {
+            lastBlock = await this.store.getLatestBlock()
+        }
+        this.log(`Syncing Monoplasma state starting from block ${lastBlock.blockNumber} (t=${lastBlock.timestamp}) with ${lastBlock.members.length} members`)
+        const playbackStartingTimestampMs = lastBlock.timestamp || lastBlock.blockNumber && await this.getBlockTimestamp(lastBlock.blockNumber) || 0
+        this.plasma = new MonoplasmaState({
+            blockFreezeSeconds: this.state.blockFreezeSeconds,
+            initialMembers: lastBlock.members,
+            store: this.store,
+            adminAddress: this.state.adminAddress,
+            adminFeeFraction: this.state.adminFee,
+            initialBlockNumber: lastBlock.blockNumber,
+            initialTimestamp: playbackStartingTimestampMs / 1000,
+        })
 
-        // TODO: this.plasma should be called this.realtimeState
-        this.log(`Starting from block ${lastBlock.blockNumber} (t=${lastBlock.timestamp}, ${new Date((lastBlock.timestamp || 0) * 1000).toISOString()}) with ${lastBlock.members.length} members`)
-        this.plasma = new MonoplasmaState(this.state.blockFreezeSeconds, lastBlock.members, this.store, this.state.adminAddress, this.state.adminFee, lastBlock.blockNumber, lastBlock.timestamp)
-
-        this.log("Syncing Monoplasma state...")
-        const playbackStartingTimestamp = this.state.lastMessageTimestamp || 0
-
-        this.log("Listening to joins/parts from the Channel...")
+        this.log(`Getting joins/parts from the Channel starting from t=${playbackStartingTimestampMs}, ${new Date(playbackStartingTimestampMs).toISOString()}`)
 
         // replay and cache messages until in sync
         // TODO: cache only starting from given block (that operator/validator have loaded state from store)
@@ -151,7 +167,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             const event = { type, addressList, timestamp: meta.messageId.timestamp }
             this.messageCache.push(event)
         })
-        await this.channel.listen(playbackStartingTimestamp)
+        await this.channel.listen(playbackStartingTimestampMs)
         this.log(`Playing back ${this.messageCache.length} messages from joinPartStream`)
 
         // messages are now cached => do the Ethereum event playback, sync up this.plasma
@@ -177,7 +193,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         })
         this.contract.on(this.blockCreateFilter, (blockNumber, rootHash, ipfsHash, event) => {
             this.log(`Observed creation of block ${+blockNumber} at block ${event.blockNumber} (root ${rootHash}, ipfs "${ipfsHash}")`)
-            this.state.lastPublishedBlock = event.args
+            //this.state.lastPublishedBlock = event.args
             this.emit("blockCreated", event)
         })
         this.token.on(this.tokenTransferFilter, async (to, from, amount, event) => {
@@ -208,7 +224,10 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         })
 
         // TODO: maybe state saving function should create the state object instead of continuously mutating "state" member
-        await this.store.saveState(this.state)
+        await this.saveState()
+    }
+    async saveState(){
+        this.store.saveState(this.state)
     }
 
     async stop() {
@@ -221,15 +240,15 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
      * @param {MonoplasmaState} monoplasmaState original to be copied
      */
     setState(monoplasmaState) {
-        this.plasma = new MonoplasmaState(
-            this.state.blockFreezeSeconds,
-            monoplasmaState.members,
-            this.store,
-            this.state.adminAddress,
-            this.state.adminFee,
-            monoplasmaState.blockNumber,
-            monoplasmaState.timestamp
-        )
+        this.plasma = new MonoplasmaState({
+            blockFreezeSeconds: this.state.blockFreezeSeconds,
+            initialMembers: monoplasmaState.members,
+            store: this.store,
+            adminAddress: this.state.adminAddress,
+            adminFeeFraction: this.state.adminFee,
+            initialBlockNumber: monoplasmaState.blockNumber,
+            initialTimestamp: monoplasmaState.timestamp,
+        })
     }
 
     /**

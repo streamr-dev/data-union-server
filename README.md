@@ -1,6 +1,6 @@
-# Streamr community products server
+# Streamr Data Union server
 
-[![Build Status](https://travis-ci.com/streamr-dev/streamr-community-products.svg?token=9unddqKugX2cPcyhtVxp&branch=master)](https://travis-ci.com/streamr-dev/streamr-community-products)
+[![Build Status](https://travis-ci.com/streamr-dev/data-union-server.svg?token=9unddqKugX2cPcyhtVxp&branch=master)](https://travis-ci.com/streamr-dev/data-union-server)
 
 # Running
 
@@ -42,7 +42,7 @@ Start server script can be modified using the following environment variables:
 
 # Debugging and developing
 
-Use Node 10.14.0 and NPM 6.4.1.
+Use Node 12.16.1 and npm 6.14.1.
 
 Run tests with one of the following:
 * `npm run test` for all tests that should currently pass

@@ -4,8 +4,9 @@ const {
 } = require("ethers")
 
 const debug = require("debug")
-const FileStore = require("monoplasma/src/fileStore")
+const pAll = require("p-all")
 
+const FileStore = require("./fileStore")
 const MonoplasmaOperator = require("./operator")
 const StreamrChannel = require("./streamrChannel")
 
@@ -43,9 +44,12 @@ module.exports = class DataUnionServer {
         this.communityIsRunningPromises = {}
         //this.whitelist = whitelist    // TODO
         //this.blacklist = blacklist
+        this.startCalled = false
     }
 
     async start() {
+        if (this.startCalled) { throw new Error("Cannot re-start stopped server.") }
+        this.startCalled = true // guard against starting multiple times
         await this.playbackPastOperatorChangedEvents()
 
         this.eth.on({ topics: [operatorChangedEventTopic] }, log => {
@@ -77,23 +81,21 @@ module.exports = class DataUnionServer {
             topics: [operatorChangedEventTopic, hexZeroPad(this.wallet.address, 32).toLowerCase()]
         }
 
+        // TODO: remove communities that have been switched away, so not to (start and) stop operators during playback
+
         const logs = await this.eth.getLogs(filter)
 
-        const total = logs.length
-        this.log(`Playing back ${total} operator change events...`)
-        const startAllTime = Date.now()
+        // get unique addresses
+        const addresses = Array.from(new Set(logs.map((log) => getAddress(log.address))))
 
-        // TODO: we should also catch all OperatorChanged from communities that we we've operated
-        //    so that we can detect if we've been swapped out
+        const total = addresses.length
+        this.log(`Playing back ${total} operator change events...`)
         let numErrors = 0
-        for (let i = 0; i < total; i++) {
+        let numComplete = 0
+        const startAllTime = Date.now()
+        await pAll(addresses.map((contractAddress) => () => {
             const startEventTime = Date.now()
-            const log = logs[i]
-            let event = operatorChangedInterface.parseLog(log)
-            const num = i + 1
-            this.log(`Playing back past OperatorChanged event ${num} of ${total}: ` + JSON.stringify(event))
-            const contractAddress = getAddress(log.address)
-            await this.onOperatorChangedEventAt(contractAddress).catch(err => {
+            return this.onOperatorChangedEventAt(contractAddress).catch((err) => {
                 // TODO: while developing, 404 for joinPartStream could just mean
                 //   mysql has been emptied by streamr-ganache docker not,
                 //   so some old joinPartStreams are in ganache but not in mysql
@@ -104,13 +106,17 @@ module.exports = class DataUnionServer {
                 this.error(err.stack)
                 // keep chugging, only give up if all fail
                 numErrors++
+            }).then(() => {
+                numComplete++
+                this.log(`Event ${numComplete} of ${total} processed in ${Date.now() - startEventTime}ms, ${Math.round((numComplete / total) * 100)}% complete.`)
             })
-            this.log(`Event ${num} of ${total} processed in ${Date.now() - startEventTime}ms, ${Math.round((num / total) * 100)}% complete.`)
-        }
+        }), { concurrency: 6 })
+
         this.log(`Finished playback of ${total} operator change events in ${Date.now() - startAllTime}ms.`)
-        if (numErrors && numErrors === total) {
+        const numCommunities = Object.keys(this.communities).length
+        if (numErrors && numErrors === numCommunities) {
             // kill if all operators errored
-            throw new Error(`All ${total} operator changed events failed to process. Shutting down.`)
+            throw new Error(`All ${numCommunities} communities failed to start. Shutting down.`)
         }
     }
 
@@ -121,35 +127,45 @@ module.exports = class DataUnionServer {
      */
     async onOperatorChangedEventAt(address) {
         const contract = new Contract(address, DataUnionJson.abi, this.eth)
+        // create the promise to prevent later (duplicate) creation
+        const isRunningPromise = this.communityIsRunning(address)
+        const status = this.communityIsRunningPromises[address]
+        const { communities } = this
+        const community = communities[address]
         const newOperatorAddress = getAddress(await contract.operator())
         const weShouldOperate = newOperatorAddress === this.wallet.address
-        const community = this.communities[address]
         if (!community) {
             if (weShouldOperate) {
                 // rapid event spam stopper (from one contract)
-                this.communities[address] = {
+                communities[address] = {
                     state: "launching",
                     eventDetectedAt: Date.now(),
                 }
 
-                // create the promise to prevent later (duplicate) creation
-                const isRunningPromise = this.communityIsRunning(address)
+                let result
+                let error
                 try {
-                    const result = await this.startOperating(address)
-                    this.communityIsRunningPromises[address].setRunning(result)
-                } catch (error) {
-                    this.communities[address] = {
-                        state: "failed",
-                        error,
-                        eventDetectedAt: this.communities[address].eventDetectedAt,
-                        failedAt: Date.now(),
-                    }
-                    this.communityIsRunningPromises[address].setFailed(error)
+                    result = await this.startOperating(address)
+                } catch (err) {
+                    error = err
                 }
-                // forward community start success/failure
-                return isRunningPromise
+
+                if (error) {
+                    if (communities[address]) {
+                        communities[address] = {
+                            state: "failed",
+                            error,
+                            eventDetectedAt: communities[address].eventDetectedAt,
+                            failedAt: Date.now(),
+                        }
+                    }
+                    status.setFailed(error)
+                } else {
+                    status.setRunning(result)
+                }
             } else {
                 this.log(`Detected a community for operator ${newOperatorAddress}, ignoring.`)
+                status.setRunning() // I guess?
             }
         } else {
             if (!community.operator || !community.operator.contract) {
@@ -164,9 +180,12 @@ module.exports = class DataUnionServer {
             }
 
             // operator was changed, we can stop running the operator process
+            // TODO: make sure the operator was in fact started first
             await community.operator.shutdown()
-            delete this.communities[address]
+            delete communities[address]
         }
+        // forward community start success/failure
+        return isRunningPromise
     }
 
     /**
@@ -226,6 +245,7 @@ module.exports = class DataUnionServer {
 
         const operatorAddress = getAddress(await contract.operator())
         if (operatorAddress !== this.wallet.address) {
+            // TODO: reconsider throwing here, since no way to *atomically* check operator before starting
             throw new Error(`startOperating: Community requesting operator ${operatorAddress}, not a job for me (${this.wallet.address})`)
         }
 

@@ -1,5 +1,5 @@
 FROM ubuntu:16.04 AS builder
-ARG NODE_VERSION="v10.14.0"
+ARG NODE_VERSION="v12.16.1"
 RUN apt-get update && apt-get install -y \
 	build-essential \
 	curl \
@@ -18,11 +18,11 @@ RUN useradd -ms /bin/bash node
 USER node
 WORKDIR /home/node
 COPY ./ ./
-RUN npm ci --only=production
+RUN npm ci
 RUN npm run build-contracts
 
 FROM ubuntu:16.04
-ARG NODE_VERSION="v10.14.0"
+ARG NODE_VERSION="v12.16.1"
 RUN apt-get update && apt-get install -y \
 	awscli \
 	curl \

@@ -8,7 +8,6 @@ const {
     Wallet,
     providers: { Web3Provider }, //, JsonRpcProvider },
 } = require("ethers")
-const onProcessExit = require("exit-hook")
 
 const deployTestToken = require("../test/utils/deployTestToken")
 const sleep = require("../src/utils/sleep-promise")
@@ -21,34 +20,17 @@ const fakeTxCount = 20
 
 const ERC20Mintable = require("../build/ERC20Mintable.json")
 
-let ganache = null
-function stopGanache() {
-    if (ganache) {
-        console.log("Shutting down Ethereum simulator...")
-        ganache.shutdown()
-        ganache = null
-    }
-}
-onProcessExit(stopGanache)
 function error(err) {
     console.error(err.stack)
     process.exit(1)
 }
 
 async function start() {
-    //const ganacheLog = () => {}
     const ganacheLog = msg => {
         if (msg.match("0x")) {
             console.log(" <Ganache> " + msg)
         }
     }
-
-    // Start Ganache CLI (in a separate process)
-    /*
-    ganache = await startGanache(8263, ganacheLog, ganacheLog, ganacheBlockIntervalSeconds)
-    const provider = new JsonRpcProvider(ganache.httpUrl)
-    const keys = ganache.privateKeys
-    */
 
     // Start Ganache Core (library)
     const keys = [

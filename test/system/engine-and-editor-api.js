@@ -1,8 +1,7 @@
 const { spawn } = require("child_process")
 const fetch = require("node-fetch")
 const assert = require("assert")
-
-const log = require("debug")("Streamr::dataunion::test::system::http-api")
+const log = require("debug")("Streamr::CPS::test::system::http-api")
 
 const StreamrClient = require("streamr-client") // just for getting session tokens (ethereum-sign-in)...
 
@@ -54,6 +53,15 @@ describe("Data Union demo but through a running E&E instance", () => {
         spawn("rm", ["-rf", STORE_DIR])
     })
 
+    function onClose(code, signal) {
+        throw new Error(`start_server.js exited with code ${code}, signal ${signal}`)
+    }
+
+    function onError(err) {
+        log(`start_server.js ERROR: ${err}`)
+        process.exitCode = 1
+    }
+
     async function startServer() {
         log("--- Running start_server.js ---")
         operatorProcess = spawn(process.execPath, ["scripts/start_server.js"], {
@@ -67,17 +75,14 @@ describe("Data Union demo but through a running E&E instance", () => {
                 WEBSERVER_PORT,
                 BLOCK_FREEZE_SECONDS,
                 RESET: "yesplease",
+                DEBUG: process.env.DEBUG,
+                DEBUG_COLORS: "true"
             }
         })
         operatorProcess.stdout.on("data", data => { log(`<server stdio> ${String(data).trim()}`) })
         operatorProcess.stderr.on("data", data => { log(`<server stderr> ${String(data).trim()}`) })
-        operatorProcess.on("close", (code, signal) => {
-            throw new Error(`start_server.js exited with code ${code}, signal ${signal}`)
-        })
-        operatorProcess.on("error", err => {
-            log(`start_server.js ERROR: ${err}`)
-            process.exitCode = 1
-        })
+        operatorProcess.on("close", onClose)
+        operatorProcess.on("error", onError)
 
         await untilStreamContains(operatorProcess.stdout, "[DONE]")
 
@@ -190,8 +195,7 @@ describe("Data Union demo but through a running E&E instance", () => {
             "pricePerSecond": 5,
             "priceCurrency": "DATA",
             "minimumSubscriptionInSeconds": 0,
-            //"type": "DATAUNION",  // TODO: use this once https://streamr.atlassian.net/browse/CORE-1869 lands
-            "type": "COMMUNITY",
+            "type": "DATAUNION",
         }
         const productCreateResponse = await POST("/products", product)
         log(`     Response: ${JSON.stringify(productCreateResponse)}`)
@@ -260,10 +264,11 @@ describe("Data Union demo but through a running E&E instance", () => {
 
         log("2.3) Wait until members have been added")
         let members = []
-        sleepTime = 100
-        while (members.length < 1) {
-            await sleep(sleepTime *= 2)
+        sleepTime = 1000
+        while (members.length < 2) {
+            await sleep(sleepTime)
             members = await GET(`/dataunions/${communityAddress}/members`)
+            log("members: ", members)
         }
 
         // TODO: send revenue by purchasing the product on Marketplace
@@ -283,13 +288,19 @@ describe("Data Union demo but through a running E&E instance", () => {
         }
 
         log("3.1) Wait for blocks to unfreeze...") //... and also that state updates.
+
+        const expectedAdminEarnings = parseEther("14").toString()
         let member = memberBeforeRevenues
-        // wait until member.withdrawableEarnings exists && has increased
-        while (member.withdrawableEarnings < 1 + memberBeforeRevenues.withdrawableEarnings) {
+        // wait until member.withdrawableEarnings is at least expected earnings
+        while ((member.withdrawableEarnings - memberBeforeRevenues.withdrawableEarnings) < expectedAdminEarnings) {
             await sleep(1000)
             member = await GET(`/dataunions/${communityAddress}/members/${address}`)
         }
-        Object.keys(member).forEach(k => log(`    ${k} ${JSON.stringify(member[k])}`))
+
+        // add so CI more reliable until error_frozen issue has a workaround+test
+        await sleep(3000)
+
+        log("    Member before", member)
 
         log("4) Withdraw tokens")
 
@@ -298,10 +309,12 @@ describe("Data Union demo but through a running E&E instance", () => {
 
         const contract = new Contract(communityAddress, DataUnion.abi, wallet)
         const withdrawTx = await contract.withdrawAll(member.withdrawableBlockNumber, member.withdrawableEarnings, member.proof)
-        await withdrawTx.wait(1)
+        log("    withdrawAll done")
+        await withdrawTx.wait(2)
+        log("    withdrawAll confirmed")
 
         const res4b = await GET(`/dataunions/${communityAddress}/members/${address}`)
-        Object.keys(res4b).forEach(k => log(`    ${k} ${JSON.stringify(res4b[k])}`))
+        log("    member stats after", res4b)
 
         const balanceAfter = await token.balanceOf(address)
         log(`   Token balance after: ${formatEther(balanceAfter)}`)
@@ -312,16 +325,19 @@ describe("Data Union demo but through a running E&E instance", () => {
         log("4.1) Withdraw tokens for another account")
         const address2 = members[1].address // 0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf
         const member2 = await GET(`/dataunions/${communityAddress}/members/${address2}`)
+        log("    Member2 stats before", res4b)
         Object.keys(member2).forEach(k => log(`    ${k} ${JSON.stringify(member2[k])}`))
 
         const balanceBefore2 = await token.balanceOf(address2)
         log(`   Token balance before: ${formatEther(balanceBefore2)}`)
 
         const withdrawTx2 = await contract.withdrawAllFor(address2, member2.withdrawableBlockNumber, member2.withdrawableEarnings, member2.proof)
+        log("    withdrawAll done")
         await withdrawTx2.wait(2)
+        log("    withdrawAll confirmed")
 
         const res4c = await GET(`/dataunions/${communityAddress}/members/${address2}`)
-        Object.keys(res4c).forEach(k => log(`    ${k} ${JSON.stringify(res4c[k])}`))
+        log("    Member2 stats after", res4c)
 
         const balanceAfter2 = await token.balanceOf(address2)
         log(`   Token balance after: ${formatEther(balanceAfter2)}`)
@@ -329,16 +345,17 @@ describe("Data Union demo but through a running E&E instance", () => {
         const difference2 = balanceAfter2.sub(balanceBefore2)
         log(`   Withdraw effect: ${formatEther(difference2)}`)
 
-        const adminEarnings = parseEther("14").toString()
-        const memberEarnings = parseEther("4").toString()
-        assert.strictEqual(member.withdrawableEarnings, adminEarnings)
-        assert.strictEqual(member2.withdrawableEarnings, memberEarnings)
-        assert.strictEqual(difference.toString(), adminEarnings)
-        assert.strictEqual(difference2.toString(), memberEarnings)
+        const expectedMember2Earnings = parseEther("4").toString()
+        assert.strictEqual(member.withdrawableEarnings, expectedAdminEarnings)
+        assert.strictEqual(member2.withdrawableEarnings, expectedMember2Earnings)
+        assert.strictEqual(difference.toString(), expectedAdminEarnings)
+        assert.strictEqual(difference2.toString(), expectedMember2Earnings)
     })
 
     afterEach(() => {
         if (operatorProcess) {
+            operatorProcess.removeListener("close", onClose)
+            operatorProcess.removeListener("error", onError)
             operatorProcess.kill()
             operatorProcess = null
         }

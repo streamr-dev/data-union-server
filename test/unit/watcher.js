@@ -10,8 +10,6 @@ const {
     providers: { Web3Provider }
 } = require("ethers")
 const ganache = require("ganache-core")
-//const { Wallet, ContractFactory, providers: { JsonRpcProvider } } = require("ethers")
-//const startGanache = require("monoplasma/src/utils/startGanache")
 
 const CommunityJson = require("../../build/DataUnion")
 const TokenJson = require("../../build/TestToken")
@@ -19,11 +17,11 @@ const TokenJson = require("../../build/TestToken")
 const sleep = require("../../src/utils/sleep-promise")
 
 const MockStreamrChannel = require("../utils/mockStreamrChannel")
-const mockStore = require("monoplasma/test/utils/mockStore")
+const mockStore = require("../utils/mockStore")
 
 const members = [
     { address: "0x2F428050ea2448ed2e4409bE47e1A50eBac0B2d2", earnings: "50" },
-    { address: "0xb3428050ea2448ed2e4409be47e1a50ebac0b2d2", earnings: "20" },
+    { address: "0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2", earnings: "20" },
 ]
 const initialBlock = {
     blockNumber: 3,
@@ -130,8 +128,8 @@ describe("MonoplasmaWatcher", () => {
 
         assert(store.lastSavedState)
         const newBalances = [
-            { address: "0x2F428050ea2448ed2e4409bE47e1A50eBac0B2d2", earnings: "70" }, // 50 startBalance + 10 + 10 (40 -> 20/2, 20 for admin)
-            { address: "0xb3428050ea2448ed2e4409be47e1a50ebac0b2d2", earnings: "40" }, // 20 startBalance + 10 + 10
+            { address: "0x2F428050ea2448ed2e4409bE47e1A50eBac0B2d2", earnings: "70", active: true }, // 50 startBalance + 10 + 10 (40 -> 20/2, 20 for admin)
+            { address: "0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2", earnings: "40", active: true }, // 20 startBalance + 10 + 10
         ]
         assert.deepStrictEqual(watcher.plasma.getMembers(), newBalances)
     })
@@ -168,10 +166,10 @@ describe("MonoplasmaWatcher", () => {
         await sleep(1000)
         log(JSON.stringify(watcher.plasma.getMembers()))
         const expectedBalances = [
-            { address: "0x2F428050ea2448ed2e4409bE47e1A50eBac0B2d2", earnings: "70" }, // 50 startBalance + 10 + 5 + 5
-            { address: "0xb3428050ea2448ed2e4409be47e1a50ebac0b2d2", earnings: "40" }, // 20 startBalance + 10 + 5 + 5
-            { address: "0x1234567812345678123456781234567812345678", earnings: "10" }, // 0 startBalance + 5 + 5
-            { address: "0x2234567812345678123456781234567812345678", earnings: "5" }, // 0 startBalance + 5
+            { address: "0x2F428050ea2448ed2e4409bE47e1A50eBac0B2d2", earnings: "70", active: true }, // 50 startBalance + 10 + 5 + 5
+            { address: "0xb3428050eA2448eD2E4409bE47E1a50EBac0B2d2", earnings: "40", active: true }, // 20 startBalance + 10 + 5 + 5
+            { address: "0x1234567812345678123456781234567812345678", earnings: "10", active: true }, // 0 startBalance + 5 + 5
+            { address: "0x2234567812345678123456781234567812345678", earnings: "5", active: true }, // 0 startBalance + 5
         ]
         assert.deepStrictEqual(watcher.plasma.getMembers(), expectedBalances)
 

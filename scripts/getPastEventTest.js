@@ -1,44 +1,42 @@
+/* eslint-disable */
+
 require("dotenv/config")
 //
 // testing how ethers.js does getPastEvents
 //   and how to make it work reliably with Ganache
 
 const { Contract, Wallet, utils, providers: { JsonRpcProvider } } = require("ethers")
-const onProcessExit = require("exit-hook")
 
 const deployTestToken = require("../test/utils/deployTestToken")
 const sleep = require("../src/utils/sleep-promise")
 
-const startGanache = require("monoplasma/src/utils/startGanache")
 const ganacheBlockIntervalSeconds = 0
 const fakeTxCount = 20
 
 const ERC20Mintable = require("../build/ERC20Mintable.json")
 
-let ganache = null
-function stopGanache() {
-    if (ganache) {
-        console.log("Shutting down Ethereum simulator...")
-        ganache.shutdown()
-        ganache = null
-    }
-}
-onProcessExit(stopGanache)
 function error(err) {
     console.error(err.stack)
     process.exit(1)
 }
 
 async function start() {
-    //const ganacheLog = () => {}
-    const ganacheLog = msg => {
-        if (msg.match("0x")) {
-            console.log(" <Ganache> " + msg)
+    const logger = {
+        log: msg => {
+            if (msg.match("0x")) {
+                console.log(" <Ganache> " + msg)
+            }
         }
     }
     ganache = await startGanache(8263, ganacheLog, ganacheLog, ganacheBlockIntervalSeconds)
+    const secretKey = "0x1234567812345678123456781234567812345678123456781234567812345678"
+    const provider = new Web3Provider(ganache.provider({
+        accounts: [{ secretKey, balance: "0xffffffffffffffffffffffffff" }],
+        logger,
+    }))
+    const wallet = new Wallet(secretKey, provider)
+    await provider.getNetwork()     // wait until ganache is up and ethers.js ready
 
-    const provider = new JsonRpcProvider(ganache.httpUrl)
     provider.pollingInterval = 500
     const wallets = ganache.privateKeys.map(key => new Wallet(key, provider))
     const network = await provider.getNetwork()

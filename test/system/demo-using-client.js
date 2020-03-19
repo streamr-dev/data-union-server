@@ -163,7 +163,7 @@ describe.skip("Community product demo but through a running E&E instance", () =>
             "pricePerSecond": 5,
             "priceCurrency": "DATA",
             "minimumSubscriptionInSeconds": 0,
-            "type": "COMMUNITY",
+            "type": "DATAUNION",
         }
         const productCreateResponse = await client.createProduct(productJson)
         log(`     Response: ${JSON.stringify(productCreateResponse)}`)
