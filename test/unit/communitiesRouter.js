@@ -7,7 +7,7 @@ const http = require("http")
 const fetch = require("node-fetch")
 const { Wallet, ContractFactory, providers: { Web3Provider } } = require("ethers")
 
-const log = require("debug")("Streamr::CPS::test::unit::communities-router")
+const log = require("debug")("Streamr::CPS::test::unit::server-router")
 
 const CommunityJson = require("../../build/CommunityProduct")
 const TokenJson = require("../../build/TestToken")
@@ -36,7 +36,7 @@ const startState = {
 }
 
 const CommunityProductServer = require("../../src/server")
-const getCommunitiesRouter = require("../../src/routers/communities")
+const getServerRouter = require("../../src/routers/server")
 
 describe("Community product server /communities router", () => {
     const port = 3031
@@ -80,13 +80,13 @@ describe("Community product server /communities router", () => {
         channel = new MockStreamrChannel("dummy-stream-for-router-test")
         server.getStoreFor = () => mockStore(startState, initialBlock, log)
         server.getChannelFor = () => channel
-        const router = getCommunitiesRouter(server, log)
         community = await server.startOperating(contractAddress)
 
         log("Starting CommunitiesRouter...")
         const app = express()
+        const router = getServerRouter(server)
         app.use(bodyParser.json())
-        app.use("/communities", router)
+        app.use(router)
         httpServer = http.createServer(app)
         httpServer.listen(port)
     })
@@ -122,6 +122,8 @@ describe("Community product server /communities router", () => {
     })
 
     it("GET /stats", async () => {
+        const statsText = await fetch(`${serverURL}/communities/${community.address}/stats`).then(res => res.text())
+        console.log(statsText)
         const stats = await fetch(`${serverURL}/communities/${community.address}/stats`).then(res => res.json())
         assert.strictEqual(stats.memberCount.active, 2)
     })

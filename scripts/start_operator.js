@@ -20,8 +20,8 @@ const deployCommunity = require("../src/utils/deployCommunity")
 
 const deployTestToken = require("../test/utils/deployTestToken")
 
-const operatorRouter = require("monoplasma/src/routers/member")
-const adminRouter = require("monoplasma/src/routers/admin")
+const operatorRouter = require("../src/routers/dataunion")
+const adminRouter = require("../src/routers/admin")
 const Channel = require("../src/streamrChannel")
 
 const {
