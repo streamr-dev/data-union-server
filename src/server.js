@@ -18,6 +18,9 @@ const operatorChangedEventTopic = id("OperatorChanged(address)")
 const operatorChangedAbi = ["event OperatorChanged(address indexed newOperator)"]
 const operatorChangedInterface = new Interface(operatorChangedAbi)
 
+/** This must be kept in sync with contracts/DataunionVault.sol */
+const SERVER_VERSION = 1
+
 /**
  * @typedef {string} EthereumAddress is hex string /0x[0-9A-Fa-f]^64/, return value from ethers.utils.getAddress
  */
@@ -133,7 +136,8 @@ module.exports = class CommunityProductServer {
         const { communities } = this
         const community = communities[address]
         const newOperatorAddress = getAddress(await contract.operator())
-        const weShouldOperate = newOperatorAddress === this.wallet.address
+        const contractVersion = contract.version ? await contract.version() : 0
+        const weShouldOperate = SERVER_VERSION === contractVersion && newOperatorAddress === this.wallet.address
         if (!community) {
             if (weShouldOperate) {
                 // rapid event spam stopper (from one contract)
