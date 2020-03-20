@@ -59,8 +59,8 @@ module.exports = (server) => {
 
     const router = express.Router()
 
-    router.get("/dataunions/:dataunionAddress", parseDataunionState, dataunionRouter)
-    router.get("/communities/:dataunionAddress", parseDataunionState, dataunionRouter)
+    router.use("/dataunions/:dataunionAddress", parseDataunionState, dataunionRouter)
+    router.use("/communities/:dataunionAddress", parseDataunionState, dataunionRouter)
 
     router.get("/dataunions", getSummary)
     router.get("/communities", getSummary)

@@ -29,9 +29,18 @@ router.get("/", (req, res) => {
 router.get("/stats", (req, res) => {
     const state = req.monoplasmaState
     //log(`HTTP ${state.dataunionAddress}> Requested community stats`)
-
-    const stats = state.getStats()
-    res.send(stats)
+    const memberCount = state.getMemberCount()
+    const totalEarnings = state.getTotalRevenue()
+    const latestBlock = summarizeBlock(this.plasma.getLatestBlock())
+    const latestWithdrawableBlock = summarizeBlock(this.plasma.getLatestWithdrawableBlock())
+    const result = {
+        memberCount,
+        totalEarnings,
+        latestBlock,
+        latestWithdrawableBlock,
+    }
+    //const stats = state.getStats()
+    res.send(result)
 })
 
 router.get("/members", (req, res) => {
