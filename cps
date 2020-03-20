@@ -1,5 +1,7 @@
 #!/bin/bash
 
+export DEBUG=Streamr*
+
 # docker env
 export ETHEREUM_SERVER=http://localhost:8545
 export STREAMR_NODE_ADDRESS=0xFCAd0B19bB29D4674531d6f115237E16AfCE377c
@@ -38,7 +40,7 @@ export DATA_TOKEN_AMOUNT=0.01
 
 #node scripts/watch_dataunion.js
 #node scripts/start_server.js
-node scripts/deploy.js
+#node scripts/deploy.js
 #node scripts/add_secret.js
 #node scripts/join.js
 #node scripts/check_dataunion.js
