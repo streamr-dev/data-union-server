@@ -4,16 +4,16 @@ const {
 } = require("ethers")
 const StreamrClient = require("streamr-client")
 
-const log = require("debug")("Streamr::CPS::utils::deployCommunity")
+const log = require("debug")("Streamr::dataunion::utils::deployCommunity")
 
 const { throwIfBadAddress, throwIfNotContract } = require("./checkArguments")
 
-const CommunityJson = require("../../build/CommunityProduct")
+const CommunityJson = require("../../build/DataUnion")
 
 /** @typedef {string} EthereumAddress */
 
 /**
- * Deploy a new CommunityProduct contract and create the required joinPartStream
+ * Deploy a new DataUnion contract and create the required joinPartStream
  * @param {Wallet} wallet to do the deployment from, also becomes owner or stream and contract
  * @param {EthereumAddress} operatorAddress community-product-server that should operate the contract
  * @param {EthereumAddress} tokenAddress

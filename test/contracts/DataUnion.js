@@ -1,18 +1,18 @@
 /*global accounts assert utils */
 
-const log = require("debug")("Streamr::CPS::test::contracts::CommunityProduct")
+const log = require("debug")("Streamr::dataunion::test::contracts::DataUnion")
 
 const etherlime = require("etherlime")
-const CommunityProduct = require("../../build/CommunityProduct.json")
+const DataUnion = require("../../build/DataUnion.json")
 const TestToken = require("../../build/TestToken.json")
 //const assert = require("assert")
 
-describe("CommunityProduct", () => {
+describe("DataUnion", () => {
     const admin = accounts[3]
     const operator = accounts[2]
     let deployer
     let token
-    let community
+    let dataunion
     let eth
 
     // constructor(address operator, string joinPartStreamId, string syncStreamId, address tokenAddress, uint blockFreezePeriodSeconds)
@@ -26,13 +26,13 @@ describe("CommunityProduct", () => {
         const blockFreezePeriodSeconds = 5
         const operatorAddress = operator.signer.signingKey.address
         log("Deploy arguments:", operatorAddress, joinPartStreamId, syncStreamId, tokenAddress, blockFreezePeriodSeconds)
-        community = await deployer.deploy(CommunityProduct, false, operatorAddress, joinPartStreamId, syncStreamId, tokenAddress, blockFreezePeriodSeconds)
+        dataunion = await deployer.deploy(DataUnion, false, operatorAddress, joinPartStreamId, syncStreamId, tokenAddress, blockFreezePeriodSeconds)
     })
 
     it("should emit event upon creation", async () => {
         const expectedEvent = "OperatorChanged"
-        const transactionReceipt = eth.getTransactionReceipt(community.deployTransaction)
-        let isEmitted = utils.hasEvent(transactionReceipt, community.contract, expectedEvent)
+        const transactionReceipt = eth.getTransactionReceipt(dataunion.deployTransaction)
+        let isEmitted = utils.hasEvent(transactionReceipt, dataunion.contract, expectedEvent)
         assert(isEmitted, "Event OperatorChanged was not emitted")
     })
 
@@ -41,6 +41,6 @@ describe("CommunityProduct", () => {
     })
 
     it("should be valid address", async () => {
-        assert.isAddress(community.contractAddress, "The contract was not deployed")
+        assert.isAddress(dataunion.contractAddress, "The contract was not deployed")
     })
 })
