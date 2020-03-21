@@ -1,7 +1,7 @@
 const { spawn } = require("child_process")
 const fetch = require("node-fetch")
 const assert = require("assert")
-const log = require("debug")("Streamr::CPS::test::system::http-api")
+const log = require("debug")("Streamr::dataunion::test::system::http-api")
 
 const StreamrClient = require("streamr-client") // just for getting session tokens (ethereum-sign-in)...
 
@@ -14,10 +14,10 @@ const {
 
 const sleep = require("../../src/utils/sleep-promise")
 const { untilStreamContains } = require("../utils/await-until")
-const deployCommunity = require("../../src/utils/deployCommunity")
+const deployContract = require("../../src/utils/deploy")
 
 const ERC20Mintable = require("../../build/ERC20Mintable.json")
-const CommunityProduct = require("../../build/CommunityProduct.json")
+const DataUnion = require("../../build/DataUnion.json")
 
 const STORE_DIR = __dirname + `/test-store-${+new Date()}`
 const BLOCK_FREEZE_SECONDS = 1
@@ -34,13 +34,13 @@ const {
 } = require("../integration/CONFIG")
 
 /**
- * Same as community-product-demo.js except only through E&E APIs,
+ * Same as dataunion-demo.js except only through E&E APIs,
  *   "more end-to-end" because it won't poke the stream and server directly, only talks to E&E
  * Only needs to run against streamr-ganache docker, so uses ETHEREUM_SERVER from CONFIG
  *
  * Point of view is of Streamr frontend developer, working on e.g. Marketplace
  */
-describe("Community product demo but through a running E&E instance", () => {
+describe("Data Union demo but through a running E&E instance", () => {
     let operatorProcess
 
     before(() => {
@@ -128,7 +128,7 @@ describe("Community product demo but through a running E&E instance", () => {
         const adminTransferTx = await adminToken.mint(address, parseEther("50"))
         await adminTransferTx.wait(1)
 
-        log("1) Create a new Community product")
+        log("1) Create a new Data Union")
 
         log("1.1) Get Streamr session token")
         const client = new StreamrClient({
@@ -143,6 +143,7 @@ describe("Community product demo but through a running E&E instance", () => {
 
         // wrap fetch; with the Authorization header the noise is just too much...
         async function GET(url) {
+            url = url.replace("dataunions", "communities")  // TODO: remove once https://streamr.atlassian.net/browse/CORE-1869 lands
             return fetch(STREAMR_HTTP_URL + url, {
                 headers: {
                     "Authorization": `Bearer ${sessionToken}`
@@ -150,6 +151,7 @@ describe("Community product demo but through a running E&E instance", () => {
             }).then(resp => resp.json())
         }
         async function POST(url, bodyObject, sessionTokenOverride, methodOverride) {
+            url = url.replace("dataunions", "communities")  // TODO: remove once https://streamr.atlassian.net/browse/CORE-1869 lands
             return fetch(STREAMR_HTTP_URL + url, {
                 method: methodOverride || "POST",
                 body: JSON.stringify(bodyObject),
@@ -165,8 +167,8 @@ describe("Community product demo but through a running E&E instance", () => {
 
         log("1.2) create a stream that's going to go into the product")
         const stream = {
-            "name": "Community Product server test stream " + Date.now(),
-            "description": "PLEASE DELETE ME, I'm a Community Product server test stream",
+            "name": "Data Union HTTP API end-to-end test stream " + Date.now(),
+            "description": "PLEASE DELETE ME, I'm a Data Union HTTP API end-to-end test stream",
             "config": {
                 "fields": [{
                     "name": "string",
@@ -181,8 +183,8 @@ describe("Community product demo but through a running E&E instance", () => {
 
         log("1.3) Create product in the database")
         const product = {
-            "name": "Community Product server test product " + Date.now(),
-            "description": "PLEASE DELETE ME, I'm a Community Product server test product",
+            "name": "Data Union HTTP API end-to-end test product " + Date.now(),
+            "description": "PLEASE DELETE ME, I'm a Data Union HTTP API end-to-end test product",
             "imageUrl": "https://www.streamr.com/uploads/to-the-moon.png",
             "category": "other",        // TODO: curiously, test-category-id doesn't exist in docker mysql
             "streams": [ streamId ],
@@ -200,11 +202,11 @@ describe("Community product demo but through a running E&E instance", () => {
         const productId = productCreateResponse.id
         assert(productId)
 
-        log("1.4) Create joinPartStream")   // done inside deployCommunity below
-        log("1.5) Deploy CommunityProduct contract")
+        log("1.4) Create joinPartStream")   // done inside deployContract below
+        log("1.5) Deploy DataUnion contract")
         const wallet = new Wallet(privateKey, ganacheProvider)
         const nodeAddress = getAddress(STREAMR_NODE_ADDRESS)
-        const communityContract = await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, ADMIN_FEE, config.streamrWsUrl, config.streamrHttpUrl)
+        const communityContract = await deployContract(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, ADMIN_FEE, config.streamrWsUrl, config.streamrHttpUrl)
         const communityAddress = communityContract.address
 
         log(`1.6) Wait until Operator starts t=${Date.now()}`)
@@ -213,7 +215,7 @@ describe("Community product demo but through a running E&E instance", () => {
         let sleepTime = 100
         while (stats.error) {
             await sleep(sleepTime *= 2)
-            stats = await GET(`/communities/${communityAddress}/stats`).catch(() => ({error: true}))
+            stats = await GET(`/dataunions/${communityAddress}/stats`).catch(() => ({error: true}))
             log(`     Response t=${Date.now()}: ${JSON.stringify(stats)}`)
         }
         clearTimeout(statsTimeout)
@@ -237,7 +239,7 @@ describe("Community product demo but through a running E&E instance", () => {
         ]
 
         log("2.1) Add community secret")
-        const secretCreateResponse = await POST(`/communities/${communityAddress}/secrets`, {
+        const secretCreateResponse = await POST(`/dataunions/${communityAddress}/secrets`, {
             name: "PLEASE DELETE ME, I'm a Community Product server test secret",
             secret: "test",
         })
@@ -251,7 +253,7 @@ describe("Community product demo but through a running E&E instance", () => {
                 url: STREAMR_WS_URL,
                 restUrl: STREAMR_HTTP_URL,
             })
-            const joinResponse = await POST(`/communities/${communityAddress}/joinRequests`, {
+            const joinResponse = await POST(`/dataunions/${communityAddress}/joinRequests`, {
                 memberAddress,
                 secret: "test",
                 metadata: { test: "PLEASE DELETE ME, I'm a Community Product server test joinRequest" },
@@ -265,23 +267,23 @@ describe("Community product demo but through a running E&E instance", () => {
         sleepTime = 1000
         while (members.length < 2) {
             await sleep(sleepTime)
-            members = await GET(`/communities/${communityAddress}/members`)
+            members = await GET(`/dataunions/${communityAddress}/members`)
             log("members: ", members)
         }
 
         // TODO: send revenue by purchasing the product on Marketplace
         log("3) Send revenue in and check tokens were distributed")
-        const memberBeforeRevenues = await GET(`/communities/${communityAddress}/members/${address}`)
+        const memberBeforeRevenues = await GET(`/dataunions/${communityAddress}/members/${address}`)
         const token = new Contract(config.tokenAddress, ERC20Mintable.abi, wallet)
         for (let i = 0; i < 5; i++) {
             const balance = await token.balanceOf(address)
-            log(`   Sending 10 tokens (out of remaining ${formatEther(balance)}) to CommunityProduct contract...`)
+            log(`   Sending 10 tokens (out of remaining ${formatEther(balance)}) to DataUnion contract...`)
 
             const transferTx = await token.transfer(communityAddress, parseEther("10"))
             await transferTx.wait(2)
 
             // check total revenue
-            const res3 = await GET(`/communities/${communityAddress}/stats`)
+            const res3 = await GET(`/dataunions/${communityAddress}/stats`)
             log(`   Total revenue: ${formatEther(res3.totalEarnings)}`)
         }
 
@@ -292,7 +294,7 @@ describe("Community product demo but through a running E&E instance", () => {
         // wait until member.withdrawableEarnings is at least expected earnings
         while ((member.withdrawableEarnings - memberBeforeRevenues.withdrawableEarnings) < expectedAdminEarnings) {
             await sleep(1000)
-            member = await GET(`/communities/${communityAddress}/members/${address}`)
+            member = await GET(`/dataunions/${communityAddress}/members/${address}`)
         }
 
         // add so CI more reliable until error_frozen issue has a workaround+test
@@ -305,13 +307,13 @@ describe("Community product demo but through a running E&E instance", () => {
         const balanceBefore = await token.balanceOf(address)
         log(`   Token balance before: ${formatEther(balanceBefore)}`)
 
-        const contract = new Contract(communityAddress, CommunityProduct.abi, wallet)
+        const contract = new Contract(communityAddress, DataUnion.abi, wallet)
         const withdrawTx = await contract.withdrawAll(member.withdrawableBlockNumber, member.withdrawableEarnings, member.proof)
         log("    withdrawAll done")
         await withdrawTx.wait(2)
         log("    withdrawAll confirmed")
 
-        const res4b = await GET(`/communities/${communityAddress}/members/${address}`)
+        const res4b = await GET(`/dataunions/${communityAddress}/members/${address}`)
         log("    member stats after", res4b)
 
         const balanceAfter = await token.balanceOf(address)
@@ -322,7 +324,7 @@ describe("Community product demo but through a running E&E instance", () => {
 
         log("4.1) Withdraw tokens for another account")
         const address2 = members[1].address // 0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf
-        const member2 = await GET(`/communities/${communityAddress}/members/${address2}`)
+        const member2 = await GET(`/dataunions/${communityAddress}/members/${address2}`)
         log("    Member2 stats before", res4b)
         Object.keys(member2).forEach(k => log(`    ${k} ${JSON.stringify(member2[k])}`))
 
@@ -334,7 +336,7 @@ describe("Community product demo but through a running E&E instance", () => {
         await withdrawTx2.wait(2)
         log("    withdrawAll confirmed")
 
-        const res4c = await GET(`/communities/${communityAddress}/members/${address2}`)
+        const res4c = await GET(`/dataunions/${communityAddress}/members/${address2}`)
         log("    Member2 stats after", res4c)
 
         const balanceAfter2 = await token.balanceOf(address2)

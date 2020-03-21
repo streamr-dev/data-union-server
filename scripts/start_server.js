@@ -17,10 +17,10 @@ const {
 
 const Channel = require("../src/streamrChannel")
 const { throwIfNotContract, throwIfBadAddress } = require("../src/utils/checkArguments")
-const deployCommunity = require("../src/utils/deployCommunity")
+const deployCommunity = require("../src/utils/deploy")
 const sleep = require("../src/utils/sleep-promise")
 
-const CommunityProductServer = require("../src/server")
+const DataUnionServer = require("../src/server")
 const getServerRouter = require("../src/routers/server")
 
 const {
@@ -113,7 +113,7 @@ async function start() {
         streamrWsUrl: STREAMR_WS_URL,
         streamrHttpUrl: STREAMR_HTTP_URL,
     }
-    const server = new CommunityProductServer(wallet, storeDir, config, log, error)
+    const server = new DataUnionServer(wallet, storeDir, config, log, error)
     await server.start()
 
     if (WEBSERVER_PORT) {
@@ -193,11 +193,11 @@ async function transfer(wallet, targetAddress, tokenAddress, amount) {
     return tr
 }
 
-const CommunityProduct = require("../build/CommunityProduct")
+const DataUnion = require("../build/DataUnion")
 async function setFee(wallet, targetAddress, fee) {
     throwIfNotContract(targetAddress, "Monoplasma contract address")
     if (!(fee >= 0 && fee <= 1)) { throw new Error(`Admin fee must be a number between 0...1, got: ${fee}`) }
-    const community = new Contract(targetAddress, CommunityProduct.abi, wallet)
+    const community = new Contract(targetAddress, DataUnion.abi, wallet)
     const feeBN = parseEther(fee.toString())
     const tx = await community.setAdminFee(feeBN)
     const tr = await tx.wait(1)

@@ -20,7 +20,7 @@ module.exports = class MonoplasmaOperator {
 
     async start(config) {
         throwIfBadAddress(config.operatorAddress, "MonoplasmaOperator argument config.operatorAddress")
-        this.log = debug("Streamr::CPS::operator::" + config.contractAddress)
+        this.log = debug("Streamr::dataunion::operator::" + config.contractAddress)
 
         this.finalityWaitPeriodSeconds = config.finalityWaitPeriodSeconds || 1 // TODO: in production || 3600
         this.address = config.operatorAddress
@@ -34,7 +34,7 @@ module.exports = class MonoplasmaOperator {
         await this.watcher.start(config)
         //this.lastPublishedBlock = (this.watcher.state.lastPublishedBlock && this.watcher.state.lastPublishedBlock.blockNumber) || 0
 
-        // TODO https://streamr.atlassian.net/browse/CPS-82 finalPlasmaStore should be instead just this.watcher.plasma.store
+        // TODO https://streamr.atlassian.net/browse/dataunion-82 finalPlasmaStore should be instead just this.watcher.plasma.store
         const finalPlasmaStore = {
             saveBlock: async block => {
                 this.lastSavedBlock = block
@@ -67,7 +67,7 @@ module.exports = class MonoplasmaOperator {
     }
 
     // TODO: block publishing should be based on value-at-risk, that is, publish after so-and-so many tokens received
-    // see https://streamr.atlassian.net/browse/CPS-39
+    // see https://streamr.atlassian.net/browse/dataunion-39
     async onTokensReceived(event) {
         const last = await this.lastPublishedBlock()
         const blockNumber = event.blockNumber
@@ -114,7 +114,7 @@ module.exports = class MonoplasmaOperator {
         const log = this.log.extend(blockNumber)
         log("Publish block", blockNumber)
 
-        // see https://streamr.atlassian.net/browse/CPS-20
+        // see https://streamr.atlassian.net/browse/dataunion-20
         // TODO: separate finalPlasma currently is so much out of sync with watcher.plasma that proofs turn out wrong
         //       perhaps communitiesRouter should get the proofs from operator's finalPlasma?
         //       perhaps operator's finalPlasma should write to store, and not watcher.plasma?
@@ -130,7 +130,7 @@ module.exports = class MonoplasmaOperator {
         const tx = await this.contract.commit(blockNumber, hash, ipfsHash)
         const tr = await tx.wait()        // confirmations
 
-        // TODO https://streamr.atlassian.net/browse/CPS-82 should be instead:
+        // TODO https://streamr.atlassian.net/browse/dataunion-82 should be instead:
         // await this.finalPlasma.storeBlock(blockNumber) // TODO: give a timestamp
         // this.watcher.state.lastPublishedBlock = {blockNumber: blockNumber}
         const commitTimestamp = (await this.contract.blockTimestamp(blockNumber)).toNumber()

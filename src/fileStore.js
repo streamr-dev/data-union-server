@@ -12,7 +12,7 @@ const debug = require("debug")
 module.exports = class FileStore {
 
     constructor(storeDir, log, maxLogLen) {
-        this.log = log || debug("Streamr::CPS::FileStore")
+        this.log = log || debug("Streamr::dataunion::FileStore")
         this.maxLogLen = maxLogLen || 840
 
         this.log(`Setting up fileStore directories under ${storeDir}...`)

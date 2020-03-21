@@ -2,7 +2,7 @@ pragma solidity ^0.5.16;
 
 import "monoplasma/contracts/Monoplasma.sol";
 
-contract CommunityProduct is Monoplasma {
+contract DataUnion is Monoplasma {
 
     string public joinPartStream;
 

@@ -1,7 +1,7 @@
 const sinon = require("sinon")
 const assert = require("assert")
 
-const log = require("debug")("Streamr::CPS::test::unit::watcher")
+const log = require("debug")("Streamr::dataunion::test::unit::watcher")
 
 const {
     Wallet,
@@ -11,7 +11,7 @@ const {
 } = require("ethers")
 const ganache = require("ganache-core")
 
-const CommunityJson = require("../../build/CommunityProduct")
+const CommunityJson = require("../../build/DataUnion")
 const TokenJson = require("../../build/TestToken")
 
 const sleep = require("../../src/utils/sleep-promise")

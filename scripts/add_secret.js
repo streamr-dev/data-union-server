@@ -12,7 +12,7 @@ const {
     ETHEREUM_NETWORK,           // use ethers.js default servers
 
     ETHEREUM_PRIVATE_KEY,
-    COMMUNITY_ADDRESS,
+    DATAUNION_ADDRESS,
     SECRET,
 
     STREAMR_WS_URL,
@@ -46,7 +46,7 @@ async function start() {
     const privateKey = ETHEREUM_PRIVATE_KEY.startsWith("0x") ? ETHEREUM_PRIVATE_KEY : "0x" + ETHEREUM_PRIVATE_KEY
     if (privateKey.length !== 66) { throw new Error("Malformed private key, must be 64 hex digits long (optionally prefixed with '0x')") }
 
-    const communityAddress = await throwIfNotContract(provider, COMMUNITY_ADDRESS, "env variable COMMUNITY_ADDRESS")
+    const communityAddress = await throwIfNotContract(provider, DATAUNION_ADDRESS, "env variable DATAUNION_ADDRESS")
 
     log("Connecting to Streamr...")
     const opts = { auth: { privateKey } }
@@ -54,7 +54,7 @@ async function start() {
     if (STREAMR_HTTP_URL) { opts.restUrl = STREAMR_HTTP_URL }
     const client = new StreamrClient(opts)
 
-    log(`Adding to https://streamr.com/api/v1/communities/${communityAddress}/secrets ...`)
+    log(`Adding to https://streamr.com/api/v1/dataunions/${communityAddress}/secrets ...`)
     const res = await client.createSecret(communityAddress, SECRET)
 
     log(`Secret added successfully, response: ${JSON.stringify(res)}`)

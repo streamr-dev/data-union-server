@@ -10,7 +10,7 @@ const bisectFindFirstIndex = require("./utils/bisectFindFirstIndex")
 const TokenJson = require("../build/ERC20Mintable.json")
 const MonoplasmaJson = require("../build/Monoplasma.json")
 
-const log = require("debug")("Streamr::CPS::watcher")
+const log = require("debug")("Streamr::dataunion::watcher")
 
 // TODO: this typedef is foobar. How to get the real thing with JSDoc?
 /** @typedef {number} BigNumber */
@@ -98,6 +98,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             this.log(`Loaded ${Object.keys(this.blockTimestampCache).length} block timestamps from disk`)
         }
 
+        // this.state should be broken up into state.js, and rest called this.config
         this.log("Initializing Monoplasma state...")
         const savedState = config.reset ? {} : await this.store.loadState()
         this.state = Object.assign({
@@ -219,6 +220,11 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         })
         this.tokenFilter.on("error", this.error)
         */
+
+        this.eth.on("block", blockNumber => {
+            if (blockNumber % 10 === 0) { this.log(`Block ${blockNumber} observed`) }
+            this.state.lastObservedBlockNumber = blockNumber
+        })
 
         // TODO: maybe state saving function should create the state object instead of continuously mutating "state" member
         await this.saveState()

@@ -7,9 +7,9 @@ const http = require("http")
 const fetch = require("node-fetch")
 const { Wallet, ContractFactory, providers: { Web3Provider } } = require("ethers")
 
-const log = require("debug")("Streamr::CPS::test::unit::server-router")
+const log = require("debug")("Streamr::dataunion::test::unit::server-router")
 
-const CommunityJson = require("../../build/CommunityProduct")
+const CommunityJson = require("../../build/DataUnion")
 const TokenJson = require("../../build/TestToken")
 
 const ganache = require("ganache-core")
@@ -35,10 +35,11 @@ const startState = {
     }
 }
 
-const CommunityProductServer = require("../../src/server")
+const DataUnionServer = require("../../src/server")
 const getServerRouter = require("../../src/routers/server")
 
-describe("Community product server /communities router", () => {
+// TODO: separate server router and dataunion router
+describe("Community product server router", () => {
     const port = 3031
     const serverURL = `http://localhost:${port}`
 
@@ -71,9 +72,9 @@ describe("Community product server /communities router", () => {
         await contract.deployed()
         const contractAddress = contract.address
 
-        log("Starting CommunityProductServer...")
+        log("Starting DataUnionServer...")
         const storeDir = path.join(os.tmpdir(), `communitiesRouter-test-${+new Date()}`)
-        const server = new CommunityProductServer(wallet, storeDir, {
+        const server = new DataUnionServer(wallet, storeDir, {
             tokenAddress: token.address,
             operatorAddress: wallet.address,
         })
@@ -92,13 +93,13 @@ describe("Community product server /communities router", () => {
     })
 
     it("GET /", async () => {
-        const resp = await fetch(`${serverURL}/communities`).then(res => res.json())
+        const resp = await fetch(`${serverURL}/dataunions`).then(res => res.json())
         assert.deepStrictEqual(resp, {
             config: {
                 tokenAddress: "0x8688966AE53807c273D8B9fCcf667F0A0a91b1d3",
                 operatorAddress: "0x8D7f03FdE1A626223364E592740a233b72395235"
             },
-            communities: {
+            dataunions: {
                 "0xfb5755567e071663F2DA276aC1D6167B093f00f4": {
                     memberCount: { total: 2, active: 2, inactive: 0 },
                     totalEarnings: "70",
@@ -122,42 +123,35 @@ describe("Community product server /communities router", () => {
     })
 
     it("GET /stats", async () => {
-        const statsText = await fetch(`${serverURL}/communities/${community.address}/stats`).then(res => res.text())
-        console.log(statsText)
-        const stats = await fetch(`${serverURL}/communities/${community.address}/stats`).then(res => res.json())
+        const stats = await fetch(`${serverURL}/dataunions/${community.address}/stats`).then(res => res.json())
         assert.strictEqual(stats.memberCount.active, 2)
     })
 
     it("GET /members", async () => {
-        const memberList = await fetch(`${serverURL}/communities/${community.address}/members`).then(res => res.json())
+        const memberList = await fetch(`${serverURL}/dataunions/${community.address}/members`).then(res => res.json())
         assert.strictEqual(memberList.length, 2)
     })
 
     it("GET /members/address", async () => {
-        const member = await fetch(`${serverURL}/communities/${community.address}/members/${members[0].address}`).then(res => res.json())
+        const member = await fetch(`${serverURL}/dataunions/${community.address}/members/${members[0].address}`).then(res => res.json())
         assert.strictEqual(member.earnings, "50")
     })
 
     it("GET /members/non-existent-address", async () => {
-        const res = await fetch(`${serverURL}/communities/${community.address}/members/0x0000000000000000000000000000000000000001`)
+        const res = await fetch(`${serverURL}/dataunions/${community.address}/members/0x0000000000000000000000000000000000000001`)
         assert.strictEqual(res.status, 404)
     })
 
     // Test the case where the member is in the community but too new to have earnings in withdrawable blocks
-    // Catch the following:
-    //   UnhandledPromiseRejectionWarning: Error: Address 0x0000000000000000000000000000000000000002 not found!
-    //   at MerkleTree.getPath (node_modules/monoplasma/src/merkletree.js:121:19)
-    //   at MonoplasmaState.getProof (node_modules/monoplasma/src/state.js:153:32)
-    //   at MonoplasmaState.getMember (node_modules/monoplasma/src/state.js:129:26)
-    //   at router.get (src/routers/communities.js:96:31)
+    // Catch the UnhandledPromiseRejectionWarning: Error: Address 0x0000000000000000000000000000000000000002 not found!
     it("GET /members/new-member-address", async () => {
         const newMemberAddress = "0x0000000000000000000000000000000000000002"
         channel.publish("join", [newMemberAddress])
         await until(async () => {
-            const memberList = await fetch(`${serverURL}/communities/${community.address}/members`).then(res => res.json())
+            const memberList = await fetch(`${serverURL}/dataunions/${community.address}/members`).then(res => res.json())
             return memberList.length > 2
         })
-        const member = await fetch(`${serverURL}/communities/${community.address}/members/${newMemberAddress}`).then(res => res.json())
+        const member = await fetch(`${serverURL}/dataunions/${community.address}/members/${newMemberAddress}`).then(res => res.json())
         assert(!member.error)
         assert.strictEqual(member.withdrawableEarnings, "0")
     })

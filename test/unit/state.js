@@ -9,7 +9,7 @@ const MonoplasmaState = require("../../src/state")
 
 // this is a unit test, but still it's better to use the "real" file store and not mock it,
 //   since we DO check that the correct values actually come out of it. Mock would be almost as complex as the real thing.
-const log = require("debug")("Streamr::CPS::test::unit::state")
+const log = require("debug")("Streamr::dataunion::test::unit::state")
 const tmpDir = path.join(os.tmpdir(), `monoplasma-test-${+new Date()}`)
 const FileStore = require("../../src/fileStore")
 const fileStore = new FileStore(tmpDir, log)

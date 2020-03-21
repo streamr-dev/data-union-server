@@ -14,14 +14,14 @@ const sleep = require("../src/utils/sleep-promise")
 const { throwIfNotContract } = require("../src/utils/checkArguments")
 
 const TokenJson = require("../build/ERC20Detailed.json")
-const CommunityJson = require("../build/CommunityProduct.json")
+const CommunityJson = require("../build/DataUnion.json")
 
 const {
     ETHEREUM_SERVER,            // explicitly specify server address
     ETHEREUM_NETWORK,           // use ethers.js default servers
     ETHEREUM_PRIVATE_KEY,
 
-    COMMUNITY_ADDRESS,
+    DATAUNION_ADDRESS,
     GAS_PRICE_GWEI,
 
     STREAMR_WS_URL,
@@ -55,7 +55,7 @@ async function start() {
     })
     log("Connected to Ethereum network: ", JSON.stringify(network))
 
-    const communityAddress = await throwIfNotContract(provider, COMMUNITY_ADDRESS, "env variable COMMUNITY_ADDRESS")
+    const communityAddress = await throwIfNotContract(provider, DATAUNION_ADDRESS, "env variable DATAUNION_ADDRESS")
 
     const privateKey = ETHEREUM_PRIVATE_KEY.startsWith("0x") ? ETHEREUM_PRIVATE_KEY : "0x" + ETHEREUM_PRIVATE_KEY
     if (privateKey.length !== 66) { throw new Error("Malformed private key, must be 64 hex digits long (optionally prefixed with '0x')") }

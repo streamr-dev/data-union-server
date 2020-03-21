@@ -5,7 +5,7 @@ const {
 
 const dataunionRouter = require("./dataunion")
 
-const log = require("debug")("Streamr::CPS::routers::server")
+const log = require("debug")("Streamr::dataunion::routers::server")
 
 /** @type {(server: CommunityProductServer) => express.Router} */
 module.exports = (server) => {

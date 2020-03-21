@@ -14,13 +14,13 @@ const StreamrClient = require("streamr-client")
 const { throwIfNotContract, throwIfSetButNotContract, throwIfSetButBadAddress } = require("../src/utils/checkArguments")
 
 const TokenJson = require("../build/ERC20Detailed.json")
-const CommunityJson = require("../build/CommunityProduct.json")
+const CommunityJson = require("../build/DataUnion.json")
 
 const {
     ETHEREUM_SERVER,            // explicitly specify server address
     ETHEREUM_NETWORK,           // use ethers.js default servers
 
-    COMMUNITY_ADDRESS,
+    DATAUNION_ADDRESS,
     STREAMR_NODE_ADDRESS,
 
     STREAMR_WS_URL,
@@ -49,7 +49,7 @@ async function start() {
 
     const communityAddress =
         await throwIfSetButNotContract(provider, communityAddressArg, "command-line argument (Community contract Ethereum address)") ||
-        await throwIfNotContract(provider, COMMUNITY_ADDRESS, "env variable COMMUNITY_ADDRESS")
+        await throwIfNotContract(provider, DATAUNION_ADDRESS, "env variable DATAUNION_ADDRESS")
     const streamrNodeAddress = await throwIfSetButBadAddress(STREAMR_NODE_ADDRESS, "env variable STREAMR_NODE_ADDRESS")
 
     log(`Checking community contract at ${communityAddress}...`)
@@ -76,7 +76,7 @@ async function start() {
     if (STREAMR_HTTP_URL) { opts.restUrl = STREAMR_HTTP_URL }
     const client = new StreamrClient(opts)
 
-    log("Community stats from CPS")
+    log("Community stats from dataunion")
     const stats = await client.communityStats(community.address)
     log(`  Members: ${stats.memberCount.active} active / ${stats.memberCount.total} total`)
     log(`  Latest unfrozen block: ${stats.latestWithdrawableBlock.blockNumber} (${stats.latestWithdrawableBlock.memberCount} members)`)
@@ -165,6 +165,6 @@ start().catch(error)
 
 const fetch = require("node-fetch")
 async function getMembers(communityAddress) {
-    const url = `${STREAMR_HTTP_URL || "https://streamr.network/api/v1"}/communities/${communityAddress}/members`
+    const url = `${STREAMR_HTTP_URL || "https://streamr.network/api/v1"}/dataunions/${communityAddress}/members`
     return fetch(url).then((res) => res.json())
 }
