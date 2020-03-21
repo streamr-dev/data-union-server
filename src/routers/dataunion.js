@@ -15,6 +15,45 @@ function parseAddress(address) {
     }
 }
 
+/**
+ * @typedef {Object} BlockSummary
+ * @property {Number} blockNumber
+ * @property {Number} timestamp when the Monoplasma block was stored, NOT Ethereum block timestamp
+ * @property {Number} memberCount
+ * @property {Number} totalEarnings
+ */
+
+/**
+ * Don't send the full member list back, only member count
+ * @returns {BlockSummary}
+ */
+function summarizeBlock(block) {
+    if (!block || !block.members) { block = { members: [] } }
+    return {
+        blockNumber: block.blockNumber || 0,
+        timestamp: block.timestamp || 0,
+        memberCount: block.members.length,
+        totalEarnings: block.totalEarnings || 0,
+    }
+}
+
+/**
+ * Returns the "real-time plasma" stats
+ * @returns {Object} summary of different stats and config of the community the watcher is watching
+ */
+function getStats(monoplasmaState) {
+    const memberCount = monoplasmaState.getMemberCount()
+    const totalEarnings = monoplasmaState.getTotalRevenue()
+    const latestBlock = summarizeBlock(monoplasmaState.getLatestBlock())
+    const latestWithdrawableBlock = summarizeBlock(monoplasmaState.getLatestWithdrawableBlock())
+    return {
+        memberCount,
+        totalEarnings,
+        latestBlock,
+        latestWithdrawableBlock,
+    }
+}
+
 const router = express.Router()
 
 router.get("/", (req, res) => {
@@ -29,17 +68,7 @@ router.get("/", (req, res) => {
 router.get("/stats", (req, res) => {
     const state = req.monoplasmaState
     //log(`HTTP ${state.dataunionAddress}> Requested community stats`)
-    const memberCount = state.getMemberCount()
-    const totalEarnings = state.getTotalRevenue()
-    const latestBlock = summarizeBlock(this.plasma.getLatestBlock())
-    const latestWithdrawableBlock = summarizeBlock(this.plasma.getLatestWithdrawableBlock())
-    const result = {
-        memberCount,
-        totalEarnings,
-        latestBlock,
-        latestWithdrawableBlock,
-    }
-    //const stats = state.getStats()
+    const result = getStats(state)
     res.send(result)
 })
 
@@ -111,5 +140,7 @@ router.setWatcher = watcher => (req, res, next) => {
     req.monoplasmaState = watcher.plasma
     next()
 }
+
+router.getStats = getStats
 
 module.exports = router

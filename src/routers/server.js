@@ -44,7 +44,8 @@ module.exports = (server) => {
         for (const [address, c] of Object.entries(server.communities)) {
             // is the community already syncing or running?
             if (c.operator) {
-                const stats = c.operator.watcher.getStats()
+                const stats = dataunionRouter.getStats(c.operator.watcher.plasma)
+                stats.joinPartStream = c.operator.watcher.channel.stream.id
                 result.communities[address] = stats
             } else {
                 result.communities[address] = {
