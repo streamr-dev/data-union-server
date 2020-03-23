@@ -39,21 +39,21 @@ module.exports = (server) => {
         log("Requested server summary")
         const result = {
             config: server.operatorConfig,
-            communities: {},
+            dataunions: {},
         }
         for (const [address, c] of Object.entries(server.communities)) {
             // is the community already syncing or running?
             if (c.operator) {
                 const stats = dataunionRouter.getStats(c.operator.watcher.plasma)
-                stats.joinPartStream = c.operator.watcher.channel.stream.id
-                result.communities[address] = stats
+                stats.joinPartStreamId = c.operator.watcher.channel.stream.id
+                result.dataunions[address] = stats
             } else {
-                result.communities[address] = {
+                result.dataunions[address] = {
                     memberCount: { total: 0, active: 0, inactive: 0 },
                     totalEarnings: 0,
                 }
             }
-            result.communities[address].state = c.state
+            result.dataunions[address].state = c.state
         }
         res.send(result)
     }
