@@ -15,10 +15,10 @@ const StreamrChannel = require("../../src/streamrChannel")
 
 const sleep = require("../../src/utils/sleep-promise")
 const { untilStreamContains, untilStreamMatches, capture } = require("../utils/await-until")
-const deployCommunity = require("../../src/utils/deployCommunity")
+const deployContract = require("../../src/utils/deployContract")
 
 const ERC20Mintable = require("../../build/ERC20Mintable.json")
-const CommunityProduct = require("../../build/CommunityProduct.json")
+const CommunityProduct = require("../../build/DataunionVault.json")
 
 const STORE_DIR = __dirname + `/test-store-${+new Date()}`
 const GANACHE_PORT = 8548
@@ -120,11 +120,11 @@ describe("Community product demo", () => {
 
         log("1) Create a new Community product")
 
-        log("1.1) Create joinPartStream")  // done in deployCommunity function below
+        log("1.1) Create joinPartStream")  // done in deployContract function below
         log("1.2) Deploy CommunityProduct contract")
         const wallet = new Wallet(privateKey, ganacheProvider)
         const nodeAddress = getAddress(streamrNodeAddress)
-        const communityContract = await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, ADMIN_FEE, config.streamrWsUrl, config.streamrHttpUrl)
+        const communityContract = await deployContract(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, ADMIN_FEE, config.streamrWsUrl, config.streamrHttpUrl)
         const communityAddress = communityContract.address
 
         log("1.3) Wait until Operator starts")

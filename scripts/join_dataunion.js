@@ -13,14 +13,14 @@ const {
     ETHEREUM_NETWORK,           // use ethers.js default servers
 
     ETHEREUM_PRIVATE_KEY,
-    COMMUNITY_ADDRESS,
+    DATAUNION_ADDRESS,
     SECRET,
 
     STREAMR_WS_URL,
     STREAMR_HTTP_URL,
 } = process.env
 
-const log = require("debug")("CPS::scripts::join_community")
+const log = require("debug")("CPS::scripts::join_dataunion")
 const error = (e, ...args) => {
     console.error(e.stack, ...args)
     process.exit(1)
@@ -44,7 +44,7 @@ async function start() {
     if (privateKey.length !== 66) { throw new Error("Malformed private key, must be 64 hex digits long (optionally prefixed with '0x')") }
     const memberAddress = computeAddress(privateKey)
 
-    const communityAddress = await throwIfNotContract(provider, COMMUNITY_ADDRESS, "env variable COMMUNITY_ADDRESS")
+    const communityAddress = await throwIfNotContract(provider, DATAUNION_ADDRESS, "env variable DATAUNION_ADDRESS")
 
     log("Connecting to Streamr...")
     const opts = { auth: { privateKey } }

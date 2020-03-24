@@ -5,14 +5,16 @@ const os = require("os")
 const path = require("path")
 const { Wallet, providers: { Web3Provider } } = require("ethers")
 
-const log = require("debug")("Streamr::CPS::test::unit::server")
+const log = console.log // require("debug")("Streamr::CPS::test::unit::server")
 
 const ganache = require("ganache-core")
 
 const MockStreamrChannel = require("../utils/mockStreamrChannel")
 const deployTestToken = require("../utils/deployTestToken")
-const deployTestCommunity = require("../utils/deployTestCommunity")
+const deployTestDataunion = require("../utils/deployTestDataunion")
 const pollingIntervalSeconds = 0.1
+
+const { until } = require("../utils/await-until")
 
 const CommunityProductServer = require("../../src/server")
 
@@ -67,32 +69,24 @@ describe("CommunityProductServer", function () {
         sinon.spy(server, "onOperatorChangedEventAt")
         sinon.spy(server, "startOperating")
         await server.start()
-        const contract = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
-        const contractAddress = contract.address
+        const contract = await deployTestDataunion(wallet, wallet.address, tokenAddress, 1000, 0)
+        await until(() => server.onOperatorChangedEventAt.calledOnce)
 
-        // give ethers.js time to poll and notice the block, also for server to react
-        await sleep(pollingIntervalSeconds * 1000)
-
-        // Note: this test must run first for the below position-sensitive assertions to pass
-        assert(server.onOperatorChangedEventAt.calledOnce)
-        assert.strictEqual(contractAddress, server.onOperatorChangedEventAt.getCall(0).args[0])
+        assert.strictEqual(contract.address, server.onOperatorChangedEventAt.getCall(0).args[0])
 
         assert(server.startOperating.calledOnce)
-        assert.strictEqual(contractAddress, server.startOperating.getCall(0).args[0])
+        assert.strictEqual(contract.address, server.startOperating.getCall(0).args[0])
 
         const clist = Object.keys(server.communities)
         assert.strictEqual(1, clist.length)
-        assert(server.communities[contractAddress])
+        assert(server.communities[contract.address])
         await server.stop()
     })
 
     it("stops operators when server is stopped", async function () {
         await server.start()
-        const contract = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
+        const contract = await deployTestDataunion(wallet, wallet.address, tokenAddress, 1000, 0)
         await server.communityIsRunning(contract.address)
-
-        // give ethers.js time to poll and notice the block, also for server to react
-        await sleep(pollingIntervalSeconds * 1000)
 
         const { communities } = server
         assert(Object.keys(communities), "has at least 1 community")
@@ -105,14 +99,14 @@ describe("CommunityProductServer", function () {
         })
     })
 
-    describe("ignores communities with different operator addresses", function () {
-        it("ignores if changed before startup", async () => {
+    describe("ignores communities not assigned to it", function () {
+        it("ignores if operator changed before startup", async () => {
             const onError = sinon.spy(server, "error")
 
-            const contract = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
+            const contract = await deployTestDataunion(wallet, wallet.address, tokenAddress, 1000, 0)
             log(`Deployed contract at ${contract.address}`)
 
-            const contract2 = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
+            const contract2 = await deployTestDataunion(wallet, wallet.address, tokenAddress, 1000, 0)
             log(`Deployed contract at ${contract2.address}`)
 
             // should ignore this contract
@@ -121,9 +115,7 @@ describe("CommunityProductServer", function () {
             // NOTE start AFTER operator is changed
             await server.start()
             await server.communityIsRunning(contract.address)
-            await server.communityIsRunning(contract2.address) // I guess?
-
-            await sleep(pollingIntervalSeconds * 1000)
+            //await server.communityIsRunning(contract2.address)    // TODO: should NOT be running, should never be started!
 
             assert.strictEqual(onError.callCount, 0, "should not have called error handler")
             assert(server.communities[contract.address], "contract1 should be handled")
@@ -132,14 +124,14 @@ describe("CommunityProductServer", function () {
             assert.strictEqual(onError.callCount, 0, "should not have called error handler")
         })
 
-        it("ignores if changed after startup", async () => {
+        it("ignores if operator changed after startup", async () => {
             const onError = sinon.spy(server, "error")
             await server.start()
 
-            const contract = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
+            const contract = await deployTestDataunion(wallet, wallet.address, tokenAddress, 1000, 0)
             log(`Deployed contract at ${contract.address}`)
 
-            const contract2 = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
+            const contract2 = await deployTestDataunion(wallet, wallet.address, tokenAddress, 1000, 0)
             log(`Deployed contract at ${contract2.address}`)
 
             await server.communityIsRunning(contract.address)
@@ -149,9 +141,10 @@ describe("CommunityProductServer", function () {
             assert(server.communities[contract2.address], "contract2 should be handled")
 
             // should ignore this contract
+            sinon.spy(server, "onOperatorChangedEventAt")
             await contract2.setOperator("0x0000000000000000000000000000000000000001")
-
-            await sleep(pollingIntervalSeconds * 1000)
+            await until(() => server.onOperatorChangedEventAt.calledOnce)
+            await server.onOperatorChangedEventAt.returnValues[0]   // wait until handler returns
 
             assert.strictEqual(onError.callCount, 0, "should not have called error handler")
             assert(server.communities[contract.address], "contract1 should be handled")
@@ -160,16 +153,20 @@ describe("CommunityProductServer", function () {
             await server.stop()
             assert.strictEqual(onError.callCount, 0, "should not have called error handler")
         })
+
+        it("ignores if server version doesn't match contract version", async () => {
+            // TODO
+        })
     })
 
     it("resumes operating communities it's operated before (e.g. a crash)", async function () {
         const onError = sinon.spy(server, "error")
         await server.start()
 
-        const contract = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
+        const contract = await deployTestDataunion(wallet, wallet.address, tokenAddress, 1000, 0)
         log(`Deployed contract at ${contract.address}`)
 
-        const contract2 = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
+        const contract2 = await deployTestDataunion(wallet, wallet.address, tokenAddress, 1000, 0)
         log(`Deployed contract at ${contract2.address}`)
 
         await server.communityIsRunning(contract.address)
@@ -201,10 +198,10 @@ describe("CommunityProductServer", function () {
 
         await server.start()
 
-        const contract = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
+        const contract = await deployTestDataunion(wallet, wallet.address, tokenAddress, 1000, 0)
         log(`Deployed contract at ${contract.address}`)
 
-        const contract2 = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
+        const contract2 = await deployTestDataunion(wallet, wallet.address, tokenAddress, 1000, 0)
         log(`Deployed contract at ${contract2.address}`)
 
         await server.communityIsRunning(contract.address)
@@ -235,10 +232,10 @@ describe("CommunityProductServer", function () {
         const onError = sinon.spy(server, "error")
         await server.start()
 
-        const contract = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
+        const contract = await deployTestDataunion(wallet, wallet.address, tokenAddress, 1000, 0)
         log(`Deployed contract at ${contract.address}`)
 
-        const contract2 = await deployTestCommunity(wallet, wallet.address, tokenAddress, 1000, 0)
+        const contract2 = await deployTestDataunion(wallet, wallet.address, tokenAddress, 1000, 0)
         log(`Deployed contract at ${contract2.address}`)
 
         await server.stop()

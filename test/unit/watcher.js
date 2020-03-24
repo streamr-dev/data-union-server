@@ -11,8 +11,8 @@ const {
 } = require("ethers")
 const ganache = require("ganache-core")
 
-const CommunityJson = require("../../build/CommunityProduct")
-const TokenJson = require("../../build/TestToken")
+const DataUnionContract = require("../../build/DataunionVault")
+const TokenContract = require("../../build/TestToken")
 
 const sleep = require("../../src/utils/sleep-promise")
 
@@ -67,13 +67,13 @@ describe("MonoplasmaWatcher", () => {
         store = mockStore(startState, initialBlock, log)
 
         log("Deploying test token and Community contract...")
-        const tokenDeployer = new ContractFactory(TokenJson.abi, TokenJson.bytecode, wallet)
+        const tokenDeployer = new ContractFactory(TokenContract.abi, TokenContract.bytecode, wallet)
         token = await tokenDeployer.deploy("Test token", "TEST")
         await token.deployed()
     })
 
     beforeEach(async function () {
-        const communityDeployer = new ContractFactory(CommunityJson.abi, CommunityJson.bytecode, wallet)
+        const communityDeployer = new ContractFactory(DataUnionContract.abi, DataUnionContract.bytecode, wallet)
         community = await communityDeployer.deploy(wallet.address, "dummy-stream-id", token.address, 1000, 0)
         await community.deployed()
         await startWatcher()

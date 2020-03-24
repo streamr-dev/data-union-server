@@ -7,7 +7,7 @@ const { replayOn, mergeEventLists } = require("./utils/events")
 const { throwIfSetButNotContract, throwIfSetButBadAddress } = require("./utils/checkArguments")
 const bisectFindFirstIndex = require("./utils/bisectFindFirstIndex")
 
-const TokenJson = require("../build/ERC20Mintable.json")
+const TokenContract = require("../build/ERC20Mintable.json")
 const MonoplasmaJson = require("../build/Monoplasma.json")
 
 const log = require("debug")("Streamr::CPS::watcher")
@@ -115,7 +115,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         this.contract = new Contract(this.state.contractAddress, MonoplasmaJson.abi, this.eth)
         this.state.tokenAddress = await this.contract.token()
         this.state.adminAddress = await this.contract.owner()
-        this.token = new Contract(this.state.tokenAddress, TokenJson.abi, this.eth)
+        this.token = new Contract(this.state.tokenAddress, TokenContract.abi, this.eth)
         this.state.blockFreezeSeconds = (await this.contract.blockFreezeSeconds()).toString()
         this.log(`Read from contracts: freeze period = ${this.state.blockFreezeSeconds} sec, token @ ${this.state.tokenAddress}`)
 

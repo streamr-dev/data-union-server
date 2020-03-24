@@ -17,7 +17,7 @@ const sleep = require("../../src/utils/sleep-promise")
 const { untilStreamContains } = require("../utils/await-until")
 
 const ERC20Mintable = require("../../build/ERC20Mintable.json")
-const CommunityProduct = require("../../build/CommunityProduct.json")
+const CommunityProduct = require("../../build/DataunionVault.json")
 
 const STORE_DIR = __dirname + `/test-store-${+new Date()}`
 const BLOCK_FREEZE_SECONDS = 1
@@ -170,9 +170,9 @@ describe.skip("Community product demo but through a running E&E instance", () =>
         const productId = productCreateResponse.id
         assert(productId)
 
-        log("1.4) Create joinPartStream")       // done inside deployCommunity below
+        log("1.4) Create joinPartStream")       // done inside deployContract below
         log("1.5) Deploy CommunityProduct contract")
-        const community = await client.deployCommunity({
+        const community = await client.deployContract({
             adminFee: ADMIN_FEE,
             blockFreezePeriodSeconds: BLOCK_FREEZE_SECONDS,
         })

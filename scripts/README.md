@@ -27,7 +27,7 @@ It's a good list regarding the rest of the scripts, too (including yet unwritten
 
 | Variable | Notes |
 | --- | --- |
-| COMMUNITY_ADDRESS | Existing community's smart contract address |
+| DATAUNION_ADDRESS | Existing community's smart contract address |
 | ETHEREUM_PRIVATE_KEY | Admin's key for admin functions e.g. `add_secret.js` |
 | MEMBER_ADDRESS | Fallback alternative to the above e.g. for `check_member.js` |
 | SECRET | Community "password" for joining without manual approval from admin |
@@ -37,6 +37,6 @@ List of script-specific interpretations and additions:
 
 | Script(s) | Variable | Notes |
 | --- | --- | --- |
-| `deploy_community.js` | ADMIN_FEE BLOCK_FREEZE_SECONDS | Monoplasma parameters (optional) |
+| `deploy_dataunion.js` | ADMIN_FEE BLOCK_FREEZE_SECONDS | Monoplasma parameters (optional) |
 | `check_member.js` | ETHEREUM_PRIVATE_KEY | Private key of the member to check, not admin |
 | `send_tokens.js` | DATA_TOKEN_AMOUNT | |

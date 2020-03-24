@@ -13,7 +13,7 @@ const {
     providers: { JsonRpcProvider },
 } = require("ethers")
 
-const CommunityProductJson = require("../build/CommunityProduct.json")
+const CommunityProductJson = require("../build/DataunionVault.json")
 
 const FileStore = require("../src/fileStore")
 const MonoplasmaWatcher = require("../src/watcher")
@@ -27,7 +27,7 @@ const {
     ETHEREUM_SERVER,            // explicitly specify server address
     ETHEREUM_NETWORK,           // use ethers.js default servers
 
-    COMMUNITY_ADDRESS,
+    DATAUNION_ADDRESS,
 
     STREAMR_WS_URL,
     STREAMR_HTTP_URL,
@@ -52,7 +52,7 @@ async function start() {
     })
     log("Connected to Ethereum network: ", JSON.stringify(network))
 
-    const contractAddress = await throwIfNotContract(provider, COMMUNITY_ADDRESS, "Environment variable COMMUNITY_ADDRESS")
+    const contractAddress = await throwIfNotContract(provider, DATAUNION_ADDRESS, "Environment variable DATAUNION_ADDRESS")
     const storeDir = fs.existsSync(STORE_DIR) ? STORE_DIR : `${__dirname}/store/${contractAddress}-${Date.now()}`
     const fileStore = new FileStore(storeDir)
 

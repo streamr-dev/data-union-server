@@ -1,6 +1,6 @@
 const { ContractFactory } = require("ethers")
 
-const CommunityJson = require("../../build/CommunityProduct")
+const DataUnionContract = require("../../build/DataunionVault")
 
 /** @typedef {string} EthereumAddress */
 
@@ -13,12 +13,12 @@ const CommunityJson = require("../../build/CommunityProduct")
  * @param {Number} adminFeeFraction
  * @param {Function} log
  */
-async function deployTestCommunity(wallet, operatorAddress, tokenAddress, blockFreezePeriodSeconds, adminFeeFraction, log) {
+async function deployTestDataunion(wallet, operatorAddress, tokenAddress, blockFreezePeriodSeconds, adminFeeFraction, log) {
     log && log(`Deploying DUMMY root chain contract (token @ ${tokenAddress}, blockFreezePeriodSeconds = ${blockFreezePeriodSeconds}, no joinPartStream...`)
-    const deployer = new ContractFactory(CommunityJson.abi, CommunityJson.bytecode, wallet)
+    const deployer = new ContractFactory(DataUnionContract.abi, DataUnionContract.bytecode, wallet)
     const result = await deployer.deploy(operatorAddress, "dummy-stream-id", tokenAddress, blockFreezePeriodSeconds, adminFeeFraction)
     await result.deployed()
     return result
 }
 
-module.exports = deployTestCommunity
+module.exports = deployTestDataunion

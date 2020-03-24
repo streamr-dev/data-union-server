@@ -11,8 +11,8 @@ const {
 const sleep = require("../src/utils/sleep-promise")
 const { throwIfNotContract } = require("../src/utils/checkArguments")
 
-const TokenJson = require("../build/ERC20Detailed.json")
-const CommunityJson = require("../build/CommunityProduct.json")
+const TokenContract = require("../build/ERC20Detailed.json")
+const DataUnionContract = require("../build/DataunionVault.json")
 
 const {
     ETHEREUM_SERVER,            // explicitly specify server address
@@ -20,7 +20,7 @@ const {
     ETHEREUM_PRIVATE_KEY,
 
     TOKEN_ADDRESS,
-    COMMUNITY_ADDRESS,
+    DATAUNION_ADDRESS,
     GAS_PRICE_GWEI,
 
     // only one of these two please...
@@ -56,7 +56,7 @@ async function start() {
     log("Connected to Ethereum network: ", JSON.stringify(network))
 
     const tokenAddress = await throwIfNotContract(provider, TOKEN_ADDRESS, "env variable TOKEN_ADDRESS")
-    const communityAddress = await throwIfNotContract(provider, COMMUNITY_ADDRESS, "env variable COMMUNITY_ADDRESS")
+    const communityAddress = await throwIfNotContract(provider, DATAUNION_ADDRESS, "env variable DATAUNION_ADDRESS")
 
     if (DATA_TOKEN_AMOUNT && DATA_WEI_AMOUNT || !DATA_TOKEN_AMOUNT && !DATA_WEI_AMOUNT) { throw new Error("Please specify either env variable DATA_TOKEN_AMOUNT or DATA_WEI_AMOUNT, but not both!") }
     const dataWeiAmount = DATA_WEI_AMOUNT ? bigNumberify(DATA_WEI_AMOUNT) : parseEther(DATA_TOKEN_AMOUNT)
@@ -65,9 +65,9 @@ async function start() {
     if (privateKey.length !== 66) { throw new Error("Malformed private key, must be 64 hex digits long (optionally prefixed with '0x')") }
     const wallet = new Wallet(privateKey, provider)
 
-    log(`Checking community contract at ${communityAddress}...`)
-    const community = new Contract(communityAddress, CommunityJson.abi, provider)
-    const getters = CommunityJson.abi.filter(f => f.constant && f.inputs.length === 0).map(f => f.name)
+    log(`Checking DataunionVault contract at ${communityAddress}...`)
+    const community = new Contract(communityAddress, DataUnionContract.abi, provider)
+    const getters = DataUnionContract.abi.filter(f => f.constant && f.inputs.length === 0).map(f => f.name)
     for (const getter of getters) {
         log(`  ${getter}: ${await community[getter]()}`)
     }
@@ -79,7 +79,7 @@ async function start() {
     }
 
     log(`Checking token contract at ${tokenAddress}...`)
-    const token = new Contract(tokenAddress, TokenJson.abi, wallet)
+    const token = new Contract(tokenAddress, TokenContract.abi, wallet)
     log("  Token name: ", await token.name())
     log("  Token symbol: ", await token.symbol())
     log("  Token decimals: ", await token.decimals())

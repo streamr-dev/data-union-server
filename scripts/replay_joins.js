@@ -8,7 +8,7 @@ const {
     providers: { JsonRpcProvider },
 } = require("ethers")
 
-const CommunityProductJson = require("../build/CommunityProduct.json")
+const CommunityProductJson = require("../build/DataunionVault.json")
 
 const { throwIfNotContract } = require("../src/utils/checkArguments")
 
@@ -18,7 +18,7 @@ const {
     ETHEREUM_SERVER,            // explicitly specify server address
     ETHEREUM_NETWORK,           // use ethers.js default servers
 
-    COMMUNITY_ADDRESS,
+    DATAUNION_ADDRESS,
 
     STREAMR_WS_URL,
     STREAMR_HTTP_URL,
@@ -32,7 +32,7 @@ async function start() {
     })
     //console.log("Connected to Ethereum network: ", JSON.stringify(network))
 
-    const contractAddress = await throwIfNotContract(provider, COMMUNITY_ADDRESS, "Environment variable COMMUNITY_ADDRESS")
+    const contractAddress = await throwIfNotContract(provider, DATAUNION_ADDRESS, "Environment variable DATAUNION_ADDRESS")
 
     const config = {
         contractAddress,

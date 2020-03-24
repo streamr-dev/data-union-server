@@ -10,7 +10,7 @@ const FileStore = require("./fileStore")
 const MonoplasmaOperator = require("./operator")
 const StreamrChannel = require("./streamrChannel")
 
-const CommunityProductJson = require("../build/CommunityProduct.json")
+const CommunityProductJson = require("../build/DataunionVault.json")
 
 const { throwIfNotSet } = require("./utils/checkArguments")
 
@@ -136,7 +136,7 @@ module.exports = class CommunityProductServer {
         const { communities } = this
         const community = communities[address]
         const newOperatorAddress = getAddress(await contract.operator())
-        const contractVersion = contract.version ? await contract.version() : 0
+        const contractVersion = contract.version ? (await contract.version()).toNumber() : 0
         const weShouldOperate = SERVER_VERSION === contractVersion && newOperatorAddress === this.wallet.address
         if (!community) {
             if (weShouldOperate) {

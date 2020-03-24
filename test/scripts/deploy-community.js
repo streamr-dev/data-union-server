@@ -14,9 +14,9 @@ const {
 const { untilStreamContains, untilStreamMatches, capture } = require("../utils/await-until")
 
 const sleep = require("../../src/utils/sleep-promise")
-const deployCommunity = require("../../src/utils/deployCommunity")
+const deployContract = require("../../src/utils/deployContract")
 
-const CommunityJson = require("../../build/CommunityProduct")
+const DataUnionContract = require("../../build/DataunionVault")
 
 const { streamrWs, streamrHttp, streamrNodeAddress } = require("../integration/CONFIG")
 
@@ -59,8 +59,8 @@ async function startServer() {
 }
 
 async function runDeployScript(ETHEREUM_SERVER, ETHEREUM_PRIVATE_KEY, OPERATOR_ADDRESS, TOKEN_ADDRESS, STREAMR_NODE_ADDRESS, STREAMR_WS_URL, STREAMR_HTTP_URL) {
-    log("--- Running deploy_community.js ---")
-    const deployProcess = spawn(process.execPath, ["scripts/deploy_community.js"], {
+    log("--- Running deploy_dataunion.js ---")
+    const deployProcess = spawn(process.execPath, ["scripts/deploy_dataunion.js"], {
         env: {
             ETHEREUM_SERVER,            // explicitly specify server address
             ETHEREUM_PRIVATE_KEY,
@@ -76,10 +76,10 @@ async function runDeployScript(ETHEREUM_SERVER, ETHEREUM_PRIVATE_KEY, OPERATOR_A
     })
     deployProcess.stdout.on("data", data => { log(`<deploy> ${data.toString().trim()}`) })
     deployProcess.stderr.on("data", data => { log(`deploy *** ERROR: ${data}`) })
-    deployProcess.on("close", code => { log(`deploy_community.js exited with code ${code}`) })
-    deployProcess.on("error", err => { log(`deploy_community.js ERROR: ${err}`) })
+    deployProcess.on("close", code => { log(`deploy_dataunion.js exited with code ${code}`) })
+    deployProcess.on("error", err => { log(`deploy_dataunion.js ERROR: ${err}`) })
 
-    const addressMatch = untilStreamMatches(deployProcess.stdout, /Deployed community contract at (.*)/)
+    const addressMatch = untilStreamMatches(deployProcess.stdout, /Deployed DataunionVault contract at (.*)/)
     const streamIdMatch = untilStreamMatches(deployProcess.stdout, /JoinPartStream ID: (.*)/)
     await untilStreamContains(deployProcess.stdout, "[DONE]")
 
@@ -132,7 +132,7 @@ describe.skip("Deploy community script", () => {
         processesToCleanUp.push(deployProcess)
 
         const provider = new JsonRpcProvider(providerUrl)
-        const communityContract = new Contract(contractAddress, CommunityJson.abi, provider)
+        const communityContract = new Contract(contractAddress, DataUnionContract.abi, provider)
         const freeze = await communityContract.blockFreezeSeconds()
         assert.strictEqual(freeze.toString(), BLOCK_FREEZE_SECONDS.toString())
 
@@ -165,7 +165,7 @@ describe.skip("Deploy community script", () => {
         const wallet = new Wallet(keys[3], provider)
 
         const nodeAddress = getAddress(streamrNodeAddress)
-        const communityContract = await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, ADMIN_FEE, config.streamrWsUrl, config.streamrHttpUrl)
+        const communityContract = await deployContract(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, ADMIN_FEE, config.streamrWsUrl, config.streamrHttpUrl)
 
         const freeze = await communityContract.blockFreezeSeconds()
         assert.strictEqual(freeze.toString(), BLOCK_FREEZE_SECONDS.toString())

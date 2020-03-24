@@ -3,7 +3,7 @@
 const log = require("debug")("Streamr::CPS::test::contracts::CommunityProduct")
 
 const etherlime = require("etherlime")
-const CommunityProduct = require("../../build/CommunityProduct.json")
+const CommunityProduct = require("../../build/DataunionVault.json")
 const TestToken = require("../../build/TestToken.json")
 //const assert = require("assert")
 

@@ -14,11 +14,11 @@ Web server answers to following HTTP endpoints, read-only, for inspection purpos
   * Returns the running server configuration
 * GET /communities
   * Returns list of communities the server runs Operators for
-* GET /communities/{communityAddress}/stats
+* GET /communities/{address}/stats
   * Returns Operator stats.
-* GET /communities/{communityAddress}/members
+* GET /communities/{address}/members
   * Returns list of members
-* GET /communities/{communityAddress}/members/{memberAddress}
+* GET /communities/{address}/members/{memberAddress}
   * Returns individual member stats (such as balances and withdraw proofs)
 
 All "writing" happens either through Ethereum contracts or the joinPartStream (see [streamrChannel.js](src/streamrChannel.js))
