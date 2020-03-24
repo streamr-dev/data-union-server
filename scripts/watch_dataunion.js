@@ -13,13 +13,13 @@ const {
     providers: { JsonRpcProvider },
 } = require("ethers")
 
-const CommunityProductJson = require("../build/DataunionVault.json")
+const DataUnionJson = require("../build/DataunionVault")
 
 const FileStore = require("../src/fileStore")
 const MonoplasmaWatcher = require("../src/watcher")
 const { throwIfNotContract } = require("../src/utils/checkArguments")
 
-//const getCommunitiesRouter = require("../src/routers/communities")
+//const getCommunitiesRouter = require("../src/routers/dataunions")
 const getMemberRouter = require("monoplasma/src/routers/member")
 const StreamrChannel = require("../src/streamrChannel")
 
@@ -62,7 +62,7 @@ async function start() {
         streamrHttpUrl: STREAMR_HTTP_URL,
     }
 
-    const contract = new Contract(contractAddress, CommunityProductJson.abi, provider)
+    const contract = new Contract(contractAddress, DataUnionJson.abi, provider)
 
     const joinPartStreamId = await contract.joinPartStream()
     const channel = new StreamrChannel(joinPartStreamId, config.streamrWsUrl, config.streamrHttpUrl)

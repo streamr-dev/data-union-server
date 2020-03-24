@@ -7,7 +7,7 @@ export ETHEREUM_SERVER=http://localhost:8545
 export STREAMR_NODE_ADDRESS=0xFCAd0B19bB29D4674531d6f115237E16AfCE377c
 export STREAMR_WS_URL=ws://localhost:8890/api/v1/ws
 export STREAMR_HTTP_URL=http://localhost:8081/streamr-core/api/v1
-#export COMMUNITY_ADDRESS=  # TODO: find out and add
+#export DATAUNION_ADDRESS=  # TODO: find out and add
 
 # start_server.js without env variables
 #export ETHEREUM_SERVER=http://localhost:8548
@@ -27,7 +27,7 @@ export ETHEREUM_PRIVATE_KEY=5E98CCE00CFF5DEA6B454889F359A4EC06B9FA6B88E9D69B86DE
 # start_server
 export OPERATOR_PRIVATE_KEY=0x5e98cce00cff5dea6b454889f359a4ec06b9fa6b88e9d69b86de8e1c81887da0 # ganache 0
 
-# deploy_contract
+# deploy
 export BLOCK_FREEZE_SECONDS=1
 export OPERATOR_ADDRESS=0xa3d1F77ACfF0060F7213D7BF3c7fEC78df847De1      # ganache 0
 export ADMIN_FEE=0.3
@@ -40,10 +40,10 @@ export SECRET=secret
 export DATA_TOKEN_AMOUNT=0.01
 
 #node scripts/watch_dataunion.js
-node scripts/start_server.js
-#node scripts/deploy_contract.js
+#node scripts/start_server.js
+#node scripts/deploy.js
 #node scripts/add_secret.js
-#node scripts/join_dataunion.js
+#node scripts/join.js
 #node scripts/check_dataunion.js
 #node scripts/send_tokens.js
 #node scripts/create_user.js

@@ -3,7 +3,7 @@ const {
     utils: { getAddress, BigNumber }
 } = require("ethers")
 
-const log = require("debug")("Streamr::CPS::routers::communities")
+const log = require("debug")("Streamr::dataunion::routers::dataunions")
 
 /** Convert Ethereum address into checksummed case */
 function parseAddress(address) {
@@ -14,7 +14,7 @@ function parseAddress(address) {
     }
 }
 
-/** @type {(server: CommunityProductServer, logFunc: Function<String>) => express.Router} */
+/** @type {(server: DataUnionServer, logFunc: Function<String>) => express.Router} */
 module.exports = (server) => {
     const router = express.Router()
 
@@ -22,33 +22,33 @@ module.exports = (server) => {
         log("Requested server summary")
         const result = {
             config: server.operatorConfig,
-            communities: {},
+            dataunions: {},
         }
         for (const [address, c] of Object.entries(server.communities)) {
             // is the community already syncing or running?
             if (c.operator) {
                 const stats = c.operator.watcher.getStats()
-                result.communities[address] = stats
+                result.dataunions[address] = stats
             } else {
-                result.communities[address] = {
+                result.dataunions[address] = {
                     memberCount: { total: 0, active: 0, inactive: 0 },
                     totalEarnings: 0,
                 }
             }
-            result.communities[address].state = c.state
+            result.dataunions[address].state = c.state
         }
         res.send(result)
     })
 
     function parseOperator(req, res, next) {
-        const address = parseAddress(req.params.communityAddress)
+        const address = parseAddress(req.params.duAddress)
         if (!address) {
-            res.status(400).send({error: `Bad Ethereum address: ${req.params.communityAddress}`})
+            res.status(400).send({error: `Bad Ethereum address: ${req.params.duAddress}`})
             return
         }
         const community = server.communities[address]
         if (!community) {
-            res.status(404).send({error: `We're not operating the community @ ${address}`})
+            res.status(404).send({error: `We're not operating the data union ${address}`})
             return
         }
         if (!community.operator) {
@@ -61,7 +61,7 @@ module.exports = (server) => {
     }
 
     // TODO: find a way to delegate to monoplasma/src/routers/member.js
-    router.get("/:communityAddress/", parseOperator, (req, res) => {
+    router.get("/:duAddress/", parseOperator, (req, res) => {
         const plasma = req.operator.watcher.plasma
         if (plasma) {
             res.send({ status: "ok" })
@@ -70,32 +70,32 @@ module.exports = (server) => {
         }
     })
 
-    router.get("/:communityAddress/stats", parseOperator, (req, res) => {
-        log(`HTTP ${req.params.communityAddress}> Requested community stats`)
+    router.get("/:duAddress/stats", parseOperator, (req, res) => {
+        log(`HTTP ${req.params.duAddress}> Requested community stats`)
         const stats = req.operator.watcher.getStats()
         res.send(stats)
     })
 
-    router.get("/:communityAddress/members", parseOperator, (req, res) => {
-        log(`HTTP ${req.params.communityAddress}> Requested monoplasma members`)
+    router.get("/:duAddress/members", parseOperator, (req, res) => {
+        log(`HTTP ${req.params.duAddress}> Requested monoplasma members`)
         const plasma = req.operator.watcher.plasma
         res.send(plasma.getMembers())
     })
 
     // NOTE: this function gets the highest query load
-    router.get("/:communityAddress/members/:address", parseOperator, (req, res) => {
+    router.get("/:duAddress/members/:address", parseOperator, (req, res) => {
         const plasma = req.operator.watcher.plasma
         const address = parseAddress(req.params.address)
         if (!address) {
             res.status(400).send({error: `Bad Ethereum address: ${req.params.address}`})
             return
         }
-        log(`HTTP ${req.params.communityAddress}> Requested member ${address}`)
+        log(`HTTP ${req.params.duAddress}> Requested member ${address}`)
         // TODO: revert to plasma.getMember after monoplasma update
         //const member = plasma.getMember(address)
         const member = plasma.getMembers().find(m => m.address === address)
         if (!member) {
-            res.status(404).send({error: `Member not found: ${address} in ${req.params.communityAddress}`})
+            res.status(404).send({error: `Member not found: ${address} in ${req.params.duAddress}`})
             return
         }
 

@@ -8,7 +8,7 @@ const {
     providers: { JsonRpcProvider },
 } = require("ethers")
 
-const CommunityProductJson = require("../build/DataunionVault.json")
+const DataUnionJson = require("../build/DataunionVault.json")
 
 const { throwIfNotContract } = require("../src/utils/checkArguments")
 
@@ -40,7 +40,7 @@ async function start() {
         streamrHttpUrl: STREAMR_HTTP_URL,
     }
 
-    const contract = new Contract(contractAddress, CommunityProductJson.abi, provider)
+    const contract = new Contract(contractAddress, DataUnionJson.abi, provider)
 
     const joinPartStreamId = await contract.joinPartStream()
     //const channel = new StreamrChannel(joinPartStreamId, config.streamrWsUrl, config.streamrHttpUrl)

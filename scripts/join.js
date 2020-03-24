@@ -5,6 +5,7 @@ const StreamrClient = require("streamr-client")
 const {
     getDefaultProvider,
     providers: { JsonRpcProvider },
+    utils: { computeAddress },
 } = require("ethers")
 
 const {
@@ -17,13 +18,9 @@ const {
 
     STREAMR_WS_URL,
     STREAMR_HTTP_URL,
-
-    QUIET,
 } = process.env
 
-const log = QUIET ? () => {} : (...args) => {
-    console.log(...args)
-}
+const log = require("debug")("CPS::scripts::join_dataunion")
 const error = (e, ...args) => {
     console.error(e.stack, ...args)
     process.exit(1)
@@ -45,6 +42,7 @@ async function start() {
 
     const privateKey = ETHEREUM_PRIVATE_KEY.startsWith("0x") ? ETHEREUM_PRIVATE_KEY : "0x" + ETHEREUM_PRIVATE_KEY
     if (privateKey.length !== 66) { throw new Error("Malformed private key, must be 64 hex digits long (optionally prefixed with '0x')") }
+    const memberAddress = computeAddress(privateKey)
 
     const communityAddress = await throwIfNotContract(provider, DATAUNION_ADDRESS, "env variable DATAUNION_ADDRESS")
 
@@ -54,11 +52,13 @@ async function start() {
     if (STREAMR_HTTP_URL) { opts.restUrl = STREAMR_HTTP_URL }
     const client = new StreamrClient(opts)
 
-    log(`Adding to https://streamr.com/api/v1/dataunions/${communityAddress}/secrets ...`)
-    const res = await client.createSecret(communityAddress, SECRET)
+    log(`secret: ${SECRET}`)
+    log(`Adding https://streamr.com/api/v1/communities/${communityAddress}/members/${memberAddress} ...`)
+    const res = await client.joinCommunity(communityAddress, SECRET)
 
-    log(`Secret added successfully, response: ${JSON.stringify(res)}`)
+    log(`Community join sent, response: ${JSON.stringify(res)}`)
     log(`Network was ${JSON.stringify(network)}`)
 }
+
 
 start().catch(error)

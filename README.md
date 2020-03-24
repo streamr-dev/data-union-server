@@ -12,13 +12,13 @@ Web server answers to following HTTP endpoints, read-only, for inspection purpos
 
 * GET /config
   * Returns the running server configuration
-* GET /communities
+* GET /dataunions
   * Returns list of communities the server runs Operators for
-* GET /communities/{address}/stats
+* GET /dataunions/{dataunionAddress}/stats
   * Returns Operator stats.
-* GET /communities/{address}/members
+* GET /dataunions/{dataunionAddress}/members
   * Returns list of members
-* GET /communities/{address}/members/{memberAddress}
+* GET /dataunions/{dataunionAddress}/members/{memberAddress}
   * Returns individual member stats (such as balances and withdraw proofs)
 
 All "writing" happens either through Ethereum contracts or the joinPartStream (see [streamrChannel.js](src/streamrChannel.js))
@@ -35,9 +35,9 @@ Start server script can be modified using the following environment variables:
 |  STREAMR_HTTP_URL | Default: https://www.streamr.com/api/v1 |
 |  FINALITY_WAIT_SECONDS | Seconds to wait before assuming Ethereum won't re-org anymore |
 |  GAS_PRICE_GWEI | Gas price for Ethereum transactions, defaults to network suggestion ([see ethers.js](https://github.com/ethers-io/ethers.js/blob/061b0eae1d4c570aedd9bee1971afa43fcdae1a6/tests/make-tests/make-contract-interface.js#L330)) |
-|  STORE_DIR | CPS file storage location, defaults to `store` |
+|  STORE_DIR | dataunion file storage location, defaults to `store` |
 |  QUIET | Don't print to console.log |
-|  WEBSERVER_PORT | HTTP API for /config and /communities endpoints |
+|  WEBSERVER_PORT | HTTP API for /config and /dataunions endpoints |
 |  SENTRY_TOKEN | DSN for sending Sentry messages |
 
 # Debugging and developing

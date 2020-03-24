@@ -59,8 +59,8 @@ async function startServer() {
 }
 
 async function runDeployScript(ETHEREUM_SERVER, ETHEREUM_PRIVATE_KEY, OPERATOR_ADDRESS, TOKEN_ADDRESS, STREAMR_NODE_ADDRESS, STREAMR_WS_URL, STREAMR_HTTP_URL) {
-    log("--- Running deploy_dataunion.js ---")
-    const deployProcess = spawn(process.execPath, ["scripts/deploy_dataunion.js"], {
+    log("--- Running deploy.js ---")
+    const deployProcess = spawn(process.execPath, ["scripts/deploy.js"], {
         env: {
             ETHEREUM_SERVER,            // explicitly specify server address
             ETHEREUM_PRIVATE_KEY,
@@ -76,8 +76,8 @@ async function runDeployScript(ETHEREUM_SERVER, ETHEREUM_PRIVATE_KEY, OPERATOR_A
     })
     deployProcess.stdout.on("data", data => { log(`<deploy> ${data.toString().trim()}`) })
     deployProcess.stderr.on("data", data => { log(`deploy *** ERROR: ${data}`) })
-    deployProcess.on("close", code => { log(`deploy_dataunion.js exited with code ${code}`) })
-    deployProcess.on("error", err => { log(`deploy_dataunion.js ERROR: ${err}`) })
+    deployProcess.on("close", code => { log(`deploy.js exited with code ${code}`) })
+    deployProcess.on("error", err => { log(`deploy.js ERROR: ${err}`) })
 
     const addressMatch = untilStreamMatches(deployProcess.stdout, /Deployed DataunionVault contract at (.*)/)
     const streamIdMatch = untilStreamMatches(deployProcess.stdout, /JoinPartStream ID: (.*)/)

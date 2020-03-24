@@ -10,7 +10,7 @@ const FileStore = require("./fileStore")
 const MonoplasmaOperator = require("./operator")
 const StreamrChannel = require("./streamrChannel")
 
-const CommunityProductJson = require("../build/DataunionVault.json")
+const DataUnionContract = require("../build/DataunionVault.json")
 
 const { throwIfNotSet } = require("./utils/checkArguments")
 
@@ -28,18 +28,18 @@ const SERVER_VERSION = 1
 /**
  * @property {Map<EthereumAddress, Community>} communities
  */
-module.exports = class CommunityProductServer {
+module.exports = class DataUnionServer {
     /**
      *
      * @param {Wallet} wallet from ethers.js
      */
     constructor(wallet, storeDir, operatorConfig, log, error) {
-        throwIfNotSet(wallet, "Wallet argument to new CommunityProductServer")
-        throwIfNotSet(storeDir, "Store directory argument to new CommunityProductServer")
+        throwIfNotSet(wallet, "Wallet argument to new DataUnionServer")
+        throwIfNotSet(storeDir, "Store directory argument to new DataUnionServer")
 
         this.wallet = wallet
         this.eth = wallet.provider
-        this.log = log || debug("Streamr::CPS::server")   // TODO: don't pass log func in constructor
+        this.log = log || debug("Streamr::dataunion::server")   // TODO: don't pass log func in constructor
         this.error = error || console.error // eslint-disable-line no-console
         this.communities = {}       // mapping: Ethereum address => Community object
         this.storeDir = storeDir
@@ -129,7 +129,7 @@ module.exports = class CommunityProductServer {
      * @param {string} address
      */
     async onOperatorChangedEventAt(address) {
-        const contract = new Contract(address, CommunityProductJson.abi, this.eth)
+        const contract = new Contract(address, DataUnionContract.abi, this.eth)
         // create the promise to prevent later (duplicate) creation
         const isRunningPromise = this.communityIsRunning(address)
         const status = this.communityIsRunningPromises[address]
@@ -174,7 +174,7 @@ module.exports = class CommunityProductServer {
         } else {
             if (!community.operator || !community.operator.contract) {
                 // abuse mitigation: only serve one community per event.address
-                //   normally CommunityProduct shouldn't send several requests (potential spam attack attempt)
+                //   normally DataUnion shouldn't send several requests (potential spam attack attempt)
                 this.error(`Too rapid OperatorChanged events from ${address}, community is still launching`)
                 return
             }
@@ -218,7 +218,7 @@ module.exports = class CommunityProductServer {
      */
     async getChannelFor(communityAddress) {
         const address = getAddress(communityAddress)
-        const contract = new Contract(address, CommunityProductJson.abi, this.eth)
+        const contract = new Contract(address, DataUnionContract.abi, this.eth)
 
         // throws if joinPartStreamId doesn't exist
         const joinPartStreamId = await contract.joinPartStream()
@@ -245,7 +245,7 @@ module.exports = class CommunityProductServer {
 
     async startOperating(communityAddress) {
         const address = getAddress(communityAddress)
-        const contract = new Contract(address, CommunityProductJson.abi, this.eth)
+        const contract = new Contract(address, DataUnionContract.abi, this.eth)
 
         const operatorAddress = getAddress(await contract.operator())
         if (operatorAddress !== this.wallet.address) {

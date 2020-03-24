@@ -20,8 +20,8 @@ const { throwIfNotContract, throwIfBadAddress } = require("../src/utils/checkArg
 const deployContract = require("../src/utils/deployContract")
 const sleep = require("../src/utils/sleep-promise")
 
-const CommunityProductServer = require("../src/server")
-const getCommunitiesRouter = require("../src/routers/communities")
+const DataUnionServer = require("../src/server")
+const getCommunitiesRouter = require("../src/routers/dataunions")
 
 const {
     ETHEREUM_SERVER,            // explicitly specify server address
@@ -38,7 +38,7 @@ const {
     // Safety parameter
     FINALITY_WAIT_SECONDS,
 
-    // Optional; HTTP API for /config and /communities endpoints
+    // Optional; HTTP API for /config and /dataunions endpoints
     WEBSERVER_PORT,
 
     // Optional; for sending out the error reports
@@ -113,7 +113,7 @@ async function start() {
         streamrWsUrl: STREAMR_WS_URL,
         streamrHttpUrl: STREAMR_HTTP_URL,
     }
-    const server = new CommunityProductServer(wallet, storeDir, config, log, error)
+    const server = new DataUnionServer(wallet, storeDir, config, log, error)
     await server.start()
 
     if (WEBSERVER_PORT) {
@@ -194,11 +194,11 @@ async function transfer(wallet, targetAddress, tokenAddress, amount) {
     return tr
 }
 
-const CommunityProduct = require("../build/DataunionVault")
+const DataUnion = require("../build/DataunionVault")
 async function setFee(wallet, targetAddress, fee) {
     throwIfNotContract(targetAddress, "Monoplasma contract address")
     if (!(fee >= 0 && fee <= 1)) { throw new Error(`Admin fee must be a number between 0...1, got: ${fee}`) }
-    const community = new Contract(targetAddress, CommunityProduct.abi, wallet)
+    const community = new Contract(targetAddress, DataUnion.abi, wallet)
     const feeBN = parseEther(fee.toString())
     const tx = await community.setAdminFee(feeBN)
     const tr = await tx.wait(1)

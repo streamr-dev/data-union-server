@@ -76,7 +76,7 @@ async function start() {
     if (STREAMR_HTTP_URL) { opts.restUrl = STREAMR_HTTP_URL }
     const client = new StreamrClient(opts)
 
-    log("Community stats from CPS")
+    log("Community stats from dataunion")
     const stats = await client.communityStats(community.address)
     log(`  Members: ${stats.memberCount.active} active / ${stats.memberCount.total} total`)
     log(`  Latest unfrozen block: ${stats.latestWithdrawableBlock.blockNumber} (${stats.latestWithdrawableBlock.memberCount} members)`)
@@ -165,6 +165,6 @@ start().catch(error)
 
 const fetch = require("node-fetch")
 async function getMembers(communityAddress) {
-    const url = `${STREAMR_HTTP_URL || "https://streamr.network/api/v1"}/communities/${communityAddress}/members`
+    const url = `${STREAMR_HTTP_URL || "https://streamr.network/api/v1"}/dataunions/${communityAddress}/members`
     return fetch(url).then((res) => res.json())
 }

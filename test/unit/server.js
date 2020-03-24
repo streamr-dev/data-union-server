@@ -3,20 +3,35 @@ const sleep = require("../../src/utils/sleep-promise")
 const sinon = require("sinon")
 const os = require("os")
 const path = require("path")
-const { Wallet, providers: { Web3Provider } } = require("ethers")
+const { ContractFactory, Wallet, providers: { Web3Provider } } = require("ethers")
 
-const log = console.log // require("debug")("Streamr::CPS::test::unit::server")
+const log = require("debug")("Streamr::dataunion::test::unit::server")
 
 const ganache = require("ganache-core")
-
+const CommunityJson = require("../../build/DataunionVault")
 const MockStreamrChannel = require("../utils/mockStreamrChannel")
 const deployTestToken = require("../utils/deployTestToken")
-const deployTestDataunion = require("../utils/deployTestDataunion")
 const pollingIntervalSeconds = 0.1
 
 const { until } = require("../utils/await-until")
 
 const CommunityProductServer = require("../../src/server")
+
+/**
+ * Deploy a DataUnion contract with no real joinPartStream, for (unit) test purposes
+ * @param {Wallet} wallet to do the deployment from, also becomes owner or stream and contract
+ * @param {EthereumAddress} operatorAddress community-product-server that should operate the contract
+ * @param {EthereumAddress} tokenAddress
+ * @param {Number} blockFreezePeriodSeconds
+ * @param {Number} adminFeeFraction
+ */
+async function deployTestDataunion(wallet, operatorAddress, tokenAddress, blockFreezePeriodSeconds, adminFeeFraction) {
+    log(`Deploying MOCK root chain contract (token @ ${tokenAddress}, blockFreezePeriodSeconds = ${blockFreezePeriodSeconds}, no joinPartStream...`)
+    const deployer = new ContractFactory(CommunityJson.abi, CommunityJson.bytecode, wallet)
+    const result = await deployer.deploy(operatorAddress, "dummy-stream-id", tokenAddress, blockFreezePeriodSeconds, adminFeeFraction)
+    await result.deployed()
+    return result
+}
 
 describe("CommunityProductServer", function () {
     this.timeout(10000)

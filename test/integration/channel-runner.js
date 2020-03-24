@@ -1,7 +1,7 @@
 const path = require("path")
 const { spawn } = require("child_process")
 
-const log = require("debug")("Streamr::CPS::test::integration::channel")
+const log = require("debug")("Streamr::dataunion::test::integration::channel")
 
 const { STREAMR_WS_URL, STREAMR_HTTP_URL } = require("./CONFIG")
 
@@ -25,7 +25,7 @@ describe.skip("Channel", () => {
             restUrl: STREAMR_HTTP_URL,
             auth: { privateKey },
         })
-        const stream = await client.createStream({ name: "CPS integration test stream" })
+        const stream = await client.createStream({ name: "dataunion integration test stream" })
 
         const joinPartChannel = new Channel(stream.id, STREAMR_WS_URL, STREAMR_HTTP_URL)
         await joinPartChannel.startServer(privateKey)

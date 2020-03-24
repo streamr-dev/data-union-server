@@ -2,7 +2,7 @@ const { spawn } = require("child_process")
 const fetch = require("node-fetch")
 const assert = require("assert")
 
-const log = require("debug")("Streamr::CPS::test::system::localhost")
+const log = require("debug")("Streamr::dataunion::test::system::localhost")
 
 const {
     Contract,
@@ -18,7 +18,7 @@ const { untilStreamContains, untilStreamMatches, capture } = require("../utils/a
 const deployContract = require("../../src/utils/deployContract")
 
 const ERC20Mintable = require("../../build/ERC20Mintable.json")
-const CommunityProduct = require("../../build/DataunionVault.json")
+const DataUnion = require("../../build/DataunionVault")
 
 const STORE_DIR = __dirname + `/test-store-${+new Date()}`
 const GANACHE_PORT = 8548
@@ -33,7 +33,7 @@ const { streamrWs, streamrHttp, streamrNodeAddress } = require("../integration/C
  *   against production simply by not providing STREAMR_WS_URL and STREAMR_HTTP_URL (that will point to dev
  *   docker in Travis test), hence spin up an "internal" ganache for the test
  *
- * Point of view is of CPS developer
+ * Point of view is of Data Unions developer
  */
 describe("Community product demo", () => {
     let operatorProcess
@@ -120,8 +120,8 @@ describe("Community product demo", () => {
 
         log("1) Create a new Community product")
 
-        log("1.1) Create joinPartStream")  // done in deployContract function below
-        log("1.2) Deploy CommunityProduct contract")
+        log("1.1) Create joinPartStream")  // done in deployCommunity function below
+        log("1.2) Deploy DataUnion contract")
         const wallet = new Wallet(privateKey, ganacheProvider)
         const nodeAddress = getAddress(streamrNodeAddress)
         const communityContract = await deployContract(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, ADMIN_FEE, config.streamrWsUrl, config.streamrHttpUrl)
@@ -131,7 +131,7 @@ describe("Community product demo", () => {
         let stats = { error: true }
         while (stats.error) {
             await sleep(100)
-            stats = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/stats`).then(resp => resp.json())
+            stats = await fetch(`http://localhost:${WEBSERVER_PORT}/dataunions/${communityAddress}/stats`).then(resp => resp.json())
         }
         log(`     Stats before adding: ${JSON.stringify(stats)}`)
 
@@ -155,11 +155,11 @@ describe("Community product demo", () => {
         let members = []
         while (members.length < 1) {
             await sleep(1000)
-            members = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/members`).then(resp => resp.json())
+            members = await fetch(`http://localhost:${WEBSERVER_PORT}/dataunions/${communityAddress}/members`).then(resp => resp.json())
         }
         const memberAddresses = members.map(m => m.address)
         log(`     Members after adding: ${memberAddresses}`)
-        const res2b = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/stats`).then(resp => resp.json())
+        const res2b = await fetch(`http://localhost:${WEBSERVER_PORT}/dataunions/${communityAddress}/stats`).then(resp => resp.json())
         log(`     Stats after adding: ${JSON.stringify(res2b)}`)
         assert(memberAddresses.includes(address))
 
@@ -167,13 +167,13 @@ describe("Community product demo", () => {
         const token = new Contract(config.tokenAddress, ERC20Mintable.abi, wallet)
         for (let i = 0; i < 5; i++) {
             const balance = await token.balanceOf(address)
-            log(`   Sending 10 tokens (out of remaining ${formatEther(balance)}) to CommunityProduct contract...`)
+            log(`   Sending 10 tokens (out of remaining ${formatEther(balance)}) to DataUnion contract...`)
 
             const transferTx = await token.transfer(communityAddress, parseEther("10"))
             await transferTx.wait(2)
 
             // check total revenue
-            const res3 = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/stats`).then(resp => resp.json())
+            const res3 = await fetch(`http://localhost:${WEBSERVER_PORT}/dataunions/${communityAddress}/stats`).then(resp => resp.json())
             log(`   Total revenue: ${formatEther(res3.totalEarnings)}`)
         }
 
@@ -183,17 +183,17 @@ describe("Community product demo", () => {
         await sleep(10000)
 
         log("4) Check tokens were distributed & withdraw")
-        const res4 = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/members/${address}`).then(resp => resp.json())
+        const res4 = await fetch(`http://localhost:${WEBSERVER_PORT}/dataunions/${communityAddress}/members/${address}`).then(resp => resp.json())
         log(JSON.stringify(res4))
 
         const balanceBefore = await token.balanceOf(address)
         log(`   Token balance before: ${formatEther(balanceBefore)}`)
 
-        const contract = new Contract(communityAddress, CommunityProduct.abi, wallet)
+        const contract = new Contract(communityAddress, DataUnion.abi, wallet)
         const withdrawTx = await contract.withdrawAll(res4.withdrawableBlockNumber, res4.withdrawableEarnings, res4.proof)
         await withdrawTx.wait(2)
 
-        const res4b = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityAddress}/members/${address}`).then(resp => resp.json())
+        const res4b = await fetch(`http://localhost:${WEBSERVER_PORT}/dataunions/${communityAddress}/members/${address}`).then(resp => resp.json())
         log(JSON.stringify(res4b))
 
         const balanceAfter = await token.balanceOf(address)

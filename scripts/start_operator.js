@@ -11,7 +11,7 @@ const bodyParser = require("body-parser")
 
 const { Wallet, Contract, providers: { JsonRpcProvider } } = require("ethers")
 
-const CommunityProductJson = require("../build/DataunionVault.json")
+const DataUnionJson = require("../build/DataunionVault.json")
 
 const FileStore = require("../src/fileStore")
 const Operator = require("../src/operator")
@@ -109,7 +109,7 @@ async function start() {
 
     log("Starting the joinPartChannel and Operator")
 
-    const contract = new Contract(config.contractAddress, CommunityProductJson.abi, this.eth)
+    const contract = new Contract(config.contractAddress, DataUnionJson.abi, this.eth)
     const joinPartStreamId = await contract.joinPartStream()
     const adminChannel = new Channel(joinPartStreamId, config.streamrWsUrl, config.streamrHttpUrl)
     await adminChannel.startServer(privateKey)
