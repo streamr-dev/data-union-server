@@ -61,7 +61,7 @@ async function start() {
     const wallet = new Wallet(privateKey, provider)
 
     log(`Checking community contract at ${communityAddress}...`)
-    const community = new Contract(communityAddress, CommunityJson.abi, provider)
+    const community = new Contract(communityAddress, CommunityJson.abi, wallet)
     const getters = CommunityJson.abi.filter(f => f.constant && f.inputs.length === 0).map(f => f.name)
     for (const getter of getters) {
         log(`  ${getter}: ${await community[getter]()}`)
@@ -83,38 +83,38 @@ async function start() {
     const client = new StreamrClient(opts)
 
     let members = await client.getMembers(communityAddress)
+    for (const member of members){
+        const stats = await client.getMemberStats(communityAddress, member.address)
+        const earningsBN = new BigNumber(stats.withdrawableEarnings)
+        const withdrawnBN = await community.withdrawn(member.address)
+        member.unwithdrawnEarningsBN = earningsBN.sub(withdrawnBN)
+        member.stats = stats
+        log(`member: ${member.address}`)
+        log(`  Previously withdrawn earnings: ${withdrawnBN.toString()}`)
+        log(`  Previously unwithdrawn earnings: ${member.unwithdrawnEarningsBN.toString()}`)
+    }
     members = members.filter(function(a){
-        return +a.earnings >= (MIN_WITHDRAWABLE_EARNINGS ? +MIN_WITHDRAWABLE_EARNINGS : 0)
+        return +a.unwithdrawnEarningsBN >= (MIN_WITHDRAWABLE_EARNINGS ? +MIN_WITHDRAWABLE_EARNINGS : 1)
     }).sort(function(a,b){
-        return +b.earnings - +a.earnings
+        return +b.unwithdrawnEarningsBN - +a.unwithdrawnEarningsBN
     })
     log(`Members to withdraw: ${JSON.stringify(members)}`)
-
-    //function withdrawAllFor(address recipient, uint blockNumber, uint totalEarnings, bytes32[] memory proof) public {
-  
-    const DUcontract = new Contract(communityAddress, CommunityJson.abi, wallet)
 
     for (const member of members){
         const options = {}
         if (GAS_PRICE_GWEI) { options.gasPrice = parseUnits(GAS_PRICE_GWEI, "gwei") }
-        const stats = await client.getMemberStats(communityAddress, member.address)
-        log(`stats: ${JSON.stringify(stats)}`)
-        const earningsBN = new BigNumber(stats.withdrawableEarnings)
-        const withdrawnBN = await community.withdrawn(member.address)
-        const unwithdrawnEarningsBN = earningsBN.sub(withdrawnBN)
-        log(`  Previously withdrawn earnings: ${withdrawnBN.toString()}`)
-        log(`  Previously unwithdrawn earnings: ${unwithdrawnEarningsBN.toString()}`)
-    
-        log(`Withdrawing ${formatEther(unwithdrawnEarningsBN)} DATA from ${communityAddress} to ${wallet.address}...`)
+
+        log(`Withdrawing ${formatEther(member.unwithdrawnEarningsBN)} DATA from ${communityAddress} to ${wallet.address}...`)
         if (sleepMs) {
             log(`Sleeping ${sleepMs}ms, please check the values and hit Ctrl+C if you're in the least unsure`)
             await sleep(sleepMs)
         }
-        const tx = await DUcontract.withdrawAllFor(
+        
+        const tx = await community.withdrawAllFor(
             member.address,
-            stats.withdrawableBlockNumber,
-            stats.withdrawableEarnings,
-            stats.proof,
+            member.stats.withdrawableBlockNumber,
+            member.unwithdrawnEarningsBN,
+            member.stats.proof,
             options
         )
     
@@ -122,6 +122,8 @@ async function start() {
         const tr = await tx.wait(1)
         log(`Receipt: ${JSON.stringify(tr)}`)
         log("[DONE]")
+        
+        
     }
 }
 
