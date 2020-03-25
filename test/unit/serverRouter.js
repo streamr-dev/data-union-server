@@ -7,7 +7,7 @@ const http = require("http")
 const fetch = require("node-fetch")
 const { Wallet, ContractFactory, providers: { Web3Provider } } = require("ethers")
 
-const log = require("debug")("Streamr::dataunion::test::unit::communities-router")
+const log = require("debug")("Streamr::dataunion::test::unit::server-router")
 
 const CommunityJson = require("../../build/DataUnion")
 const TokenJson = require("../../build/TestToken")
@@ -36,9 +36,10 @@ const startState = {
 }
 
 const DataUnionServer = require("../../src/server")
-const getCommunitiesRouter = require("../../src/routers/dataunions")
+const getServerRouter = require("../../src/routers/server")
 
-describe("Community product server /dataunions router", () => {
+// TODO: separate server router and dataunion router
+describe("Community product server router", () => {
     const port = 3031
     const serverURL = `http://localhost:${port}`
 
@@ -80,13 +81,13 @@ describe("Community product server /dataunions router", () => {
         channel = new MockStreamrChannel("dummy-stream-for-router-test")
         server.getStoreFor = () => mockStore(startState, initialBlock, log)
         server.getChannelFor = () => channel
-        const router = getCommunitiesRouter(server, log)
         community = await server.startOperating(contractAddress)
 
         log("Starting CommunitiesRouter...")
         const app = express()
+        const router = getServerRouter(server)
         app.use(bodyParser.json())
-        app.use("/dataunions", router)
+        app.use(router)
         httpServer = http.createServer(app)
         httpServer.listen(port)
     })
@@ -142,12 +143,7 @@ describe("Community product server /dataunions router", () => {
     })
 
     // Test the case where the member is in the community but too new to have earnings in withdrawable blocks
-    // Catch the following:
-    //   UnhandledPromiseRejectionWarning: Error: Address 0x0000000000000000000000000000000000000002 not found!
-    //   at MerkleTree.getPath (node_modules/monoplasma/src/merkletree.js:121:19)
-    //   at MonoplasmaState.getProof (node_modules/monoplasma/src/state.js:153:32)
-    //   at MonoplasmaState.getMember (node_modules/monoplasma/src/state.js:129:26)
-    //   at router.get (src/routers/dataunions.js:96:31)
+    // Catch the UnhandledPromiseRejectionWarning: Error: Address 0x0000000000000000000000000000000000000002 not found!
     it("GET /members/new-member-address", async () => {
         const newMemberAddress = "0x0000000000000000000000000000000000000002"
         channel.publish("join", [newMemberAddress])

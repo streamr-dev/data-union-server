@@ -21,7 +21,7 @@ const deployCommunity = require("../src/utils/deploy")
 const sleep = require("../src/utils/sleep-promise")
 
 const DataUnionServer = require("../src/server")
-const getCommunitiesRouter = require("../src/routers/dataunions")
+const getServerRouter = require("../src/routers/server")
 
 const {
     ETHEREUM_SERVER,            // explicitly specify server address
@@ -127,9 +127,8 @@ async function start() {
 
         app.get("/config", (req, res) => { res.send(config) }) // TODO: remove
 
-        const communitiesRouter = getCommunitiesRouter(server)
-        app.use("/dataunions", communitiesRouter)
-        app.use("/communities", communitiesRouter) // deprecated alias, remove once no longer used
+        const serverRouter = getServerRouter(server)
+        app.use("/", serverRouter)
 
         app.listen(port, () => log(`Web server started at ${serverURL}`))
 

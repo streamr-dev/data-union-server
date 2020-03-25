@@ -19,8 +19,7 @@ const FileStore = require("../src/fileStore")
 const MonoplasmaWatcher = require("../src/watcher")
 const { throwIfNotContract } = require("../src/utils/checkArguments")
 
-//const getCommunitiesRouter = require("../src/routers/dataunions")
-const getMemberRouter = require("monoplasma/src/routers/member")
+const dataunionRouter = require("../src/routers/dataunion")
 const StreamrChannel = require("../src/streamrChannel")
 
 const {
@@ -80,7 +79,7 @@ async function start() {
     const app = express()
     app.use(cors())
     app.use(bodyParser.json({limit: "50mb"}))
-    app.use("/api", getMemberRouter(watcher.plasma.getMemberApi()))
+    app.use("/", dataunionRouter.setWatcher(watcher), dataunionRouter)
     app.get("/config", (req, res) => { res.send(config) })
 
     // TODO: these probably should not be part of "public HTTP server" of Data Unions
