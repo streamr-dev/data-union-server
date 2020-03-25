@@ -17,7 +17,8 @@
     "system-tests": "mocha test/system/engine-and-editor-api.js --exit",
     "contract-tests": "npm run build-contracts && etherlime test --solcVersion=0.4.24 test/contracts",
     "test": "npm run unit-tests && npm run integration-tests && npm run script-tests && npm run contract-tests",
-    "preinstall": "node scripts/fix_package_lock.js || true"
+    "preinstall": "node scripts/fix_package_lock.js || true",
+    "prepare": "if [[ ${NODE_ENV} != \"production\" ]]; then npm run build-contracts && npm run flatten; fi"
   },
   "author": "Streamr Network AG",
   "license": "AGPL-3.0",
