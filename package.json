@@ -8,7 +8,7 @@
     "inspect": "node --inspect-brk ./scripts/start_server.js",
     "lint": "eslint src test scripts",
     "flatten": "etherlime --solcVersion=0.5.16 flatten DataunionVault.sol",
-    "build-contracts": "rm -rf build flat && etherlime --solcVersion=0.5.16 compile && npm run flatten",
+    "build-contracts": "etherlime --solcVersion=0.5.16 compile && npm run flatten",
     "docker-build": "docker build -t streamr/data-union-server:local .",
     "docker-tag-dev": "docker tag streamr/data-union-server:local streamr/data-union-server:dev",
     "unit-tests": "mocha test/unit --exit",
