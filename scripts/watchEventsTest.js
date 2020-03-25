@@ -12,8 +12,7 @@ const {
 const deployTestToken = require("../test/utils/deployTestToken")
 const sleep = require("../src/utils/sleep-promise")
 
-//const startGanache = require("monoplasma/src/utils/startGanache")
-const ganacheLib = require("ganache-core")
+const ganache = require("ganache-core")
 
 const ganacheBlockIntervalSeconds = 0
 const fakeTxCount = 20
@@ -39,7 +38,7 @@ async function start() {
         "0x1234567812345678123456781234567812345678123456781234567812345676",
         "0x1234567812345678123456781234567812345678123456781234567812345675",
     ]
-    const provider = new Web3Provider(ganacheLib.provider({
+    const provider = new Web3Provider(ganache.provider({
         accounts: keys.map(secretKey => ({ secretKey, balance: "0xffffffffffffffffffffffffff" })),
         logger: { log: ganacheLog },
         blockTime: ganacheBlockIntervalSeconds,

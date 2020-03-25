@@ -11,7 +11,7 @@ const exit = () => {
     process.exitCode = 0
 }
 
-const Log = debug(`Streamr::CPS::merkletree::worker::${process.pid}`)
+const Log = debug(`Streamr::dataunion::merkletree::worker::${process.pid}`)
 
 const isChild = !!process.send
 
