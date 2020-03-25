@@ -83,7 +83,7 @@ async function start() {
     const client = new StreamrClient(opts)
 
     let members = await client.getMembers(communityAddress)
-    for (const member of members){
+    for (const member of members) {
         const stats = await client.getMemberStats(communityAddress, member.address)
         const earningsBN = new BigNumber(stats.withdrawableEarnings)
         const withdrawnBN = await community.withdrawn(member.address)
@@ -93,14 +93,14 @@ async function start() {
         log(`  Previously withdrawn earnings: ${withdrawnBN.toString()}`)
         log(`  Previously unwithdrawn earnings: ${member.unwithdrawnEarningsBN.toString()}`)
     }
-    members = members.filter(function(a){
+    members = members.filter(function(a) {
         return +a.unwithdrawnEarningsBN >= (MIN_WITHDRAWABLE_EARNINGS ? +MIN_WITHDRAWABLE_EARNINGS : 1)
-    }).sort(function(a,b){
+    }).sort(function(a,b) {
         return +b.unwithdrawnEarningsBN - +a.unwithdrawnEarningsBN
     })
     log(`Members to withdraw: ${JSON.stringify(members)}`)
 
-    for (const member of members){
+    for (const member of members) {
         const options = {}
         if (GAS_PRICE_GWEI) { options.gasPrice = parseUnits(GAS_PRICE_GWEI, "gwei") }
 
