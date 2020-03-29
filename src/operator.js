@@ -142,7 +142,7 @@ module.exports = class MonoplasmaOperator {
         this.watcher.plasma.latestBlocks.unshift(block)
         // ensure blocks are in order
         this.watcher.plasma.latestBlocks.sort((a, b) => b.blockNumber - a.blockNumber)
-        log(`Latest blocks: ${JSON.stringify(this.latestBlocks.map(b => Object.assign({}, b, {members: b.members.length})))}`)
+        log(`Latest blocks: ${JSON.stringify(this.watcher.plasma.latestBlocks.map(b => Object.assign({}, b, {members: b.members.length})))}`)
 
         this.log(`Commit sent, receipt: ${JSON.stringify(tr)}`)
 
