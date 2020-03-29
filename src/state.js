@@ -138,7 +138,7 @@ module.exports = class MonoplasmaState {
         const i = this.latestBlocks.findIndex(b => nowTimestamp - b.timestamp > this.blockFreezeSeconds, this)
         if (i === -1) { return null }         // all blocks still frozen
         this.latestBlocks.length = i + 1    // throw away older than latest withdrawable
-        log(`Latest blocks: ${JSON.stringify(this.latestBlocks)}`)
+        log(`Latest blocks: ${JSON.stringify(this.latestBlocks.map(b => Object.assign({}, b, {members: b.members.length})))}`)
         const block = this.latestBlocks[i]
         return block
     }
@@ -416,7 +416,7 @@ module.exports = class MonoplasmaState {
         }
         this.latestBlocks.unshift(latestBlock) // = insert to beginning
         this.latestBlocks.sort((a, b) => b.blockNumber - a.blockNumber)
-        log(`Latest blocks: ${JSON.stringify(this.latestBlocks)}`)
+        log(`Latest blocks: ${JSON.stringify(this.latestBlocks.map(b => Object.assign({}, b, {members: b.members.length})))}`)
         await this.store.saveBlock(latestBlock)
         return latestBlock
     }
