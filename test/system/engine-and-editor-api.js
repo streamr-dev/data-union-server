@@ -95,10 +95,10 @@ describe("Data Union demo but through a running E&E instance", () => {
     }
 
     // for pre-started start_server.js, so to be able to debug also the server in IDE while running tests
-    function connectToLocalGanache() {    //eslint-disable-line no-unused-vars
+    function connectToLocalServer() {    //eslint-disable-line no-unused-vars
         return {
-            ganacheProvider: new JsonRpcProvider("http://localhost:8545"),
-            adminPrivateKey: "0x5e98cce00cff5dea6b454889f359a4ec06b9fa6b88e9d69b86de8e1c81887da0",  // ganache 0
+            ganacheProvider: new JsonRpcProvider(ETHEREUM_SERVER),
+            adminPrivateKey: OPERATOR_PRIVATE_KEY,  // ganache 0
             privateKey: "0xe5af7834455b7239881b85be89d905d6881dcb4751063897f12be1b0dd546bdb", // ganache 1
             address: "0x4178baBE9E5148c6D5fd431cD72884B07Ad855a0",
         }
@@ -265,7 +265,7 @@ describe("Data Union demo but through a running E&E instance", () => {
         log("2.3) Wait until members have been added")
         let members = []
         sleepTime = 1000
-        while (members.length < 2) {
+        while (!(members.length >= 10)) {
             await sleep(sleepTime)
             members = await GET(`/dataunions/${communityAddress}/members`)
             log("members: ", members)
@@ -284,7 +284,7 @@ describe("Data Union demo but through a running E&E instance", () => {
 
             // check total revenue
             const res3 = await GET(`/dataunions/${communityAddress}/stats`)
-            log(`   Total revenue: ${formatEther(res3.totalEarnings)}`)
+            log(`   Total revenue: ${formatEther(res3.totalEarnings || "0")}`)
         }
 
         log("3.1) Wait for blocks to unfreeze...") //... and also that state updates.
@@ -300,7 +300,7 @@ describe("Data Union demo but through a running E&E instance", () => {
         // add so CI more reliable until error_frozen issue has a workaround+test
         await sleep(3000)
 
-        log("    Member before", member)
+        log(`    Member before: ${JSON.stringify(member)}`)
 
         log("4) Withdraw tokens")
 

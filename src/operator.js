@@ -130,16 +130,19 @@ module.exports = class MonoplasmaOperator {
         const tx = await this.contract.commit(blockNumber, hash, ipfsHash)
         const tr = await tx.wait()        // confirmations
 
+        // TODO this should probably just happen through watcher noticing the NewCommit event?
         // TODO https://streamr.atlassian.net/browse/dataunion-82 should be instead:
         // await this.finalPlasma.storeBlock(blockNumber) // TODO: give a timestamp
         // this.watcher.state.lastPublishedBlock = {blockNumber: blockNumber}
         const commitTimestamp = (await this.contract.blockTimestamp(blockNumber)).toNumber()
         const block = await state.storeBlock(blockNumber, commitTimestamp)
 
+        // TODO: how many times is this done now?!
         // update watcher plasma's block list
         this.watcher.plasma.latestBlocks.unshift(block)
         // ensure blocks are in order
         this.watcher.plasma.latestBlocks.sort((a, b) => b.blockNumber - a.blockNumber)
+        log(`Latest blocks: ${JSON.stringify(this.watcher.plasma.latestBlocks)}`)
 
         this.log(`Commit sent, receipt: ${JSON.stringify(tr)}`)
 
