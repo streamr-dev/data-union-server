@@ -7,7 +7,7 @@ const { replayOn, mergeEventLists } = require("./utils/events")
 const { throwIfSetButNotContract, throwIfSetButBadAddress } = require("./utils/checkArguments")
 const bisectFindFirstIndex = require("./utils/bisectFindFirstIndex")
 
-const TokenJson = require("../build/ERC20Mintable.json")
+const TokenContract = require("../build/ERC20Mintable.json")
 const MonoplasmaJson = require("../build/Monoplasma.json")
 
 const log = require("debug")("Streamr::dataunion::watcher")
@@ -94,7 +94,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         this.contract = new Contract(this.state.contractAddress, MonoplasmaJson.abi, this.eth)
         this.state.tokenAddress = await this.contract.token()
         this.state.adminAddress = await this.contract.owner()
-        this.token = new Contract(this.state.tokenAddress, TokenJson.abi, this.eth)
+        this.token = new Contract(this.state.tokenAddress, TokenContract.abi, this.eth)
         this.state.blockFreezeSeconds = (await this.contract.blockFreezeSeconds()).toString()
         this.log(`Read from contracts: freeze period = ${this.state.blockFreezeSeconds} sec, token @ ${this.state.tokenAddress}`)
 
@@ -121,7 +121,9 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         }
         */
         if (await this.store.hasLatestBlock()) {
+            this.log("Getting latest block from store")
             lastBlock = await this.store.getLatestBlock()
+            this.log(`Got ${JSON.stringify(lastBlock)}`)
         }
         this.log(`Syncing Monoplasma state starting from block ${lastBlock.blockNumber} (t=${lastBlock.timestamp}) with ${lastBlock.members.length} members`)
         const playbackStartingTimestampMs = lastBlock.timestamp || lastBlock.blockNumber && await this.getBlockTimestamp(lastBlock.blockNumber) || 0
@@ -241,15 +243,16 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
     async playbackUntilBlock(toBlock, plasma) {
         if (!plasma) { plasma = this.plasma }
         const fromBlock = plasma.currentBlock + 1 || 0      // JSON RPC filters are inclusive, hence +1
-        const fromTimestamp = plasma.currentTimestamp || 0
         if (toBlock <= fromBlock) {
             this.log(`Playback skipped: block ${toBlock} requested, already at ${fromBlock}`)
             return
         }
+
+        const fromTimestamp = plasma.currentTimestamp || 0
+        const toTimestamp = await this.getBlockTimestamp(toBlock)
         if (fromTimestamp < this.cachePrunedUpTo) {
             throw new Error(`Cache has been pruned up to ${this.cachePrunedUpTo}, can't play back correctly ${fromTimestamp}...${toTimestamp}`)
         }
-        const toTimestamp = await this.getBlockTimestamp(toBlock)
 
         this.log(`Retrieving from blocks ${fromBlock}...${toBlock}`)
         const adminFeeFilter = Object.assign({}, this.adminFeeFilter,  { fromBlock, toBlock })
@@ -310,6 +313,9 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             this.log(`blockTimestampCache miss for block number ${blockNumber}`)
             this.blockTimestampCache[blockNumber] = (async () => {
                 const block = await this.eth.getBlock(blockNumber)
+                if (!block) {
+                    throw new Error(`No timestamp exists from block ${blockNumber}`)
+                }
                 return block.timestamp * 1000
             })()
         }

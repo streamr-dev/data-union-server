@@ -8,7 +8,7 @@ const {
     providers: { JsonRpcProvider },
 } = require("ethers")
 
-const DataUnionJson = require("../build/DataUnion.json")
+const DataUnionJson = require("../build/DataunionVault.json")
 
 const { throwIfNotContract } = require("../src/utils/checkArguments")
 

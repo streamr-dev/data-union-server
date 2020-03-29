@@ -13,8 +13,8 @@ const StreamrClient = require("streamr-client")
 
 const { throwIfNotContract, throwIfSetButNotContract, throwIfSetButBadAddress } = require("../src/utils/checkArguments")
 
-const TokenJson = require("../build/ERC20Detailed.json")
-const CommunityJson = require("../build/DataUnion.json")
+const TokenContract = require("../build/ERC20Detailed.json")
+const DataUnionContract = require("../build/DataunionVault.json")
 
 const {
     ETHEREUM_SERVER,            // explicitly specify server address
@@ -38,7 +38,7 @@ const error = (e, ...args) => {
 }
 
 const lastArg = process.argv.pop()
-const communityAddressArg = lastArg.endsWith("check_community.js") ? "" : lastArg
+const communityAddressArg = lastArg.endsWith("check_dataunion.js") ? "" : lastArg
 
 async function start() {
     const provider = ETHEREUM_SERVER ? new JsonRpcProvider(ETHEREUM_SERVER) : getDefaultProvider(ETHEREUM_NETWORK)
@@ -52,9 +52,9 @@ async function start() {
         await throwIfNotContract(provider, DATAUNION_ADDRESS, "env variable DATAUNION_ADDRESS")
     const streamrNodeAddress = await throwIfSetButBadAddress(STREAMR_NODE_ADDRESS, "env variable STREAMR_NODE_ADDRESS")
 
-    log(`Checking community contract at ${communityAddress}...`)
-    const community = new Contract(communityAddress, CommunityJson.abi, provider)
-    const getters = CommunityJson.abi.filter(f => f.constant && f.inputs.length === 0).map(f => f.name)
+    log(`Checking DataunionVault contract at ${communityAddress}...`)
+    const community = new Contract(communityAddress, DataUnionContract.abi, provider)
+    const getters = DataUnionContract.abi.filter(f => f.constant && f.inputs.length === 0).map(f => f.name)
     const communityProps = {}
     for (const getter of getters) {
         communityProps[getter] = await community[getter]()
@@ -65,7 +65,7 @@ async function start() {
     const tokenAddress = await throwIfNotContract(provider, _tokenAddress, `community(${communityAddress}).token`)
 
     log(`Checking token contract at ${tokenAddress}...`)
-    const token = new Contract(tokenAddress, TokenJson.abi, provider)
+    const token = new Contract(tokenAddress, TokenContract.abi, provider)
     log("  Token name: ", await token.name())
     log("  Token symbol: ", await token.symbol())
     log("  Token decimals: ", await token.decimals())
@@ -77,7 +77,7 @@ async function start() {
     const client = new StreamrClient(opts)
 
     log("Community stats from dataunion")
-    const stats = await client.communityStats(community.address)
+    const stats = await client.getCommunityStats(community.address)
     log(`  Members: ${stats.memberCount.active} active / ${stats.memberCount.total} total`)
     log(`  Latest unfrozen block: ${stats.latestWithdrawableBlock.blockNumber} (${stats.latestWithdrawableBlock.memberCount} members)`)
     log(`  Total earnings received: ${formatEther(stats.totalEarnings)}`)

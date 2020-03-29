@@ -1,13 +1,13 @@
 /*global accounts assert utils */
 
-const log = require("debug")("Streamr::dataunion::test::contracts::DataUnion")
+const log = require("debug")("Streamr::dataunion::test::contracts::DataunionVault")
 
 const etherlime = require("etherlime")
-const DataUnion = require("../../build/DataUnion.json")
-const TestToken = require("../../build/TestToken.json")
+const DataUnion = require("../../build/DataunionVault")
+const TestToken = require("../../build/TestToken")
 //const assert = require("assert")
 
-describe("DataUnion", () => {
+describe("DataunionVault", () => {
     const admin = accounts[3]
     const operator = accounts[2]
     let deployer

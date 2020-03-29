@@ -10,13 +10,16 @@ const FileStore = require("./fileStore")
 const MonoplasmaOperator = require("./operator")
 const StreamrChannel = require("./streamrChannel")
 
-const DataUnionJson = require("../build/DataUnion.json")
+const DataUnionContract = require("../build/DataunionVault.json")
 
 const { throwIfNotSet } = require("./utils/checkArguments")
 
 const operatorChangedEventTopic = id("OperatorChanged(address)")
 const operatorChangedAbi = ["event OperatorChanged(address indexed newOperator)"]
 const operatorChangedInterface = new Interface(operatorChangedAbi)
+
+/** This must be kept in sync with contracts/DataunionVault.sol */
+const SERVER_VERSION = 1
 
 /**
  * @typedef {string} EthereumAddress is hex string /0x[0-9A-Fa-f]^64/, return value from ethers.utils.getAddress
@@ -126,14 +129,15 @@ module.exports = class DataUnionServer {
      * @param {string} address
      */
     async onOperatorChangedEventAt(address) {
-        const contract = new Contract(address, DataUnionJson.abi, this.eth)
+        const contract = new Contract(address, DataUnionContract.abi, this.eth)
         // create the promise to prevent later (duplicate) creation
         const isRunningPromise = this.communityIsRunning(address)
         const status = this.communityIsRunningPromises[address]
         const { communities } = this
         const community = communities[address]
         const newOperatorAddress = getAddress(await contract.operator())
-        const weShouldOperate = newOperatorAddress === this.wallet.address
+        const contractVersion = contract.version ? (await contract.version()).toNumber() : 0
+        const weShouldOperate = SERVER_VERSION === contractVersion && newOperatorAddress === this.wallet.address
         if (!community) {
             if (weShouldOperate) {
                 // rapid event spam stopper (from one contract)
@@ -214,7 +218,7 @@ module.exports = class DataUnionServer {
      */
     async getChannelFor(communityAddress) {
         const address = getAddress(communityAddress)
-        const contract = new Contract(address, DataUnionJson.abi, this.eth)
+        const contract = new Contract(address, DataUnionContract.abi, this.eth)
 
         // throws if joinPartStreamId doesn't exist
         const joinPartStreamId = await contract.joinPartStream()
@@ -241,7 +245,7 @@ module.exports = class DataUnionServer {
 
     async startOperating(communityAddress) {
         const address = getAddress(communityAddress)
-        const contract = new Contract(address, DataUnionJson.abi, this.eth)
+        const contract = new Contract(address, DataUnionContract.abi, this.eth)
 
         const operatorAddress = getAddress(await contract.operator())
         if (operatorAddress !== this.wallet.address) {

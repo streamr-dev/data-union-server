@@ -48,9 +48,8 @@ describe("Test help utilities", () => {
             let done = false
             assert(!done)
             assert(+new Date() - start < 9)
-            const ret = await until(() => done, 100, 10)
+            await assert.rejects(until(() => done, 100, 10), { message: "timeout" })
             assert(!done)
-            assert(!ret)
             assert(+new Date() - start > 90)
             assert(+new Date() - start < 900)
         })

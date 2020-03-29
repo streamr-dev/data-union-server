@@ -13,7 +13,10 @@ const sleep = require("../../src/utils/sleep-promise")
 async function until(condition, timeOutMs = 10000, pollingIntervalMs = 100) {
     let timeout = false
     setTimeout(() => { timeout = true }, timeOutMs)
-    while (!condition() && !timeout) {
+    while (!condition()) {
+        if (timeout) {
+            throw new Error("timeout")
+        }
         await sleep(pollingIntervalMs)
     }
     return condition()

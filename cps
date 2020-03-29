@@ -12,6 +12,7 @@ export STREAMR_HTTP_URL=http://localhost:8081/streamr-core/api/v1
 # start_server.js without env variables
 #export ETHEREUM_SERVER=http://localhost:8548
 #export STREAMR_NODE_ADDRESS=0xc0aa4dC0763550161a6B59fa430361b5a26df28C
+export COMMUNITY_ADDRESS=0xEAA002f7Dc60178B6103f8617Be45a9D3df659B6
 export DATAUNION_ADDRESS=0xEAA002f7Dc60178B6103f8617Be45a9D3df659B6
 export WEBSERVER_PORT=8085
 
@@ -32,7 +33,7 @@ export OPERATOR_ADDRESS=0xa3d1F77ACfF0060F7213D7BF3c7fEC78df847De1      # ganach
 export ADMIN_FEE=0.3
 export GAS_PRICE_GWEI=20
 
-# add_secret, join
+# add_secret, join_dataunion
 export SECRET=secret
 
 # send_tokens

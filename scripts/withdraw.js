@@ -13,8 +13,8 @@ const StreamrClient = require("streamr-client")
 const sleep = require("../src/utils/sleep-promise")
 const { throwIfNotContract } = require("../src/utils/checkArguments")
 
-const TokenJson = require("../build/ERC20Detailed.json")
-const CommunityJson = require("../build/DataUnion.json")
+const TokenContract = require("../build/ERC20Detailed.json")
+const DataUnionContract = require("../build/DataunionVault.json")
 
 const {
     ETHEREUM_SERVER,            // explicitly specify server address
@@ -61,9 +61,9 @@ async function start() {
     if (privateKey.length !== 66) { throw new Error("Malformed private key, must be 64 hex digits long (optionally prefixed with '0x')") }
     const wallet = new Wallet(privateKey, provider)
 
-    log(`Checking community contract at ${communityAddress}...`)
-    const community = new Contract(communityAddress, CommunityJson.abi, provider)
-    const getters = CommunityJson.abi.filter(f => f.constant && f.inputs.length === 0).map(f => f.name)
+    log(`Checking DataunionVault contract at ${communityAddress}...`)
+    const community = new Contract(communityAddress, DataUnionContract.abi, provider)
+    const getters = DataUnionContract.abi.filter(f => f.constant && f.inputs.length === 0).map(f => f.name)
     for (const getter of getters) {
         log(`  ${getter}: ${await community[getter]()}`)
     }
@@ -72,7 +72,7 @@ async function start() {
     const tokenAddress = await throwIfNotContract(provider, _tokenAddress, `community(${communityAddress}).token`)
 
     log(`Checking token contract at ${tokenAddress}...`)
-    const token = new Contract(tokenAddress, TokenJson.abi, wallet)
+    const token = new Contract(tokenAddress, TokenContract.abi, wallet)
     log("  Token name: ", await token.name())
     log("  Token symbol: ", await token.symbol())
     log("  Token decimals: ", await token.decimals())
@@ -106,7 +106,7 @@ async function start() {
 
     // TODO: use client once withdraw is available from NPM
     //const tx = await client.getWithdrawTx(communityAddress)
-    const contract = new Contract(communityAddress, CommunityJson.abi, wallet)
+    const contract = new Contract(communityAddress, DataUnionContract.abi, wallet)
     const options = {}
     if (GAS_PRICE_GWEI) { options.gasPrice = parseUnits(GAS_PRICE_GWEI, "gwei") }
     const tx = await contract.withdrawAll(

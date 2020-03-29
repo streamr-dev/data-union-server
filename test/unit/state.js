@@ -445,7 +445,8 @@ describe("MonoplasmaState", () => {
 
         // The idea of this test is to make sure the merkletrees are cached between getProofAt queries
         //   so that the tree isn't recalculated every time
-        it("should perform fine with LOTS of queries of recent past blocks' proofs", async () => {
+        it("should perform fine with LOTS of queries of recent past blocks' proofs", async function() {
+            this.timeout(10000)
             const initialMembers = []
             while (initialMembers.length < 1000) {
                 initialMembers.push({

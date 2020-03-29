@@ -4,16 +4,16 @@ const {
 } = require("ethers")
 const StreamrClient = require("streamr-client")
 
-const log = require("debug")("Streamr::dataunion::utils::deployCommunity")
+const log = require("debug")("Streamr::CPS::utils::deployContract")
 
 const { throwIfBadAddress, throwIfNotContract } = require("./checkArguments")
 
-const CommunityJson = require("../../build/DataUnion")
+const DataUnionContract = require("../../build/DataunionVault")
 
 /** @typedef {string} EthereumAddress */
 
 /**
- * Deploy a new DataUnion contract and create the required joinPartStream
+ * Deploy a new DataunionVault contract and create the required joinPartStream
  * @param {Wallet} wallet to do the deployment from, also becomes owner or stream and contract
  * @param {EthereumAddress} operatorAddress community-product-server that should operate the contract
  * @param {EthereumAddress} tokenAddress
@@ -23,10 +23,10 @@ const CommunityJson = require("../../build/DataUnion")
  * @param {String} streamrHttpUrl HTTP API URL (optional, default: production mainnet)
  * @param {Number} gasPriceGwei (optional, default: ethers.js default, probably network recommendation)
  */
-async function deployCommunity(wallet, operatorAddress, tokenAddress, streamrNodeAddress, blockFreezePeriodSeconds = 0, adminFee = 0, streamrWsUrl, streamrHttpUrl, gasPriceGwei) {
-    throwIfBadAddress(operatorAddress, "deployCommunity function argument operatorAddress")
-    throwIfBadAddress(streamrNodeAddress, "deployCommunity function argument streamrNodeAddress")
-    await throwIfNotContract(wallet.provider, tokenAddress, "deployCommunity function argument tokenAddress")
+async function deployContract(wallet, operatorAddress, tokenAddress, streamrNodeAddress, blockFreezePeriodSeconds = 0, adminFee = 0, streamrWsUrl, streamrHttpUrl, gasPriceGwei) {
+    throwIfBadAddress(operatorAddress, "deployContract function argument operatorAddress")
+    throwIfBadAddress(streamrNodeAddress, "deployContract function argument streamrNodeAddress")
+    await throwIfNotContract(wallet.provider, tokenAddress, "deployContract function argument tokenAddress")
 
     if (adminFee < 0 || adminFee > 1) { throw new Error("Admin fee must be a number between 0...1, got: " + adminFee) }
     const adminFeeBN = new BigNumber((adminFee * 1e18).toFixed())   // last 2...3 decimals are going to be gibberish
@@ -53,11 +53,11 @@ async function deployCommunity(wallet, operatorAddress, tokenAddress, streamrNod
     if (gasPriceGwei) { options.gasPrice = parseUnits(gasPriceGwei, "gwei") }
 
     log(`Deploying root chain contract (token @ ${tokenAddress}, blockFreezePeriodSeconds = ${blockFreezePeriodSeconds}, joinPartStream = ${stream.id}, adminFee = ${adminFee})...`)
-    const deployer = new ContractFactory(CommunityJson.abi, CommunityJson.bytecode, wallet)
+    const deployer = new ContractFactory(DataUnionContract.abi, DataUnionContract.bytecode, wallet)
     const result = await deployer.deploy(operatorAddress, stream.id, tokenAddress, blockFreezePeriodSeconds, adminFeeBN, options)
     log(`Will be deployed @ ${result.address}, follow deployment: https://etherscan.io/tx/${result.deployTransaction.hash}`)
     await result.deployed()
     return result
 }
 
-module.exports = deployCommunity
+module.exports = deployContract

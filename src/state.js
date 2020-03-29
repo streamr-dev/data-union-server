@@ -119,17 +119,26 @@ module.exports = class MonoplasmaState {
     }
 
     getLatestBlock() {
-        if (this.latestBlocks.length < 1) { return null }
+        if (this.latestBlocks.length < 1) {
+            log("Asked for latest block, nothing to give")
+            //log(new Error().stack)
+            return null
+        }
         const block = this.latestBlocks[0]
         return block
     }
 
     getLatestWithdrawableBlock() {
-        if (this.latestBlocks.length < 1) { return null }
+        if (this.latestBlocks.length < 1) {
+            log("Asked for latest block, nothing to give")
+            //log(new Error().stack)
+            return null
+        }
         const nowTimestamp = now()
         const i = this.latestBlocks.findIndex(b => nowTimestamp - b.timestamp > this.blockFreezeSeconds, this)
         if (i === -1) { return null }         // all blocks still frozen
         this.latestBlocks.length = i + 1    // throw away older than latest withdrawable
+        log(`Latest blocks: ${JSON.stringify(this.latestBlocks.map(b => Object.assign({}, b, {members: b.members.length})))}`)
         const block = this.latestBlocks[i]
         return block
     }
@@ -386,6 +395,7 @@ module.exports = class MonoplasmaState {
     /**
      * Snapshot the Monoplasma state for later use (getMemberAt, getProofAt)
      * @param {number} blockNumber root-chain block number after which this block state is valid
+     * @param {number} timestamp in seconds of NewCommit event
      */
     async storeBlock(blockNumber, timestamp) {
         if (!Number.isSafeInteger(timestamp)) { throw new Error("Timestamp should be a positive Number, got: " + timestamp) }
@@ -406,6 +416,7 @@ module.exports = class MonoplasmaState {
         }
         this.latestBlocks.unshift(latestBlock) // = insert to beginning
         this.latestBlocks.sort((a, b) => b.blockNumber - a.blockNumber)
+        log(`Latest blocks: ${JSON.stringify(this.latestBlocks.map(b => Object.assign({}, b, {members: b.members.length})))}`)
         await this.store.saveBlock(latestBlock)
         return latestBlock
     }

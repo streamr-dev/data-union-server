@@ -13,7 +13,7 @@ const {
     providers: { JsonRpcProvider },
 } = require("ethers")
 
-const DataUnionJson = require("../build/DataUnion.json")
+const DataUnionJson = require("../build/DataunionVault")
 
 const FileStore = require("../src/fileStore")
 const MonoplasmaWatcher = require("../src/watcher")

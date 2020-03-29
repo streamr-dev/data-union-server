@@ -9,8 +9,8 @@ const { Wallet, ContractFactory, providers: { Web3Provider } } = require("ethers
 
 const log = require("debug")("Streamr::dataunion::test::unit::server-router")
 
-const CommunityJson = require("../../build/DataUnion")
-const TokenJson = require("../../build/TestToken")
+const DataUnionContract = require("../../build/DataunionVault")
+const TokenContract = require("../../build/TestToken")
 
 const ganache = require("ganache-core")
 
@@ -63,11 +63,11 @@ describe("Community product server router", () => {
         }
 
         log("Deploying test token and Community contract...")
-        const tokenDeployer = new ContractFactory(TokenJson.abi, TokenJson.bytecode, wallet)
+        const tokenDeployer = new ContractFactory(TokenContract.abi, TokenContract.bytecode, wallet)
         token = await tokenDeployer.deploy("Router test token", "TEST")
         await token.deployed()
 
-        const deployer = new ContractFactory(CommunityJson.abi, CommunityJson.bytecode, wallet)
+        const deployer = new ContractFactory(DataUnionContract.abi, DataUnionContract.bytecode, wallet)
         const contract = await deployer.deploy(wallet.address, "dummy-stream-id", token.address, 1000, 0)
         await contract.deployed()
         const contractAddress = contract.address

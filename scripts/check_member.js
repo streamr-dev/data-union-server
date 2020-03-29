@@ -12,7 +12,7 @@ const StreamrClient = require("streamr-client")
 
 const { throwIfNotContract, throwIfBadAddress } = require("../src/utils/checkArguments")
 
-const CommunityJson = require("../build/DataUnion.json")
+const DataUnionContract = require("../build/DataunionVault.json")
 
 const {
     ETHEREUM_SERVER,            // explicitly specify server address
@@ -54,8 +54,8 @@ async function start() {
     const communityAddress = await throwIfNotContract(provider, DATAUNION_ADDRESS, "env variable DATAUNION_ADDRESS")
     const memberAddress = wallet && wallet.address || await throwIfBadAddress(MEMBER_ADDRESS, "env variable MEMBER_ADDRESS")
 
-    log(`Checking community contract at ${communityAddress}...`)
-    const community = new Contract(communityAddress, CommunityJson.abi, provider)
+    log(`Checking DataunionVault contract at ${communityAddress}...`)
+    const community = new Contract(communityAddress, DataUnionContract.abi, provider)
 
     log("Connecting to Streamr...")
     const opts = {}

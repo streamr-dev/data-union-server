@@ -17,7 +17,7 @@ const {
 
 const Channel = require("../src/streamrChannel")
 const { throwIfNotContract, throwIfBadAddress } = require("../src/utils/checkArguments")
-const deployCommunity = require("../src/utils/deploy")
+const deployContract = require("../src/utils/deployContract")
 const sleep = require("../src/utils/sleep-promise")
 
 const DataUnionServer = require("../src/server")
@@ -141,17 +141,17 @@ async function start() {
             const adminFee = process.env.ADMIN_FEE || 0
 
             // deploy new communities
-            app.use("/admin/deploy", (req, res) => deployCommunity(wallet, wallet.address, tokenAddress, streamrNodeAddress, BLOCK_FREEZE_SECONDS || 1000, adminFee, config.streamrWsUrl, config.streamrHttpUrl).then(({contract: { address }}) => res.send({ address })).catch(error => res.status(500).send({error})))
+            app.use("/admin/deploy", (req, res) => deployContract(wallet, wallet.address, tokenAddress, streamrNodeAddress, BLOCK_FREEZE_SECONDS || 1000, adminFee, config.streamrWsUrl, config.streamrHttpUrl).then(({contract: { address }}) => res.send({ address })).catch(error => res.status(500).send({error})))
             app.use("/admin/addTo/:communityAddress", (req, res) => transfer(wallet, req.params.communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
 
             // deploy a test community and provide direct manipulation endpoints for it (useful for seeing if anything is happening)
-            const contract = await deployCommunity(wallet, wallet.address, tokenAddress, streamrNodeAddress, BLOCK_FREEZE_SECONDS || 1000, adminFee, config.streamrWsUrl, config.streamrHttpUrl)
+            const contract = await deployContract(wallet, wallet.address, tokenAddress, streamrNodeAddress, BLOCK_FREEZE_SECONDS || 1000, adminFee, config.streamrWsUrl, config.streamrHttpUrl)
             const communityAddress = contract.address
             app.use("/admin/addRevenue", (req, res) => transfer(wallet, communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
             app.use("/admin/setAdminFee", (req, res) => setFee(wallet, communityAddress, "0.3").then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
             app.use("/admin/resetAdminFee", (req, res) => setFee(wallet, communityAddress, 0).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
 
-            log(`Deployed community at ${communityAddress}, waiting for server to notice...`)
+            log(`Deployed DataunionVault contract at ${communityAddress}, waiting for server to notice...`)
             await server.communityIsRunning(communityAddress)
             await sleep(500)
 
@@ -193,7 +193,7 @@ async function transfer(wallet, targetAddress, tokenAddress, amount) {
     return tr
 }
 
-const DataUnion = require("../build/DataUnion")
+const DataUnion = require("../build/DataunionVault")
 async function setFee(wallet, targetAddress, fee) {
     throwIfNotContract(targetAddress, "Monoplasma contract address")
     if (!(fee >= 0 && fee <= 1)) { throw new Error(`Admin fee must be a number between 0...1, got: ${fee}`) }
