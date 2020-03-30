@@ -15,9 +15,10 @@ ENV PATH="/node-${NODE_VERSION}-linux-x64/bin:${PATH}"
 RUN node --version
 RUN npm --version
 RUN useradd -ms /bin/bash node
+COPY ./ /home/node
+RUN chown -R node /home/node/
 USER node
 WORKDIR /home/node
-COPY ./ ./
 RUN npm ci
 RUN npm run build-contracts
 
