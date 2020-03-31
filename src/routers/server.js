@@ -32,6 +32,7 @@ module.exports = (server) => {
         }
 
         req.monoplasmaState = community.operator.watcher.plasma
+        req.joinPartStreamId = community.operator.watcher.channel.stream.id
         next()
     }
 

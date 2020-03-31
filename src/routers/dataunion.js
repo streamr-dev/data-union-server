@@ -57,11 +57,18 @@ function getStats(monoplasmaState) {
 const router = express.Router()
 
 router.get("/", (req, res) => {
-    const state = req.monoplasmaState
-    if (state) {
-        res.send({ status: "ok" })
+    const {
+        monoplasmaState,
+        joinPartStreamId,
+    } = req
+    if (monoplasmaState) {
+        res.send({
+            joinPartStreamId
+        })
     } else {
-        res.status(500).send({error: "Faulty operator"})
+        res.status(500).send({
+            error: "Operator state is falsy"
+        })
     }
 })
 
