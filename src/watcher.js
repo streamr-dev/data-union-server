@@ -7,10 +7,10 @@ const { replayOn, mergeEventLists } = require("./utils/events")
 const { throwIfSetButNotContract, throwIfSetButBadAddress } = require("./utils/checkArguments")
 const bisectFindFirstIndex = require("./utils/bisectFindFirstIndex")
 
-const TokenJson = require("../build/ERC20Mintable.json")
+const TokenContract = require("../build/ERC20Mintable.json")
 const MonoplasmaJson = require("../build/Monoplasma.json")
 
-const log = require("debug")("Streamr::CPS::watcher")
+const log = require("debug")("Streamr::dataunion::watcher")
 
 // TODO: this typedef is foobar. How to get the real thing with JSDoc?
 /** @typedef {number} BigNumber */
@@ -33,28 +33,6 @@ function parseLogs(interface, logs) {
                 log.args = event.decode(log.data, log.topics)
             }
         }
-    }
-}
-
-/** TODO: this might belong to state? getLatestBlockSummary, getLatestWithdrawableBlockSummary
- * @typedef {Object} BlockSummary
- * @property {Number} blockNumber
- * @property {Number} timestamp when the Monoplasma block was stored, NOT Ethereum block timestamp
- * @property {Number} memberCount
- * @property {Number} totalEarnings
- */
-
-/**
- * Don't send the full member list back, only member count
- * @returns {BlockSummary}
- */
-function summarizeBlock(block) {
-    if (!block || !block.members) { block = { members: [] } }
-    return {
-        blockNumber: block.blockNumber || 0,
-        timestamp: block.timestamp || 0,
-        memberCount: block.members.length,
-        totalEarnings: block.totalEarnings || 0,
     }
 }
 
@@ -98,6 +76,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             this.log(`Loaded ${Object.keys(this.blockTimestampCache).length} block timestamps from disk`)
         }
 
+        // this.state should be broken up into state.js, and rest called this.config
         this.log("Initializing Monoplasma state...")
         const savedState = config.reset ? {} : await this.store.loadState()
         this.state = Object.assign({
@@ -115,13 +94,13 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         this.contract = new Contract(this.state.contractAddress, MonoplasmaJson.abi, this.eth)
         this.state.tokenAddress = await this.contract.token()
         this.state.adminAddress = await this.contract.owner()
-        this.token = new Contract(this.state.tokenAddress, TokenJson.abi, this.eth)
+        this.token = new Contract(this.state.tokenAddress, TokenContract.abi, this.eth)
         this.state.blockFreezeSeconds = (await this.contract.blockFreezeSeconds()).toString()
         this.log(`Read from contracts: freeze period = ${this.state.blockFreezeSeconds} sec, token @ ${this.state.tokenAddress}`)
 
         // TODO: next time a new event is added, DRY this (there's like 6 repetitions of listened events)
         this.adminFeeFilter = this.contract.filters.AdminFeeChanged()
-        this.blockCreateFilter = this.contract.filters.BlockCreated()
+        this.blockCreateFilter = this.contract.filters.NewCommit()
         this.tokenTransferFilter = this.token.filters.Transfer(null, this.contract.address)
 
         // let lastPublishedBlockNumber = this.state.lastPublishedBlock && this.state.lastPublishedBlock.blockNumber
@@ -142,11 +121,21 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         }
         */
         if (await this.store.hasLatestBlock()) {
+            this.log("Getting latest block from store")
             lastBlock = await this.store.getLatestBlock()
+            this.log(`Got ${JSON.stringify(lastBlock)}`)
         }
         this.log(`Syncing Monoplasma state starting from block ${lastBlock.blockNumber} (t=${lastBlock.timestamp}) with ${lastBlock.members.length} members`)
         const playbackStartingTimestampMs = lastBlock.timestamp || lastBlock.blockNumber && await this.getBlockTimestamp(lastBlock.blockNumber) || 0
-        this.plasma = new MonoplasmaState(this.state.blockFreezeSeconds, lastBlock.members, this.store, this.state.adminAddress, this.state.adminFee, lastBlock.blockNumber, playbackStartingTimestampMs / 1000)
+        this.plasma = new MonoplasmaState({
+            blockFreezeSeconds: this.state.blockFreezeSeconds,
+            initialMembers: lastBlock.members,
+            store: this.store,
+            adminAddress: this.state.adminAddress,
+            adminFeeFraction: this.state.adminFee,
+            initialBlockNumber: lastBlock.blockNumber,
+            initialTimestamp: playbackStartingTimestampMs / 1000,
+        })
 
         this.log(`Getting joins/parts from the Channel starting from t=${playbackStartingTimestampMs}, ${new Date(playbackStartingTimestampMs).toISOString()}`)
 
@@ -179,16 +168,19 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         this.log("Listening to Ethereum events...")
         this.contract.on(this.adminFeeFilter, async (adminFee, event) => {
             this.log(`Admin fee changed to ${utils.formatEther(adminFee)} at block ${event.blockNumber}`)
+            event.timestamp = await this.getBlockTimestamp(event.blockNumber)
             await replayOn(this.plasma, [event])
             this.emit("adminFeeChanged", event)
         })
-        this.contract.on(this.blockCreateFilter, (blockNumber, rootHash, ipfsHash, event) => {
+        this.contract.on(this.blockCreateFilter, async (blockNumber, rootHash, ipfsHash, event) => {
             this.log(`Observed creation of block ${+blockNumber} at block ${event.blockNumber} (root ${rootHash}, ipfs "${ipfsHash}")`)
+            event.timestamp = await this.getBlockTimestamp(event.blockNumber)
             //this.state.lastPublishedBlock = event.args
             this.emit("blockCreated", event)
         })
         this.token.on(this.tokenTransferFilter, async (to, from, amount, event) => {
             this.log(`Received ${utils.formatEther(event.args.value)} DATA`)
+            event.timestamp = await this.getBlockTimestamp(event.blockNumber)
             await replayOn(this.plasma, [event])
             this.emit("tokensReceived", event)
         })
@@ -209,11 +201,17 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         this.tokenFilter.on("error", this.error)
         */
 
+        this.eth.on("block", blockNumber => {
+            if (blockNumber % 10 === 0) { this.log(`Block ${blockNumber} observed`) }
+            this.state.lastObservedBlockNumber = blockNumber
+        })
+
         // TODO: maybe state saving function should create the state object instead of continuously mutating "state" member
         await this.saveState()
     }
-    async saveState(){
-        this.store.saveState(this.state)
+
+    async saveState() {
+        return this.store.saveState(this.state)
     }
 
     async stop() {
@@ -226,15 +224,15 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
      * @param {MonoplasmaState} monoplasmaState original to be copied
      */
     setState(monoplasmaState) {
-        this.plasma = new MonoplasmaState(
-            this.state.blockFreezeSeconds,
-            monoplasmaState.members,
-            this.store,
-            this.state.adminAddress,
-            this.state.adminFee,
-            monoplasmaState.blockNumber,
-            monoplasmaState.timestamp
-        )
+        this.plasma = new MonoplasmaState({
+            blockFreezeSeconds: this.state.blockFreezeSeconds,
+            initialMembers: monoplasmaState.members,
+            store: this.store,
+            adminAddress: this.state.adminAddress,
+            adminFeeFraction: this.state.adminFee,
+            initialBlockNumber: monoplasmaState.blockNumber,
+            initialTimestamp: monoplasmaState.timestamp,
+        })
     }
 
     /**
@@ -245,15 +243,16 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
     async playbackUntilBlock(toBlock, plasma) {
         if (!plasma) { plasma = this.plasma }
         const fromBlock = plasma.currentBlock + 1 || 0      // JSON RPC filters are inclusive, hence +1
-        const fromTimestamp = plasma.currentTimestamp || 0
         if (toBlock <= fromBlock) {
             this.log(`Playback skipped: block ${toBlock} requested, already at ${fromBlock}`)
             return
         }
+
+        const fromTimestamp = plasma.currentTimestamp || 0
+        const toTimestamp = await this.getBlockTimestamp(toBlock)
         if (fromTimestamp < this.cachePrunedUpTo) {
             throw new Error(`Cache has been pruned up to ${this.cachePrunedUpTo}, can't play back correctly ${fromTimestamp}...${toTimestamp}`)
         }
-        const toTimestamp = await this.getBlockTimestamp(toBlock)
 
         this.log(`Retrieving from blocks ${fromBlock}...${toBlock}`)
         const adminFeeFilter = Object.assign({}, this.adminFeeFilter,  { fromBlock, toBlock })
@@ -312,10 +311,15 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
     async getBlockTimestamp(blockNumber) {
         if (!(blockNumber in this.blockTimestampCache)) {
             this.log(`blockTimestampCache miss for block number ${blockNumber}`)
-            const block = await this.eth.getBlock(blockNumber)
-            this.blockTimestampCache[blockNumber] = block.timestamp * 1000
+            this.blockTimestampCache[blockNumber] = (async () => {
+                const block = await this.eth.getBlock(blockNumber)
+                if (!block) {
+                    throw new Error(`No timestamp exists from block ${blockNumber}`)
+                }
+                return block.timestamp * 1000
+            })()
         }
-        return this.blockTimestampCache[blockNumber]
+        return await this.blockTimestampCache[blockNumber]
     }
 
     /**
@@ -324,24 +328,5 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
     async getContractTokenBalance() {
         const balance = await this.token.methods.balanceOf(this.state.contractAddress).call()
         return balance
-    }
-
-    /**
-     * Returns the "real-time plasma" stats
-     * @returns {Object} summary of different stats and config of the community the watcher is watching
-     */
-    getStats() {
-        const joinPartStreamId = this.channel.stream.id
-        const memberCount = this.plasma.getMemberCount()
-        const totalEarnings = this.plasma.getTotalRevenue()
-        const latestBlock = summarizeBlock(this.plasma.getLatestBlock())
-        const latestWithdrawableBlock = summarizeBlock(this.plasma.getLatestWithdrawableBlock())
-        return {
-            memberCount,
-            totalEarnings,
-            latestBlock,
-            latestWithdrawableBlock,
-            joinPartStreamId,
-        }
     }
 }

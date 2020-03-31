@@ -2,7 +2,7 @@ const { spawn } = require("child_process")
 const fetch = require("node-fetch")
 const assert = require("assert")
 
-const log = require("debug")("Streamr::CPS::test::system::operator-demo")
+const log = require("debug")("Streamr::dataunion::test::system::operator-demo")
 
 const {
     Contract,
@@ -23,7 +23,7 @@ const WEBSERVER_PORT = 3030
 const JOIN_PART_CHANNEL_PORT = 5964
 const BLOCK_FREEZE_SECONDS = 1
 
-const FileStore = require("monoplasma/src/fileStore")
+const FileStore = require("../../src/fileStore")
 
 // this is the oldest demo, presented in EthDenver 2019
 // only one operator is run (no server.js), so only one community is being operated

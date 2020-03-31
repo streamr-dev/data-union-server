@@ -21,16 +21,24 @@ module.exports = class MonoplasmaValidator {
 
     async start(config) {
         throwIfBadAddress(config.operatorAddress, "MonoplasmaOperator argument config.operatorAddress")
-        this.log = debug("Streamr::CPS::validator::" + config.contractAddress)
+        this.log = debug("Streamr::dataunion::validator::" + config.contractAddress)
 
         this.contract = new Contract(config.contractAddress, MonoplasmaJson.abi, this.wallet)
         await this.watcher.start(config)
 
-        this.validatedPlasma = new MonoplasmaState(0, [], {
-            saveBlock: async block => {
-                this.lastSavedBlock = block
-            }
-        }, this.watcher.plasma.adminAddress, this.watcher.plasma.adminFee, this.watcher.plasma.currentBlock, this.watcher.plasma.currentTimestamp)
+        this.validatedPlasma = new MonoplasmaState({
+            blockFreezeSeconds: 0,
+            initialMembers: [],
+            store: {
+                saveBlock: async block => {
+                    this.lastSavedBlock = block
+                },
+            },
+            adminAddress: this.watcher.plasma.adminAddress,
+            adminFeeFraction: this.watcher.plasma.adminFeeFraction,
+            initialBlockNumber: this.watcher.plasma.currentBlock,
+            initialTimestamp: this.watcher.plasma.currentTimestamp,
+        })
 
         const self = this
         this.log("Starting validator's BlockCreated listener")
@@ -41,7 +49,8 @@ module.exports = class MonoplasmaValidator {
         // add the block to store; this won't be done by Watcher because Operator does it now
         // TODO: move this to Watcher
         const blockNumber = +block.blockNumber
-        this.plasma.storeBlock(blockNumber)
+        const commitTimestamp = (await this.contract.blockTimestamp(blockNumber)).toNumber()
+        this.plasma.storeBlock(blockNumber, commitTimestamp)
 
         // update the "validated" version to the block number whose hash was published
         await this.watcher.playbackUntilBlock(blockNumber, this.validatedPlasma)
@@ -51,7 +60,7 @@ module.exports = class MonoplasmaValidator {
         // check that the hash at that point in history matches
         // TODO: get hash from this.lastSavedBlock
         // TODO: if there's a Transfer after BlockCreated in same block, current approach breaks
-        const hash = this.validatedPlasma.getRootHash()
+        const hash = await this.validatedPlasma.getRootHashAt(blockNumber)
         if (hash === block.rootHash) {
             this.log(`Root hash @ ${blockNumber} validated.`)
             this.lastValidatedBlock = blockNumber

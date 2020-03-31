@@ -2,7 +2,7 @@ const { spawn } = require("child_process")
 const fetch = require("node-fetch")
 const assert = require("assert")
 
-const log = require("debug")("Streamr::CPS::test::system::streamr-client")
+const log = require("debug")("Streamr::dataunion::test::system::streamr-client")
 
 const StreamrClient = require("streamr-client")
 
@@ -17,7 +17,7 @@ const sleep = require("../../src/utils/sleep-promise")
 const { untilStreamContains } = require("../utils/await-until")
 
 const ERC20Mintable = require("../../build/ERC20Mintable.json")
-const CommunityProduct = require("../../build/CommunityProduct.json")
+const DataUnion = require("../../build/DataunionVault")
 
 const STORE_DIR = __dirname + `/test-store-${+new Date()}`
 const BLOCK_FREEZE_SECONDS = 1
@@ -38,7 +38,7 @@ const {
  * Same as community-product-demo.js except only using StreamrClient.
  * Only needs to run against streamr-ganache docker, so uses ETHEREUM_SERVER from CONFIG
  *
- * Point of view is of external CPS integrator that depends on streamr-client-javascript, e.g. Swash team
+ * Point of view is of external dataunion integrator that depends on streamr-client-javascript, e.g. Swash team
  */
 
 // NB: THIS TEST WON'T ACTUALLY RUN BEFORE STUFF IS ADDED TO streamr-javascript-client
@@ -171,7 +171,7 @@ describe.skip("Community product demo but through a running E&E instance", () =>
         assert(productId)
 
         log("1.4) Create joinPartStream")       // done inside deployCommunity below
-        log("1.5) Deploy CommunityProduct contract")
+        log("1.5) Deploy DataUnion contract")
         const community = await client.deployCommunity({
             adminFee: ADMIN_FEE,
             blockFreezePeriodSeconds: BLOCK_FREEZE_SECONDS,
@@ -223,7 +223,7 @@ describe.skip("Community product demo but through a running E&E instance", () =>
         const token = new Contract(config.tokenAddress, ERC20Mintable.abi, wallet)
         for (let i = 0; i < 5; i++) {
             const balance = await token.balanceOf(address)
-            log(`   Sending 10 tokens (out of remaining ${formatEther(balance)}) to CommunityProduct contract...`)
+            log(`   Sending 10 tokens (out of remaining ${formatEther(balance)}) to DataUnion contract...`)
 
             const transferTx = await token.transfer(community.address, parseEther("10"))
             await transferTx.wait(2)
@@ -248,7 +248,7 @@ describe.skip("Community product demo but through a running E&E instance", () =>
         const balanceBefore = await token.balanceOf(address)
         log(`   Token balance before: ${formatEther(balanceBefore)}`)
 
-        const contract = new Contract(community.address, CommunityProduct.abi, wallet)
+        const contract = new Contract(community.address, DataUnion.abi, wallet)
         const withdrawTx = await contract.withdrawAll(member.withdrawableBlockNumber, member.withdrawableEarnings, member.proof)
         await withdrawTx.wait(1)
 

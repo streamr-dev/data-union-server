@@ -5,7 +5,6 @@ const express = require("express")
 const cors = require("cors")
 const bodyParser = require("body-parser")
 const morgan = require("morgan")
-const onProcessExit = require("exit-hook")
 
 const {
     Contract,
@@ -18,11 +17,11 @@ const {
 
 const Channel = require("../src/streamrChannel")
 const { throwIfNotContract, throwIfBadAddress } = require("../src/utils/checkArguments")
-const deployCommunity = require("../src/utils/deployCommunity")
+const deployContract = require("../src/utils/deployContract")
 const sleep = require("../src/utils/sleep-promise")
 
-const CommunityProductServer = require("../src/server")
-const getCommunitiesRouter = require("../src/routers/communities")
+const DataUnionServer = require("../src/server")
+const getServerRouter = require("../src/routers/server")
 
 const {
     ETHEREUM_SERVER,            // explicitly specify server address
@@ -39,7 +38,7 @@ const {
     // Safety parameter
     FINALITY_WAIT_SECONDS,
 
-    // Optional; HTTP API for /config and /communities endpoints
+    // Optional; HTTP API for /config and /dataunions endpoints
     WEBSERVER_PORT,
 
     // Optional; for sending out the error reports
@@ -83,16 +82,6 @@ const error = (e, ...args) => {
 
 const storeDir = fs.existsSync(STORE_DIR) ? STORE_DIR : __dirname + "/store"
 
-let ganache = null
-function stopGanache() {
-    if (ganache) {
-        log("Shutting down Ethereum simulator...")
-        ganache.shutdown()
-        ganache = null
-    }
-}
-onProcessExit(stopGanache)
-
 async function start() {
 
     const provider =
@@ -124,7 +113,7 @@ async function start() {
         streamrWsUrl: STREAMR_WS_URL,
         streamrHttpUrl: STREAMR_HTTP_URL,
     }
-    const server = new CommunityProductServer(wallet, storeDir, config, log, error)
+    const server = new DataUnionServer(wallet, storeDir, config, log, error)
     await server.start()
 
     if (WEBSERVER_PORT) {
@@ -138,9 +127,8 @@ async function start() {
 
         app.get("/config", (req, res) => { res.send(config) }) // TODO: remove
 
-        const communitiesRouter = getCommunitiesRouter(server)
-        app.use("/dataunions", communitiesRouter)
-        app.use("/communities", communitiesRouter) // deprecated alias, remove once no longer used
+        const serverRouter = getServerRouter(server)
+        app.use("/", serverRouter)
 
         app.listen(port, () => log(`Web server started at ${serverURL}`))
 
@@ -153,17 +141,17 @@ async function start() {
             const adminFee = process.env.ADMIN_FEE || 0
 
             // deploy new communities
-            app.use("/admin/deploy", (req, res) => deployCommunity(wallet, wallet.address, tokenAddress, streamrNodeAddress, BLOCK_FREEZE_SECONDS || 1000, adminFee, config.streamrWsUrl, config.streamrHttpUrl).then(({contract: { address }}) => res.send({ address })).catch(error => res.status(500).send({error})))
+            app.use("/admin/deploy", (req, res) => deployContract(wallet, wallet.address, tokenAddress, streamrNodeAddress, BLOCK_FREEZE_SECONDS || 1000, adminFee, config.streamrWsUrl, config.streamrHttpUrl).then(({contract: { address }}) => res.send({ address })).catch(error => res.status(500).send({error})))
             app.use("/admin/addTo/:communityAddress", (req, res) => transfer(wallet, req.params.communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
 
             // deploy a test community and provide direct manipulation endpoints for it (useful for seeing if anything is happening)
-            const contract = await deployCommunity(wallet, wallet.address, tokenAddress, streamrNodeAddress, BLOCK_FREEZE_SECONDS || 1000, adminFee, config.streamrWsUrl, config.streamrHttpUrl)
+            const contract = await deployContract(wallet, wallet.address, tokenAddress, streamrNodeAddress, BLOCK_FREEZE_SECONDS || 1000, adminFee, config.streamrWsUrl, config.streamrHttpUrl)
             const communityAddress = contract.address
             app.use("/admin/addRevenue", (req, res) => transfer(wallet, communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
             app.use("/admin/setAdminFee", (req, res) => setFee(wallet, communityAddress, "0.3").then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
             app.use("/admin/resetAdminFee", (req, res) => setFee(wallet, communityAddress, 0).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
 
-            log(`Deployed community at ${communityAddress}, waiting for server to notice...`)
+            log(`Deployed DataunionVault contract at ${communityAddress}, waiting for server to notice...`)
             await server.communityIsRunning(communityAddress)
             await sleep(500)
 
@@ -205,11 +193,11 @@ async function transfer(wallet, targetAddress, tokenAddress, amount) {
     return tr
 }
 
-const CommunityProduct = require("../build/CommunityProduct")
+const DataUnion = require("../build/DataunionVault")
 async function setFee(wallet, targetAddress, fee) {
     throwIfNotContract(targetAddress, "Monoplasma contract address")
     if (!(fee >= 0 && fee <= 1)) { throw new Error(`Admin fee must be a number between 0...1, got: ${fee}`) }
-    const community = new Contract(targetAddress, CommunityProduct.abi, wallet)
+    const community = new Contract(targetAddress, DataUnion.abi, wallet)
     const feeBN = parseEther(fee.toString())
     const tx = await community.setAdminFee(feeBN)
     const tr = await tx.wait(1)

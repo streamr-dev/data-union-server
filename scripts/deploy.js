@@ -8,10 +8,10 @@ const {
     providers: { JsonRpcProvider }
 } = require("ethers")
 
-const deployCommunity = require("../src/utils/deployCommunity")
+const deployContract = require("../src/utils/deployContract")
 const { throwIfNotContract, throwIfBadAddress } = require("../src/utils/checkArguments")
 
-const TokenJson = require("../build/ERC20Detailed.json")
+const TokenContract = require("../build/ERC20Detailed.json")
 
 const {
     ETHEREUM_SERVER,            // explicitly specify server address
@@ -60,15 +60,15 @@ async function start() {
     const wallet = new Wallet(privateKey, provider)
 
     log("Checking token info...")
-    const token = new Contract(TOKEN_ADDRESS, TokenJson.abi, provider)
+    const token = new Contract(TOKEN_ADDRESS, TokenContract.abi, provider)
     log("  Token name: ", await token.name())
     log("  Token symbol: ", await token.symbol())
     log("  Token decimals: ", await token.decimals())
 
-    const contract = await deployCommunity(wallet, operatorAddress, tokenAddress, streamrNodeAddress, blockFreezeSeconds, adminFee, STREAMR_WS_URL, STREAMR_HTTP_URL, GAS_PRICE_GWEI)
+    const contract = await deployContract(wallet, operatorAddress, tokenAddress, streamrNodeAddress, blockFreezeSeconds, adminFee, STREAMR_WS_URL, STREAMR_HTTP_URL, GAS_PRICE_GWEI)
     const joinPartStreamId = await contract.joinPartStream()
 
-    log(`Deployed community contract at ${contract.address}`)
+    log(`Deployed DataunionVault contract at ${contract.address}`)
     log(`Network was ${JSON.stringify(network)}`)
     log(`JoinPartStream ID: ${joinPartStreamId}`)
     log("[DONE]")

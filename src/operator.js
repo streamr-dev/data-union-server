@@ -20,7 +20,7 @@ module.exports = class MonoplasmaOperator {
 
     async start(config) {
         throwIfBadAddress(config.operatorAddress, "MonoplasmaOperator argument config.operatorAddress")
-        this.log = debug("Streamr::CPS::operator::" + config.contractAddress)
+        this.log = debug("Streamr::dataunion::operator::" + config.contractAddress)
 
         this.finalityWaitPeriodSeconds = config.finalityWaitPeriodSeconds || 1 // TODO: in production || 3600
         this.address = config.operatorAddress
@@ -34,24 +34,23 @@ module.exports = class MonoplasmaOperator {
         await this.watcher.start(config)
         //this.lastPublishedBlock = (this.watcher.state.lastPublishedBlock && this.watcher.state.lastPublishedBlock.blockNumber) || 0
 
-        // TODO https://streamr.atlassian.net/browse/CPS-82 finalPlasmaStore should be instead just this.watcher.plasma.store
+        // TODO https://streamr.atlassian.net/browse/dataunion-82 finalPlasmaStore should be instead just this.watcher.plasma.store
         const finalPlasmaStore = {
             saveBlock: async block => {
                 this.lastSavedBlock = block
             }
         }
-        this.finalPlasma = new MonoplasmaState(
-            0,
-            this.watcher.plasma.members,
-            finalPlasmaStore,
-            this.watcher.plasma.adminAddress,
-            this.watcher.plasma.adminFee,
-            this.watcher.plasma.currentBlock,
-            this.watcher.plasma.currentTimestamp
-        )
+        this.finalPlasma = new MonoplasmaState({
+            blockFreezeSeconds: 0,
+            initialMembers: this.watcher.plasma.members,
+            store: finalPlasmaStore,
+            adminAddress: this.watcher.plasma.adminAddress,
+            adminFeeFraction: this.watcher.plasma.adminFeeFraction,
+            initialBlockNumber: this.watcher.plasma.currentBlock,
+            initialTimestamp: this.watcher.plasma.currentTimestamp
+        })
 
-        const self = this
-        this.watcher.on("tokensReceived", async event => self.onTokensReceived(event).catch(self.error))
+        this.watcher.on("tokensReceived", event => this.onTokensReceived(event).catch(this.log))
     }
 
     async shutdown() {
@@ -68,7 +67,7 @@ module.exports = class MonoplasmaOperator {
     }
 
     // TODO: block publishing should be based on value-at-risk, that is, publish after so-and-so many tokens received
-    // see https://streamr.atlassian.net/browse/CPS-39
+    // see https://streamr.atlassian.net/browse/dataunion-39
     async onTokensReceived(event) {
         const last = await this.lastPublishedBlock()
         const blockNumber = event.blockNumber
@@ -79,22 +78,43 @@ module.exports = class MonoplasmaOperator {
         }
     }
 
+    async publishBlock(rootchainBlockNumber) {
+        // enqueue publishBlock calls
+        if (this.inProgressPublish) {
+            this.log("Queued block publish", rootchainBlockNumber)
+        }
+        const task = Promise.resolve(this.inProgressPublish)
+            .then(() => this._publishBlock(rootchainBlockNumber))
+            .finally(() => {
+                // last task cleans up
+                if (this.inProgressPublish === task) {
+                    this.inProgressPublish = undefined
+                }
+            })
+        this.inProgressPublish = task
+        return task
+    }
+
     // TODO: call it commit instead. Replace all mentions of "publish" with "commit".
     /**
      * Sync watcher to the given block and publish the state AFTER it into blockchain
      * @param {Number} rootchainBlockNumber to sync up to
      * @returns {Promise<TransactionReceipt>}
      */
-    async publishBlock(rootchainBlockNumber) {
+    async _publishBlock(rootchainBlockNumber) {
         // TODO: would mutex for publishing blocks make sense? Consider (finality wait period + delay) vs block publishing interval
         //if (this.publishBlockInProgress) { throw new Error(`Currently publishing block ${this.publishBlockInProgress}, please wait that it completes before attempting another`) }
         //this.publishBlockInProgress = blockNumber
+        const state = this.watcher.plasma.clone()
 
         await sleep(0)          // ensure lastObservedBlockNumber is updated since this likely happens as a response to event
         const blockNumber = rootchainBlockNumber || this.watcher.state.lastObservedBlockNumber
-        if (blockNumber <= await this.lastPublishedBlock()) { throw new Error(`Block #${this.lastPublishedBlock} has already been published, can't publish #${blockNumber}`) }
-            
-        // see https://streamr.atlassian.net/browse/CPS-20
+        const lastPublishedBlock = await this.lastPublishedBlock()
+        if (blockNumber <= lastPublishedBlock) { throw new Error(`Block #${lastPublishedBlock} has already been published, can't publish #${blockNumber}`) }
+        const log = this.log.extend(blockNumber)
+        log("Publish block", blockNumber)
+
+        // see https://streamr.atlassian.net/browse/dataunion-20
         // TODO: separate finalPlasma currently is so much out of sync with watcher.plasma that proofs turn out wrong
         //       perhaps communitiesRouter should get the proofs from operator's finalPlasma?
         //       perhaps operator's finalPlasma should write to store, and not watcher.plasma?
@@ -104,18 +124,26 @@ module.exports = class MonoplasmaOperator {
 
         //await this.watcher.playbackUntilBlock(blockNumber, this.finalPlasma)
         //const hash = this.finalPlasma.getRootHash()
-        const hash = this.watcher.plasma.getRootHash()  // TODO: remove, uncomment above
+        const hash = await state.prepareRootHash(blockNumber)  // TODO: remove, uncomment above
         const ipfsHash = ""     // TODO: upload this.finalPlasma to IPFS while waiting for finality
 
         const tx = await this.contract.commit(blockNumber, hash, ipfsHash)
-        const tr = await tx.wait(1)        // confirmations
-        
-        // TODO https://streamr.atlassian.net/browse/CPS-82 should be instead:
+        const tr = await tx.wait()        // confirmations
+
+        // TODO this should probably just happen through watcher noticing the NewCommit event?
+        // TODO https://streamr.atlassian.net/browse/dataunion-82 should be instead:
         // await this.finalPlasma.storeBlock(blockNumber) // TODO: give a timestamp
         // this.watcher.state.lastPublishedBlock = {blockNumber: blockNumber}
-        await this.watcher.plasma.storeBlock(blockNumber)
-        await this.watcher.saveState()
-        
+        const commitTimestamp = (await this.contract.blockTimestamp(blockNumber)).toNumber()
+        const block = await state.storeBlock(blockNumber, commitTimestamp)
+
+        // TODO: how many times is this done now?!
+        // update watcher plasma's block list
+        this.watcher.plasma.latestBlocks.unshift(block)
+        // ensure blocks are in order
+        this.watcher.plasma.latestBlocks.sort((a, b) => b.blockNumber - a.blockNumber)
+        log(`Latest blocks: ${JSON.stringify(this.watcher.plasma.latestBlocks.map(b => Object.assign({}, b, {members: b.members.length})))}`)
+
         this.log(`Commit sent, receipt: ${JSON.stringify(tr)}`)
 
         // TODO: something causes events to be replayed many times, resulting in wrong balances. It could have something to do with the state cloning that happens here

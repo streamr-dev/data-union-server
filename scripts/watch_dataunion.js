@@ -13,21 +13,20 @@ const {
     providers: { JsonRpcProvider },
 } = require("ethers")
 
-const CommunityProductJson = require("../build/CommunityProduct.json")
+const DataUnionJson = require("../build/DataunionVault")
 
 const FileStore = require("../src/fileStore")
 const MonoplasmaWatcher = require("../src/watcher")
 const { throwIfNotContract } = require("../src/utils/checkArguments")
 
-//const getCommunitiesRouter = require("../src/routers/communities")
-const getMemberRouter = require("monoplasma/src/routers/member")
+const dataunionRouter = require("../src/routers/dataunion")
 const StreamrChannel = require("../src/streamrChannel")
 
 const {
     ETHEREUM_SERVER,            // explicitly specify server address
     ETHEREUM_NETWORK,           // use ethers.js default servers
 
-    COMMUNITY_ADDRESS,
+    DATAUNION_ADDRESS,
 
     STREAMR_WS_URL,
     STREAMR_HTTP_URL,
@@ -52,7 +51,7 @@ async function start() {
     })
     log("Connected to Ethereum network: ", JSON.stringify(network))
 
-    const contractAddress = await throwIfNotContract(provider, COMMUNITY_ADDRESS, "Environment variable COMMUNITY_ADDRESS")
+    const contractAddress = await throwIfNotContract(provider, DATAUNION_ADDRESS, "Environment variable DATAUNION_ADDRESS")
     const storeDir = fs.existsSync(STORE_DIR) ? STORE_DIR : `${__dirname}/store/${contractAddress}-${Date.now()}`
     const fileStore = new FileStore(storeDir)
 
@@ -62,7 +61,7 @@ async function start() {
         streamrHttpUrl: STREAMR_HTTP_URL,
     }
 
-    const contract = new Contract(contractAddress, CommunityProductJson.abi, provider)
+    const contract = new Contract(contractAddress, DataUnionJson.abi, provider)
 
     const joinPartStreamId = await contract.joinPartStream()
     const channel = new StreamrChannel(joinPartStreamId, config.streamrWsUrl, config.streamrHttpUrl)
@@ -80,7 +79,7 @@ async function start() {
     const app = express()
     app.use(cors())
     app.use(bodyParser.json({limit: "50mb"}))
-    app.use("/api", getMemberRouter(watcher.plasma.getMemberApi()))
+    app.use("/", dataunionRouter.setWatcher(watcher), dataunionRouter)
     app.get("/config", (req, res) => { res.send(config) })
 
     // TODO: these probably should not be part of "public HTTP server" of Data Unions

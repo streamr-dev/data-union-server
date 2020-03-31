@@ -1,7 +1,7 @@
 
 const { utils: { BigNumber: BN }} = require("ethers")
 
-const log = require("debug")("Streamr::CPS::utils::events")
+const log = require("debug")("Streamr::dataunion::utils::events")
 
 async function replayOn(plasma, events, messages) {
     const merged = mergeEventsWithMessages(events, messages)
@@ -16,15 +16,16 @@ async function replayEvent(plasma, event) {
     switch (type) {
         // event Transfer(address indexed from, address indexed to, uint256 value);
         case "Transfer": {
-            const revenueBN = new BN(event.args.value.toString(10))
+            const revenueBN = new BN(event.args.value.toString())
             log(`${revenueBN} tokens received @ block ${event.blockNumber}`)
             plasma.addRevenue(revenueBN)
         } break
         // event BlockCreated(uint blockNumber, bytes32 rootHash, string ipfsHash);
-        case "BlockCreated": {
+        case "NewCommit": {
             const blockNumber = +event.args.blockNumber
-            log(`Storing block ${blockNumber}`)
-            await plasma.storeBlock(blockNumber)
+            const eventTimestampSeconds = event.timestamp / 1000
+            log(`Storing block ${blockNumber}, freeze period starts at ${eventTimestampSeconds}`)
+            await plasma.storeBlock(blockNumber, eventTimestampSeconds)
         } break
         case "join": {
             const { addressList } = event
@@ -34,7 +35,7 @@ async function replayEvent(plasma, event) {
             const { addressList } = event
             plasma.removeMembers(addressList)
         } break
-        // TODO: this event is not yet implemented in CPS (it is in Monoplasma...)
+        // TODO: this event is not yet implemented in dataunion (it is in Monoplasma...)
         case "OwnershipTransferred": {
             const { previousOwner, newOwner } = event.args
             log(`Owner (admin) address changed to ${newOwner} from ${previousOwner} @ block ${event.blockNumber}`)

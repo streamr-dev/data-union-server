@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable */
 
 require("dotenv/config")
 
@@ -7,21 +8,20 @@ const path = require("path")
 const express = require("express")
 const cors = require("cors")
 const bodyParser = require("body-parser")
-const onProcessExit = require("exit-hook")
 
 const { Wallet, Contract, providers: { JsonRpcProvider } } = require("ethers")
 
-const CommunityProductJson = require("../build/CommunityProduct.json")
+const DataUnionJson = require("../build/DataunionVault.json")
 
 const FileStore = require("../src/fileStore")
 const Operator = require("../src/operator")
 const { throwIfSetButNotContract /*, throwIfNotSet */ } = require("../src/utils/checkArguments")
-const deployCommunity = require("../src/utils/deployCommunity")
+const deployContract = require("../src/utils/deployContract")
 
 const deployTestToken = require("../test/utils/deployTestToken")
 
-const operatorRouter = require("monoplasma/src/routers/member")
-const adminRouter = require("monoplasma/src/routers/admin")
+const operatorRouter = require("../src/routers/dataunion")
+const adminRouter = require("../src/routers/admin")
 const Channel = require("../src/streamrChannel")
 
 const {
@@ -65,16 +65,6 @@ const error = (e, ...args) => {
 const storeDir = fs.existsSync(STORE_DIR) ? STORE_DIR : __dirname + "/demo/public/data"
 const fileStore = new FileStore(storeDir)
 
-let ganache = null
-function stopGanache() {
-    if (ganache) {
-        log("Shutting down Ethereum simulator...")
-        ganache.shutdown()
-        ganache = null
-    }
-}
-onProcessExit(stopGanache)
-
 async function start() {
     let privateKey
     let ethereumServer = ETHEREUM_SERVER
@@ -88,8 +78,9 @@ async function start() {
         log("Starting Ethereum simulator...")
         const ganachePort = GANACHE_PORT || 8545
         const ganacheLog = msg => { log(" <Ganache> " + msg) }
-        ganache = await require("monoplasma/src/utils/startGanache")(ganachePort, ganacheLog, error)
-        ethereumServer = ganache.httpUrl
+        // TODO: start ganache using ganache.provider()
+        // ganache = await require("monoplasma/src/utils/startGanache")(ganachePort, ganacheLog, error)
+        // ethereumServer = ganache.httpUrl
     }
 
     log(`Connecting to ${ethereumServer}`)
@@ -109,7 +100,7 @@ async function start() {
     config.streamrHttpUrl = STREAMR_HTTP_URL || config.streamrHttpUrl
     config.streamrNodeAddress = STREAMR_NODE_ADDRESS || config.streamrNodeAddress
     config.adminFee = ADMIN_FEE || config.adminFee || 0
-    config.contractAddress = CONTRACT_ADDRESS || config.contractAddress || (await deployCommunity(wallet, config.operatorAddress, config.tokenAddress, config.streamrNodeAddress, config.blockFreezeSeconds, config.adminFee, config.streamrWsUrl, config.streamrHttpUrl)).address
+    config.contractAddress = CONTRACT_ADDRESS || config.contractAddress || (await deployContract(wallet, config.operatorAddress, config.tokenAddress, config.streamrNodeAddress, config.blockFreezeSeconds, config.adminFee, config.streamrWsUrl, config.streamrHttpUrl)).address
 
     // augment the config / saved state with variables that may be useful for the validators
     // TODO: find another way to communicate config to demo than state.json
@@ -118,7 +109,7 @@ async function start() {
 
     log("Starting the joinPartChannel and Operator")
 
-    const contract = new Contract(config.contractAddress, CommunityProductJson.abi, this.eth)
+    const contract = new Contract(config.contractAddress, DataUnionJson.abi, this.eth)
     const joinPartStreamId = await contract.joinPartStream()
     const adminChannel = new Channel(joinPartStreamId, config.streamrWsUrl, config.streamrHttpUrl)
     await adminChannel.startServer(privateKey)

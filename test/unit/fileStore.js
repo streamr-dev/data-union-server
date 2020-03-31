@@ -2,7 +2,7 @@ const os = require("os")
 const path = require("path")
 const assert = require("assert")
 
-const log = require("debug")("Streamr::CPS::test::unit::fileStore")
+const log = require("debug")("Streamr::dataunion::test::unit::fileStore")
 
 const tmpDir = path.join(os.tmpdir(), `fileStore-test-${+new Date()}`)
 const FileStore = require("../../src/fileStore")
