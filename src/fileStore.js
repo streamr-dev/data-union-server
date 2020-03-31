@@ -122,7 +122,7 @@ module.exports = class FileStore {
         return this.makeLatestSymlink(block.blockNumber)
     }
 
-    async makeLatestSymlink(blockNum){
+    async makeLatestSymlink(blockNum) {
         const path = this.getBlockPath(blockNum)
         const latest = this.getLatestPath()
         const exists = fs.existsSync(latest)
