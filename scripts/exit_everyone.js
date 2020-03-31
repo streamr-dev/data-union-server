@@ -43,6 +43,11 @@ const error = (e, ...args) => {
 // sleep before executing, let user double-check values
 const sleepMs = Number.isNaN(+SLEEP_MS) ? 5000 : +SLEEP_MS
 
+const ethersOptions = {}
+if (GAS_PRICE_GWEI) {
+    ethersOptions.gasPrice = parseUnits(GAS_PRICE_GWEI, "gwei")
+}
+
 async function start() {
     // TODO: move process.env parsing logic to a separate file
     const provider =
@@ -82,15 +87,18 @@ async function start() {
     if (STREAMR_HTTP_URL) { opts.restUrl = STREAMR_HTTP_URL }
     const client = new StreamrClient(opts)
 
+    let totalBN = new BigNumber("0")
     let members = await client.getMembers(communityAddress)
     for (const member of members) {
         const stats = await client.getMemberStats(communityAddress, member.address)
         const earningsBN = new BigNumber(stats.withdrawableEarnings)
         const withdrawnBN = await community.withdrawn(member.address)
         member.unwithdrawnEarningsBN = earningsBN.sub(withdrawnBN)
-        member.stats = stats
+        member.proof = stats.proof
+        member.withdrawableBlockNumber = stats.withdrawableBlockNumber
+        totalBN = totalBN.add(member.unwithdrawnEarningsBN)
         log(`member: ${member.address}`)
-        log(`  Previously withdrawn earnings: ${withdrawnBN.toString()}`)
+        log(`  Previously withdrawn earnings:   ${withdrawnBN.toString()}`)
         log(`  Previously unwithdrawn earnings: ${member.unwithdrawnEarningsBN.toString()}`)
     }
     members = members.filter(function(a) {
@@ -98,33 +106,43 @@ async function start() {
     }).sort(function(a,b) {
         return +b.unwithdrawnEarningsBN - +a.unwithdrawnEarningsBN
     })
-    log(`Members to withdraw: ${JSON.stringify(members)}`)
+
+    // estimate and show a summary of costs and sample of tx to be executed
+    const gasBN = await community.estimate.withdrawAllFor(
+        members[0].address,
+        members[0].withdrawableBlockNumber,
+        members[0].unwithdrawnEarningsBN,
+        members[0].proof
+    )
+    const priceBN = ethersOptions.gasPrice || parseUnits(10, "gwei")
+    const feeBN = gasBN.mul(priceBN)
+    const totalFeeBN = feeBN.mul(members.length)
+    log(`Sending ${members.length} withdraw tx, for total value of ${formatEther(totalBN)} DATA`)
+    log(`Paying approx ${formatEther(totalFeeBN)}ETH for gas, or ${formatEther(feeBN)}ETH/tx`)
+    log("ADDRESS                                     DATA")
+    //   0x0000000000000000000000000000000000000000  0.000000000000000000
+    for (const member of members.slice(0, 5)) { log(`${member.address}  ${formatEther(member.unwithdrawnEarningsBN)}`) }
+    if (members.length > 5) { log("...                                         ...") }
+    if (sleepMs) {
+        log(`Sleeping ${sleepMs}ms, please check the values and hit Ctrl+C if you're in the least unsure`)
+        await sleep(sleepMs)
+    }
 
     for (const member of members) {
-        const options = {}
-        if (GAS_PRICE_GWEI) { options.gasPrice = parseUnits(GAS_PRICE_GWEI, "gwei") }
-
-        log(`Withdrawing ${formatEther(member.unwithdrawnEarningsBN)} DATA from ${communityAddress} to ${wallet.address}...`)
-        if (sleepMs) {
-            log(`Sleeping ${sleepMs}ms, please check the values and hit Ctrl+C if you're in the least unsure`)
-            await sleep(sleepMs)
-        }
-        
+        log(`Withdrawing ${formatEther(member.unwithdrawnEarningsBN)} DATA on behalf of ${member.address}...`)
         const tx = await community.withdrawAllFor(
             member.address,
-            member.stats.withdrawableBlockNumber,
+            member.withdrawableBlockNumber,
             member.unwithdrawnEarningsBN,
-            member.stats.proof,
-            options
+            member.proof,
+            ethersOptions
         )
-    
+
         log(`Follow transaction at https://etherscan.io/tx/${tx.hash}`)
         const tr = await tx.wait(1)
         log(`Receipt: ${JSON.stringify(tr)}`)
-        log("[DONE]")
-        
-        
     }
+    log("[DONE]")
 }
 
 start().catch(error)
