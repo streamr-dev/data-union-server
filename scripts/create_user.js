@@ -36,6 +36,7 @@ async function start() {
 
     log("Disconnecting...")
     await client.ensureDisconnected()
+    log("[DONE]")
 }
 
 start().catch(error)

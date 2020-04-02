@@ -59,6 +59,7 @@ async function start() {
 
     log(`Secret added successfully, response: ${JSON.stringify(res)}`)
     log(`Network was ${JSON.stringify(network)}`)
+    log("[DONE]")
 }
 
 start().catch(error)

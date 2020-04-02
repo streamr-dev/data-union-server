@@ -159,6 +159,7 @@ async function start() {
     }
     log(`Sum of members' earnings: ${formatEther(sumOfEarnings)}`)
     log(`Total earnings for the community: ${formatEther(stats.totalEarnings)}`)
+    log("[DONE]")
 }
 
 start().catch(error)

@@ -73,5 +73,6 @@ async function start() {
     await sleep(provider.pollingInterval * 3)
 
     process.exit(0)
+    console.log("[DONE]")
 }
 start().catch(error)

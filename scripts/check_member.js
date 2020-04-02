@@ -99,6 +99,7 @@ async function start() {
     const earningsBN = new BigNumber(stats.withdrawableEarnings)
     const unwithdrawnEarningsBN = earningsBN.sub(withdrawnBN)
     log(`  The withdrawAll tx would transfer ${unwithdrawnEarningsBN.toString()} DATA to ${memberAddress}`)
+    log("[DONE]")
 }
 
 start().catch(error)
