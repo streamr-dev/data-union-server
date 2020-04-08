@@ -4,7 +4,7 @@ const {
     Contract,
     getDefaultProvider,
     providers: { JsonRpcProvider },
-    utils: { BigNumber },
+    utils: { BigNumber, formatEther },
     Wallet,
 } = require("ethers")
 
@@ -12,6 +12,7 @@ const StreamrClient = require("streamr-client")
 
 const { throwIfNotContract, throwIfBadAddress } = require("../src/utils/checkArguments")
 
+const TokenContract = require("../build/ERC20Detailed.json")
 const DataUnionContract = require("../build/DataunionVault.json")
 
 const {
@@ -51,11 +52,18 @@ async function start() {
         wallet = new Wallet(privateKey, provider)
     }
 
-    const communityAddress = await throwIfNotContract(provider, DATAUNION_ADDRESS, "env variable DATAUNION_ADDRESS")
+    const dataunionAddress = await throwIfNotContract(provider, DATAUNION_ADDRESS, "env variable DATAUNION_ADDRESS")
     const memberAddress = wallet && wallet.address || await throwIfBadAddress(MEMBER_ADDRESS, "env variable MEMBER_ADDRESS")
 
-    log(`Checking DataunionVault contract at ${communityAddress}...`)
-    const community = new Contract(communityAddress, DataUnionContract.abi, provider)
+    log(`Checking DataunionVault contract at ${dataunionAddress}...`)
+    const dataunion = new Contract(dataunionAddress, DataUnionContract.abi, provider)
+
+    log(`  Token contract at ${tokenAddress}...`)
+    const tokenAddress = await throwIfNotContract(provider, await dataunion.token(), `DataunionVault(${dataunionAddress}).token()`)
+    const token = new Contract(tokenAddress, TokenContract.abi, provider)
+    const DATA = await token.symbol()
+    log(`  Data union token balance: ${formatEther(await token.balanceOf(dataunionAddress))} ${DATA}`)
+    log(`  ${memberAddress} token balance: ${formatEther(await token.balanceOf(memberAddress))} ${DATA}`)
 
     log("Connecting to Streamr...")
     const opts = {}
@@ -64,7 +72,7 @@ async function start() {
     const client = new StreamrClient(opts)
 
     log(`Member stats for ${memberAddress}...`)
-    const stats = await client.getMemberStats(communityAddress, memberAddress)
+    const stats = await client.getMemberStats(dataunionAddress, memberAddress)
     if (stats.error) {
         log(`Error from server: ${JSON.stringify(stats)}`)
         return
@@ -73,8 +81,8 @@ async function start() {
         log(`  Server: ${key}: ${value}`)
     }
 
-    const withdrawnBN = await community.withdrawn(memberAddress)
-    log(`  Contract: Proven earnings: ${(await community.earnings(memberAddress)).toString()}`)
+    const withdrawnBN = await dataunion.withdrawn(memberAddress)
+    log(`  Contract: Proven earnings: ${(await dataunion.earnings(memberAddress)).toString()}`)
     log(`  Contract: Withdrawn earnings: ${withdrawnBN.toString()}`)
 
     // check withdraw proof
@@ -84,7 +92,7 @@ async function start() {
     }
 
     // function proofIsCorrect(uint blockNumber, address account, uint balance, bytes32[] memory proof) public view returns(bool)
-    const proofIsCorrect = await community.proofIsCorrect(
+    const proofIsCorrect = await dataunion.proofIsCorrect(
         stats.withdrawableBlockNumber,
         memberAddress,
         stats.withdrawableEarnings,
@@ -98,7 +106,7 @@ async function start() {
 
     const earningsBN = new BigNumber(stats.withdrawableEarnings)
     const unwithdrawnEarningsBN = earningsBN.sub(withdrawnBN)
-    log(`  The withdrawAll tx would transfer ${unwithdrawnEarningsBN.toString()} DATA to ${memberAddress}`)
+    log(`  The withdrawAll tx would transfer ${formatEther(unwithdrawnEarningsBN)} ${DATA} to ${memberAddress}`)
     log("[DONE]")
 }
 
