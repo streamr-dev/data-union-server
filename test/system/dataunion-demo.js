@@ -26,7 +26,7 @@ const WEBSERVER_PORT = 8085//8880
 const BLOCK_FREEZE_SECONDS = 1
 const ADMIN_FEE = 0
 
-const { streamrWs, streamrHttp, streamrNodeAddress } = require("../integration/CONFIG")
+const { streamrWs, streamrHttp, streamrNodeAddress } = require("../CONFIG")
 
 /**
  * This test is an "integration test" but the setup should still be such that it could be independently run

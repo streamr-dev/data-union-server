@@ -32,7 +32,7 @@ const {
     ADMIN_PRIVATE_KEY,
     TOKEN_ADDRESS,
     WEBSERVER_PORT,
-} = require("../integration/CONFIG")
+} = require("../CONFIG")
 
 /**
  * Same as community-product-demo.js except only using StreamrClient.

@@ -9,7 +9,7 @@ const assertFails = require("../utils/assert-promise-fails")
 
 const privateKey = "0x5e98cce00cff5dea6b454889f359a4ec06b9fa6b88e9d69b86de8e1c81887da0"  // ganache 0
 
-const { streamrWs, streamrHttp } = require("./CONFIG")
+const { streamrWs, streamrHttp } = require("../CONFIG")
 
 describe.skip("streamrChannel", () => {
     let sendChannel
