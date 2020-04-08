@@ -55,6 +55,7 @@ async function start() {
     const blockFreezeSeconds = BLOCK_FREEZE_SECONDS ? +BLOCK_FREEZE_SECONDS : 3600
     const adminFee = Number.parseFloat(ADMIN_FEE) || 0
 
+    if (!ETHEREUM_PRIVATE_KEY) { throw new Error("Must set ETHEREUM_PRIVATE_KEY environment variable!") }
     const privateKey = ETHEREUM_PRIVATE_KEY.startsWith("0x") ? ETHEREUM_PRIVATE_KEY : "0x" + ETHEREUM_PRIVATE_KEY
     if (privateKey.length !== 66) { throw new Error("Malformed private key, must be 64 hex digits long (optionally prefixed with '0x')") }
     const wallet = new Wallet(privateKey, provider)
