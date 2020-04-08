@@ -62,7 +62,7 @@ async function start() {
     }
 
     const _tokenAddress = await community.token()
-    const tokenAddress = await throwIfNotContract(provider, _tokenAddress, `community(${communityAddress}).token`)
+    const tokenAddress = await throwIfNotContract(provider, _tokenAddress, `DataunionVault(${communityAddress}).token()`)
 
     log(`Checking token contract at ${tokenAddress}...`)
     const token = new Contract(tokenAddress, TokenContract.abi, provider)
