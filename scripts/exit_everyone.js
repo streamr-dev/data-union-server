@@ -14,14 +14,15 @@ const sleep = require("../src/utils/sleep-promise")
 const { throwIfNotContract } = require("../src/utils/checkArguments")
 
 const TokenJson = require("../build/ERC20Detailed.json")
-const CommunityJson = require("../build/CommunityProduct.json")
+const DataunionJson = require("../build/DataunionVault.json")
 
 const {
     ETHEREUM_SERVER,            // explicitly specify server address
     ETHEREUM_NETWORK,           // use ethers.js default servers
     ETHEREUM_PRIVATE_KEY,
+    ETHEREUM_PRIVATE_KEYS,      // comma-separated list
 
-    COMMUNITY_ADDRESS,
+    DATAUNION_ADDRESS,
     GAS_PRICE_GWEI,
     MIN_WITHDRAWABLE_EARNINGS,
     STREAMR_WS_URL,
@@ -60,39 +61,42 @@ async function start() {
     })
     log("Connected to Ethereum network: ", JSON.stringify(network))
 
-    const communityAddress = await throwIfNotContract(provider, COMMUNITY_ADDRESS, "env variable COMMUNITY_ADDRESS")
-    const privateKey = ETHEREUM_PRIVATE_KEY.startsWith("0x") ? ETHEREUM_PRIVATE_KEY : "0x" + ETHEREUM_PRIVATE_KEY
-    if (privateKey.length !== 66) { throw new Error("Malformed private key, must be 64 hex digits long (optionally prefixed with '0x')") }
-    const wallet = new Wallet(privateKey, provider)
+    const dataunionAddress = await throwIfNotContract(provider, DATAUNION_ADDRESS, "env variable COMMUNITY_ADDRESS")
 
-    log(`Checking community contract at ${communityAddress}...`)
-    const community = new Contract(communityAddress, CommunityJson.abi, wallet)
-    const getters = CommunityJson.abi.filter(f => f.constant && f.inputs.length === 0).map(f => f.name)
+    const rawKeys = [ETHEREUM_PRIVATE_KEY].concat((ETHEREUM_PRIVATE_KEYS || "").split(",")).filter(x => x)
+    if (rawKeys.length < 1) {
+        throw new Error("Must set in environment at least one ETHEREUM_PRIVATE_KEY or a comma-separated list of ETHEREUM_PRIVATE_KEYS")
+    }
+    const wallets = rawKeys.map(key => new Wallet(key, provider))   // throws "Error: invalid private key" on bad keys
+
+    log(`Checking DataunionVault contract at ${dataunionAddress}...`)
+    const dataunion = new Contract(dataunionAddress, DataunionJson.abi, wallets[0])
+    const getters = DataunionJson.abi.filter(f => f.constant && f.inputs.length === 0).map(f => f.name)
     for (const getter of getters) {
-        log(`  ${getter}: ${await community[getter]()}`)
+        log(`  ${getter}: ${await dataunion[getter]()}`)
     }
 
-    const _tokenAddress = await community.token()
-    const tokenAddress = await throwIfNotContract(provider, _tokenAddress, `community(${communityAddress}).token`)
+    const _tokenAddress = await dataunion.token()
+    const tokenAddress = await throwIfNotContract(provider, _tokenAddress, `DataunionVault(${dataunionAddress}).token`)
 
     log(`Checking token contract at ${tokenAddress}...`)
-    const token = new Contract(tokenAddress, TokenJson.abi, wallet)
+    const token = new Contract(tokenAddress, TokenJson.abi, wallets[0])
     log("  Token name: ", await token.name())
     log("  Token symbol: ", await token.symbol())
     log("  Token decimals: ", await token.decimals())
 
     log("Connecting to Streamr...")
-    const opts = { auth: { privateKey } }
+    const opts = { auth: { privateKey: ETHEREUM_PRIVATE_KEY } }
     if (STREAMR_WS_URL) { opts.url = STREAMR_WS_URL }
     if (STREAMR_HTTP_URL) { opts.restUrl = STREAMR_HTTP_URL }
     const client = new StreamrClient(opts)
 
     let totalBN = new BigNumber("0")
-    let members = await client.getMembers(communityAddress)
+    let members = await client.getMembers(dataunionAddress)
     for (const member of members) {
-        const stats = await client.getMemberStats(communityAddress, member.address)
+        const stats = await client.getMemberStats(dataunionAddress, member.address)
         const earningsBN = new BigNumber(stats.withdrawableEarnings)
-        const withdrawnBN = await community.withdrawn(member.address)
+        const withdrawnBN = await dataunion.withdrawn(member.address)
         member.unwithdrawnEarningsBN = earningsBN.sub(withdrawnBN)
         member.proof = stats.proof
         member.withdrawableBlockNumber = stats.withdrawableBlockNumber
@@ -107,8 +111,14 @@ async function start() {
         return +b.unwithdrawnEarningsBN - +a.unwithdrawnEarningsBN
     })
 
+    if (members.length < 1) {
+        log("No members with earnings to withdraw")
+        log("[DONE]")
+        return
+    }
+
     // estimate and show a summary of costs and sample of tx to be executed
-    const gasBN = await community.estimate.withdrawAllFor(
+    const gasBN = await dataunion.estimate.withdrawAllFor(
         members[0].address,
         members[0].withdrawableBlockNumber,
         members[0].unwithdrawnEarningsBN,
@@ -128,9 +138,18 @@ async function start() {
         await sleep(sleepMs)
     }
 
-    for (const member of members) {
+    //const contracts = wallets.map(w => new Contract(dataunionAddress, DataunionJson.abi, w))
+    const contract = new Contract(dataunionAddress, DataunionJson.abi, wallets[0])
+    // TODO: more functional:
+    // members.forChunks(contracts.length, members => {
+    //    const receipts = await Promise.all(contracts.map(c => {
+    for (let i = 0; i < members.length; i++) {
+        //for (let j = 0; i < members.length && j < contracts.length; i++, j++) {
+        const member = members[i]
+        //const contract = contracts[j]
+
         log(`Withdrawing ${formatEther(member.unwithdrawnEarningsBN)} DATA on behalf of ${member.address}...`)
-        const tx = await community.withdrawAllFor(
+        const tx = await contract.withdrawAllFor(
             member.address,
             member.withdrawableBlockNumber,
             member.unwithdrawnEarningsBN,
@@ -142,6 +161,7 @@ async function start() {
         const tr = await tx.wait(1)
         log(`Receipt: ${JSON.stringify(tr)}`)
     }
+
     log("[DONE]")
 }
 
