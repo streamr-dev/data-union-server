@@ -138,28 +138,31 @@ async function start() {
         await sleep(sleepMs)
     }
 
-    //const contracts = wallets.map(w => new Contract(dataunionAddress, DataunionJson.abi, w))
-    const contract = new Contract(dataunionAddress, DataunionJson.abi, wallets[0])
+    // split the members in batches and send them in parallel, one at a time from each wallet
+    const contracts = wallets.map(w => new Contract(dataunionAddress, DataunionJson.abi, w))
     // TODO: more functional:
     // members.forChunks(contracts.length, members => {
     //    const receipts = await Promise.all(contracts.map(c => {
     for (let i = 0; i < members.length; i++) {
-        //for (let j = 0; i < members.length && j < contracts.length; i++, j++) {
-        const member = members[i]
-        //const contract = contracts[j]
+        const trPromises = []
+        for (let j = 0; i < members.length && j < contracts.length; i++, j++) {
+            const member = members[i]
+            const contract = contracts[j]
 
-        log(`Withdrawing ${formatEther(member.unwithdrawnEarningsBN)} DATA on behalf of ${member.address}...`)
-        const tx = await contract.withdrawAllFor(
-            member.address,
-            member.withdrawableBlockNumber,
-            member.unwithdrawnEarningsBN,
-            member.proof,
-            ethersOptions
-        )
+            log(`Withdrawing ${formatEther(member.unwithdrawnEarningsBN)} DATA on behalf of ${member.address}...`)
+            const tx = await contract.withdrawAllFor(
+                member.address,
+                member.withdrawableBlockNumber,
+                member.unwithdrawnEarningsBN,
+                member.proof,
+                ethersOptions
+            )
 
-        log(`Follow transaction at https://etherscan.io/tx/${tx.hash}`)
-        const tr = await tx.wait(1)
-        log(`Receipt: ${JSON.stringify(tr)}`)
+            log(`Follow transaction at https://etherscan.io/tx/${tx.hash}`)
+            trPromises.push(tx.wait(1))
+        }
+        const receipts = await Promise.all(trPromises)
+        log(`Receipts: ${JSON.stringify(receipts)}`)
     }
 
     log("[DONE]")
