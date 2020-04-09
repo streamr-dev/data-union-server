@@ -81,5 +81,6 @@ async function start() {
 
     ganache.shutdown()
     process.exit(0)
+    console.log("[DONE]")
 }
 start().catch(error)

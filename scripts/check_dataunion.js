@@ -62,7 +62,7 @@ async function start() {
     }
 
     const _tokenAddress = await community.token()
-    const tokenAddress = await throwIfNotContract(provider, _tokenAddress, `community(${communityAddress}).token`)
+    const tokenAddress = await throwIfNotContract(provider, _tokenAddress, `DataunionVault(${communityAddress}).token()`)
 
     log(`Checking token contract at ${tokenAddress}...`)
     const token = new Contract(tokenAddress, TokenContract.abi, provider)
@@ -76,7 +76,7 @@ async function start() {
     if (STREAMR_HTTP_URL) { opts.restUrl = STREAMR_HTTP_URL }
     const client = new StreamrClient(opts)
 
-    log("Community stats from dataunion")
+    log("Data union stats from server")
     const stats = await client.getCommunityStats(community.address)
     log(`  Members: ${stats.memberCount.active} active / ${stats.memberCount.total} total`)
     log(`  Latest unfrozen block: ${stats.latestWithdrawableBlock.blockNumber} (${stats.latestWithdrawableBlock.memberCount} members)`)
@@ -159,6 +159,7 @@ async function start() {
     }
     log(`Sum of members' earnings: ${formatEther(sumOfEarnings)}`)
     log(`Total earnings for the community: ${formatEther(stats.totalEarnings)}`)
+    log("[DONE]")
 }
 
 start().catch(error)

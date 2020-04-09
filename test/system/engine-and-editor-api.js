@@ -31,7 +31,7 @@ const {
     OPERATOR_PRIVATE_KEY,
     TOKEN_ADDRESS,
     WEBSERVER_PORT,
-} = require("../integration/CONFIG")
+} = require("../CONFIG")
 
 /**
  * Same as dataunion-demo.js except only through E&E APIs,

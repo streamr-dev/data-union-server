@@ -58,7 +58,7 @@ module.exports = class MonoplasmaOperator {
         await this.watcher.stop()
     }
 
-    async lastPublishedBlock(){
+    async lastPublishedBlock() {
         const lb = await this.watcher.plasma.store.getLatestBlock()
         if (lb == undefined) {
             return undefined

@@ -3,7 +3,7 @@
 const Channel = require("../../src/streamrChannel")
 const sleep = require("../../src/utils/sleep-promise")
 
-const { STREAMR_WS_URL, STREAMR_HTTP_URL } = require("./CONFIG")
+const { STREAMR_WS_URL, STREAMR_HTTP_URL } = require("../CONFIG")
 
 const streamId = process.env.__JOINPART_STREAM_ID
 

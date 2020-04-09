@@ -31,6 +31,7 @@ module.exports = {
         "no-console": "error",
         "keyword-spacing": "error",
         "func-call-spacing": "error",
-        "space-infix-ops": "error"
+        "space-infix-ops": "error",
+        "space-before-blocks": "error"
     }
 }

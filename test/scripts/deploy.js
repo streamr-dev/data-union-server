@@ -18,7 +18,7 @@ const deployContract = require("../../src/utils/deployContract")
 
 const DataUnionContract = require("../../build/DataunionVault")
 
-const { streamrWs, streamrHttp, streamrNodeAddress } = require("../integration/CONFIG")
+const { streamrWs, streamrHttp, streamrNodeAddress } = require("../CONFIG")
 
 const STORE_DIR = __dirname + `/test-store-${+new Date()}`
 const GANACHE_PORT = 8549

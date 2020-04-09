@@ -3,7 +3,7 @@ const { spawn } = require("child_process")
 
 const log = require("debug")("Streamr::dataunion::test::integration::channel")
 
-const { STREAMR_WS_URL, STREAMR_HTTP_URL } = require("./CONFIG")
+const { STREAMR_WS_URL, STREAMR_HTTP_URL } = require("../CONFIG")
 
 const { untilStreamContains } = require("../utils/await-until")
 const sleep = require("../../src/utils/sleep-promise")

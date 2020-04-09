@@ -58,6 +58,7 @@ async function start() {
 
     log(`Community join sent, response: ${JSON.stringify(res)}`)
     log(`Network was ${JSON.stringify(network)}`)
+    log("[DONE]")
 }
 
 
