@@ -25,6 +25,8 @@ export ETHEREUM_PRIVATE_KEY=5e98cce00cff5dea6b454889f359a4ec06b9fa6b88e9d69b86de
 export DATA_TOKEN_AMOUNT=1
 node send_tokens.js
 
+sleep 10
+
 #should have 3 users
 node exit_everyone.js
 node exit_everyone.js
