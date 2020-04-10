@@ -1,5 +1,7 @@
 require("dotenv/config")
 
+const fs = require("fs")
+
 const {
     Contract,
     getDefaultProvider,
@@ -29,6 +31,8 @@ const {
     STREAMR_HTTP_URL,
 
     SLEEP_MS,                   // set this to zero for automatic runs
+
+    MEMBERS_CACHE_FILE,
 
     QUIET,
 } = process.env
@@ -73,7 +77,7 @@ async function start() {
     const dataunion = new Contract(dataunionAddress, DataunionJson.abi, wallets[0])
     const getters = DataunionJson.abi.filter(f => f.constant && f.inputs.length === 0).map(f => f.name)
     for (const getter of getters) {
-        log(`  ${getter}: ${await dataunion[getter]()}`)
+        log(`  ${getter}: ${await dataunion[getter]().catch(e => e.message)}`)
     }
 
     const _tokenAddress = await dataunion.token()
@@ -92,18 +96,25 @@ async function start() {
     const client = new StreamrClient(opts)
 
     let totalBN = new BigNumber("0")
-    let members = await client.getMembers(dataunionAddress)
-    for (const member of members) {
-        const stats = await client.getMemberStats(dataunionAddress, member.address)
-        const earningsBN = new BigNumber(stats.withdrawableEarnings)
-        const withdrawnBN = await dataunion.withdrawn(member.address)
-        member.unwithdrawnEarningsBN = earningsBN.sub(withdrawnBN)
-        member.proof = stats.proof
-        member.withdrawableBlockNumber = stats.withdrawableBlockNumber
-        totalBN = totalBN.add(member.unwithdrawnEarningsBN)
-        log(`member: ${member.address}`)
-        log(`  Previously withdrawn earnings:   ${withdrawnBN.toString()}`)
-        log(`  Previously unwithdrawn earnings: ${member.unwithdrawnEarningsBN.toString()}`)
+    let members
+    if (MEMBERS_CACHE_FILE && fs.existsSync(MEMBERS_CACHE_FILE)) {
+        const membersBuf = fs.readFileSync(MEMBERS_CACHE_FILE)
+        members = JSON.parse(membersBuf)
+    } else {
+        members = await client.getMembers(dataunionAddress)
+        for (let i = 0; i < members.length; i++) {
+            const member = members[i]
+            const stats = await client.getMemberStats(dataunionAddress, member.address)
+            const earningsBN = new BigNumber(stats.withdrawableEarnings)
+            const withdrawnBN = await dataunion.withdrawn(member.address)
+            member.unwithdrawnEarningsBN = earningsBN.sub(withdrawnBN)
+            member.proof = stats.proof
+            member.withdrawableBlockNumber = stats.withdrawableBlockNumber
+            totalBN = totalBN.add(member.unwithdrawnEarningsBN)
+            log(`member ${i}/${members.length}: ${member.address}`)
+            log(`  Previously withdrawn earnings:   ${withdrawnBN.toString()}`)
+            log(`  Previously unwithdrawn earnings: ${member.unwithdrawnEarningsBN.toString()}`)
+        }
     }
     members = members.filter(function(a) {
         return +a.unwithdrawnEarningsBN >= (MIN_WITHDRAWABLE_EARNINGS ? +MIN_WITHDRAWABLE_EARNINGS : 1)
@@ -115,6 +126,11 @@ async function start() {
         log("No members with earnings to withdraw")
         log("[DONE]")
         return
+    }
+
+    if (MEMBERS_CACHE_FILE) {
+        const membersString = JSON.stringify(members)
+        fs.writeFileSync(membersString, MEMBERS_CACHE_FILE)
     }
 
     // estimate and show a summary of costs and sample of tx to be executed
