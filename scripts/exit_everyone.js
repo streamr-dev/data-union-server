@@ -137,10 +137,11 @@ async function start() {
     const gasBN = await dataunion.estimate.withdrawAllFor(
         members[0].address,
         members[0].withdrawableBlockNumber,
-        members[0].unwithdrawnEarningsBN,
+        members[0].withdrawableEarnings,
         members[0].proof
     )
     const priceBN = ethersOptions.gasPrice || parseUnits(10, "gwei")
+    ethersOptions.gasLimit = gasBN.mul(2)
     const feeBN = gasBN.mul(priceBN)
     const totalFeeBN = feeBN.mul(members.length)
     log(`Sending ${members.length} withdraw tx, for total value of ${formatEther(totalBN)} DATA`)
@@ -159,7 +160,7 @@ async function start() {
     // TODO: more functional:
     // members.forChunks(contracts.length, members => {
     //    const receipts = await Promise.all(contracts.map(c => {
-    for (let i = 0; i < members.length; i++) {
+    for (let i = 0; i < members.length;) {
         const trPromises = []
         for (let j = 0; i < members.length && j < contracts.length; i++, j++) {
             const member = members[i]
@@ -169,7 +170,7 @@ async function start() {
             const tx = await contract.withdrawAllFor(
                 member.address,
                 member.withdrawableBlockNumber,
-                member.unwithdrawnEarningsBN,
+                member.withdrawableEarnings,
                 member.proof,
                 ethersOptions
             )
