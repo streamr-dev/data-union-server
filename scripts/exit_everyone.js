@@ -61,7 +61,7 @@ async function start() {
     })
     log("Connected to Ethereum network: ", JSON.stringify(network))
 
-    const dataunionAddress = await throwIfNotContract(provider, DATAUNION_ADDRESS, "env variable COMMUNITY_ADDRESS")
+    const dataunionAddress = await throwIfNotContract(provider, DATAUNION_ADDRESS, "env variable DATAUNION_ADDRESS")
 
     const rawKeys = [ETHEREUM_PRIVATE_KEY].concat((ETHEREUM_PRIVATE_KEYS || "").split(",")).filter(x => x)
     if (rawKeys.length < 1) {
