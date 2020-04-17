@@ -123,10 +123,25 @@ module.exports = class DataUnionServer {
         }
     }
 
+    /** Check contract's version number, @returns {number} version number, or 0 if not found */
+    async getVersionOfContractAt(address) {
+        const contract = new Contract(address, DataUnionContract.abi, this.eth)
+        if (!contract.version) { return 0 }
+        return contract.version().then(v => v.toNumber()).catch(e => {
+            // there is no version getter in the contract, return zero
+            // ethers+mainnet seems to say "call exception"
+            // ganache seems to say "revert"
+            if (e.message.startsWith("call exception") || e.message.endsWith("revert")) {
+                return 0
+            }
+            throw e
+        })
+    }
+
     /**
      * Filter how to respond to OperatorChanged events, pass new communities to startOperating
      * TODO: abuse defenses could be replaced with bytecode checking or similar if feasible
-     * @param {string} address
+     * @param {string} address of Data Union that changed its operator
      */
     async onOperatorChangedEventAt(address) {
         const contract = new Contract(address, DataUnionContract.abi, this.eth)
@@ -136,7 +151,7 @@ module.exports = class DataUnionServer {
         const { communities } = this
         const community = communities[address]
         const newOperatorAddress = getAddress(await contract.operator())
-        const contractVersion = contract.version ? (await contract.version()).toNumber() : 0
+        const contractVersion = await this.getVersionOfContractAt(address)
         const weShouldOperate = SERVER_VERSION === contractVersion && newOperatorAddress === this.wallet.address
         if (!community) {
             if (weShouldOperate) {

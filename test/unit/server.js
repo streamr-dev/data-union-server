@@ -8,32 +8,33 @@ const { ContractFactory, Wallet, providers: { Web3Provider } } = require("ethers
 const log = require("debug")("Streamr::dataunion::test::unit::server")
 
 const ganache = require("ganache-core")
-const CommunityJson = require("../../build/DataunionVault")
+const DataunionVaultJson = require("../../build/DataunionVault")
+const OldContractJson = require("./CommunityProduct.json")
 const MockStreamrChannel = require("../utils/mockStreamrChannel")
 const deployTestToken = require("../utils/deployTestToken")
 const pollingIntervalSeconds = 0.1
 
 const { until } = require("../utils/await-until")
 
-const CommunityProductServer = require("../../src/server")
+const DataUnionServer = require("../../src/server")
 
 /**
- * Deploy a DataUnion contract with no real joinPartStream, for (unit) test purposes
+ * Deploy a DataunionVault contract with no real joinPartStream, for (unit) test purposes
  * @param {Wallet} wallet to do the deployment from, also becomes owner or stream and contract
- * @param {EthereumAddress} operatorAddress community-product-server that should operate the contract
+ * @param {EthereumAddress} operatorAddress data-union-server process that should operate the contract
  * @param {EthereumAddress} tokenAddress
  * @param {Number} blockFreezePeriodSeconds
  * @param {Number} adminFeeFraction
  */
 async function deployTestDataunion(wallet, operatorAddress, tokenAddress, blockFreezePeriodSeconds, adminFeeFraction) {
     log(`Deploying MOCK root chain contract (token @ ${tokenAddress}, blockFreezePeriodSeconds = ${blockFreezePeriodSeconds}, no joinPartStream...`)
-    const deployer = new ContractFactory(CommunityJson.abi, CommunityJson.bytecode, wallet)
+    const deployer = new ContractFactory(DataunionVaultJson.abi, DataunionVaultJson.bytecode, wallet)
     const result = await deployer.deploy(operatorAddress, "dummy-stream-id", tokenAddress, blockFreezePeriodSeconds, adminFeeFraction)
     await result.deployed()
     return result
 }
 
-describe("CommunityProductServer", function () {
+describe("DataUnionServer", function () {
     this.timeout(10000)
     let tokenAddress
     let wallet
@@ -43,7 +44,7 @@ describe("CommunityProductServer", function () {
         const secretKey = "0x1234567812345678123456781234567812345678123456781234567812345678"
         const provider = new Web3Provider(ganache.provider({
             accounts: [{ secretKey, balance: "0xffffffffffffffffffffffffff" }],
-            logger: console,
+            logger: { log },
         }))
         provider.pollingInterval = pollingIntervalSeconds * 100
         wallet = new Wallet(secretKey, provider)
@@ -62,7 +63,7 @@ describe("CommunityProductServer", function () {
             tokenAddress,
             operatorAddress: wallet.address,
         }
-        server = new CommunityProductServer(wallet, storeDir, config, log, log)
+        server = new DataUnionServer(wallet, storeDir, config, log, log)
         server.getChannelFor = () => new MockStreamrChannel("dummy-stream-id")
     })
 
@@ -80,14 +81,16 @@ describe("CommunityProductServer", function () {
         })
     })
 
-    it("notices creation of a new CommunityProduct and starts Operator", async function () {
+    it("notices creation of a new DataunionVault and starts Operator", async function () {
         sinon.spy(server, "onOperatorChangedEventAt")
         sinon.spy(server, "startOperating")
         await server.start()
         const contract = await deployTestDataunion(wallet, wallet.address, tokenAddress, 1000, 0)
-        await until(() => server.onOperatorChangedEventAt.calledOnce)
 
+        await until(() => server.onOperatorChangedEventAt.calledOnce)
         assert.strictEqual(contract.address, server.onOperatorChangedEventAt.getCall(0).args[0])
+
+        await server.communityIsRunning(contract.address)
 
         assert(server.startOperating.calledOnce)
         assert.strictEqual(contract.address, server.startOperating.getCall(0).args[0])
@@ -114,7 +117,7 @@ describe("CommunityProductServer", function () {
         })
     })
 
-    describe("ignores communities not assigned to it", function () {
+    describe("ignores dataunions not assigned to it", function () {
         it("ignores if operator changed before startup", async () => {
             const onError = sinon.spy(server, "error")
 
@@ -197,7 +200,7 @@ describe("CommunityProductServer", function () {
         assert.strictEqual(onError.callCount, 0, "should not have called error handler")
 
         // create a second server
-        const server2 = new CommunityProductServer(wallet, storeDir, config, log, log)
+        const server2 = new DataUnionServer(wallet, storeDir, config, log, log)
         server2.getChannelFor = () => new MockStreamrChannel("dummy-stream-id")
         const onError2 = sinon.spy(server2, "error")
         await server2.start()
@@ -229,7 +232,7 @@ describe("CommunityProductServer", function () {
 
         // create a second server
         //
-        const server2 = new CommunityProductServer(wallet, storeDir, config, log, log)
+        const server2 = new DataUnionServer(wallet, storeDir, config, log, log)
         sinon.stub(server2, "getChannelFor")
             .callsFake(() => new MockStreamrChannel("dummy-stream-id"))
             // force one community startup to fail when getting channel
@@ -256,12 +259,28 @@ describe("CommunityProductServer", function () {
         await server.stop()
         await sleep(pollingIntervalSeconds * 1000)
         assert.strictEqual(onError.callCount, 0, "should not have called error handler")
-        const server2 = new CommunityProductServer(wallet, storeDir, config, log, log)
+        const server2 = new DataUnionServer(wallet, storeDir, config, log, log)
         const onError2 = sinon.spy(server2, "error")
         sinon.stub(server2, "getChannelFor").callsFake(async function () {
             throw new Error("expected fail")
         })
         await assert.rejects(() => server2.start())
         assert.strictEqual(onError2.callCount, 2, "should have called error handler twice")
+    })
+
+    describe("Version", () => {
+        it("is zero for old contract", async () => {
+            const deployer = new ContractFactory(OldContractJson.abi, OldContractJson.bytecode, wallet)
+            const oldContract = await deployer.deploy(wallet.address, "dummy-stream-id", tokenAddress, 1, 0)
+            await oldContract.deployed()
+            const version = await server.getVersionOfContractAt(oldContract.address)
+            assert.strictEqual(version, 0)
+        })
+
+        it("is positive number for current contract", async () => {
+            const contract = await deployTestDataunion(wallet, wallet.address, tokenAddress, 1000, 0)
+            const version = await server.getVersionOfContractAt(contract.address)
+            assert(version > 0)
+        })
     })
 })
