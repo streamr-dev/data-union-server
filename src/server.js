@@ -128,8 +128,13 @@ module.exports = class DataUnionServer {
         const contract = new Contract(address, DataUnionContract.abi, this.eth)
         if (!contract.version) { return 0 }
         return contract.version().then(v => v.toNumber()).catch(e => {
-            e // TODO: check that the exception means that the function didn't exist (fallback was invoked?)
-            return 0
+            // there is no version getter in the contract, return zero
+            // ethers+mainnet seems to say "call exception"
+            // ganache seems to say "revert"
+            if (e.message.startsWith("call exception") || e.message.endsWith("revert")) {
+                return 0
+            }
+            throw e
         })
     }
 
@@ -146,7 +151,7 @@ module.exports = class DataUnionServer {
         const { communities } = this
         const community = communities[address]
         const newOperatorAddress = getAddress(await contract.operator())
-        const contractVersion = this.getVersionOfContractAt(address)
+        const contractVersion = await this.getVersionOfContractAt(address)
         const weShouldOperate = SERVER_VERSION === contractVersion && newOperatorAddress === this.wallet.address
         if (!community) {
             if (weShouldOperate) {
