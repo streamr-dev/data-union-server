@@ -1,0 +1,44 @@
+#!/bin/bash
+# Set environment variables for scripts so that they point to https://streamr.network/core
+# This is the production environment
+# Source this file to use: `source setup_prod`
+# Also add your mainnet Ethereum account: `export ETHEREUM_PRIVATE_KEY=`
+
+export ETHEREUM_NETWORK=homestead
+export STREAMR_NODE_ADDRESS=0xf3E5A65851C3779f468c9EcB32E6f25D9D68601a
+export OPERATOR_ADDRESS=0xc0aa4dC0763550161a6B59fa430361b5a26df28C
+export TOKEN_ADDRESS=0x0Cf0Ee63788A0849fE5297F3407f701E122cC023
+export GAS_PRICE_GWEI=4.2
+
+# send_tokens
+export DATA_TOKEN_AMOUNT=0.1
+
+# deploy
+export BLOCK_FREEZE_SECONDS=3600
+export ADMIN_FEE=0.3
+
+# check_member
+export MEMBER_ADDRESS=0x7e5DfCeBC4B7A1A93970dec620f20930608B3e7a
+
+# exit_everyone
+export MIN_WITHDRAWABLE_EARNINGS=1000000000000000000    # 1 DATA
+
+report_ok () {
+    aws cloudwatch put-metric-data --region eu-west-1 --namespace "hetzner/data-union-server" --metric-name "${1:-monitoringAlert}" --value 0 --timestamp $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+}
+
+report_fail () {
+    aws cloudwatch put-metric-data --region eu-west-1 --namespace "hetzner/data-union-server" --metric-name "${1:-monitoringAlert}" --value 1 --timestamp $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+}
+
+assert_exit_code_zero () {
+    if [ $? -eq 0 ]
+    then
+        echo OK $1
+        report_ok $1
+    else
+        echo FAIL $1: exit code $?
+        report_fail $1
+        exit $?
+    fi
+}
