@@ -7,6 +7,7 @@
     "start": "node ./scripts/start_server.js",
     "inspect": "node --inspect-brk ./scripts/start_server.js",
     "lint": "eslint src test scripts",
+    "compile-typescript": "tsc -p ./tsconfig.json",
     "flatten": "etherlime --solcVersion=0.5.16 flatten DataunionVault.sol",
     "build-contracts": "etherlime --solcVersion=0.5.16 compile && npm run flatten",
     "docker-build": "docker build -t streamr/data-union-server:local .",
@@ -47,6 +48,7 @@
     "husky": "4.2.1",
     "mocha": "7.0.1",
     "node-fetch": "2.6.0",
-    "sinon": "8.1.1"
+    "sinon": "8.1.1",
+    "typescript": "3.8.3"
   }
 }
