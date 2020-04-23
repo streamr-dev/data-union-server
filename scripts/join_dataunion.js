@@ -40,6 +40,7 @@ async function start() {
     })
     log("Connected to Ethereum network: ", JSON.stringify(network))
 
+    if (!ETHEREUM_PRIVATE_KEY) { throw new Error("Must set ETHEREUM_PRIVATE_KEY environment variable!") }
     const privateKey = ETHEREUM_PRIVATE_KEY.startsWith("0x") ? ETHEREUM_PRIVATE_KEY : "0x" + ETHEREUM_PRIVATE_KEY
     if (privateKey.length !== 66) { throw new Error("Malformed private key, must be 64 hex digits long (optionally prefixed with '0x')") }
     const memberAddress = computeAddress(privateKey)
