@@ -2,7 +2,8 @@
 
 source test/setup_prod
 
-POLL_URL=https://streamr.network/api/v1/dataunions/0x3650b99D107d581eF8ff004365A4Ada8DA6bf62F/stats
+ADDRESS=${DATAUNION_ADDRESS:-0x3650b99D107d581eF8ff004365A4Ada8DA6bf62F}
+POLL_URL=https://streamr.network/api/v1/dataunions/$ADDRESS/stats
 POLL_INTERVAL_SECONDS=60
 
 echo "Polling $POLL_URL every $POLL_INTERVAL_SECONDS seconds"
