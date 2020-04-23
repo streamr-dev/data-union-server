@@ -12,7 +12,7 @@ while true
 do
     # "If you want only errors add the -S flag curl -s -S 'example.com' > /dev/null" https://unix.stackexchange.com/questions/196549/hide-curl-output
     curl -s -S $POLL_URL > /dev/null
-    assert_exit_code_zero
+    assert_exit_code_zero dus-http-monitor
 
     sleep $POLL_INTERVAL_SECONDS
 done

@@ -28,7 +28,7 @@ do
 
     POLL_URL=https://streamr.network/api/v1/dataunions/$DATAUNION_ADDRESS/members/$MEMBER_ADDRESS
     curl -s -S $POLL_URL > /dev/null
-    assert_exit_code_zero $MEMBER_ADDRESS
+    assert_exit_code_zero dus-join-monitor
 
     sleep $POLL_INTERVAL_SECONDS
 done
