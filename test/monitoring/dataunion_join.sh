@@ -7,7 +7,7 @@ if [ -z $DATAUNION_ADDRESS ]; then
     export DEBUG=*
     export DATAUNION_ADDRESS=`node scripts/deploy.js |grep Deployed | grep -oe '0x\w\+'`
     node scripts/add_secret.js
-    #export DEBUG=
+    export DEBUG=
     echo "Deployed contract at $DATAUNION_ADDRESS"
 else
     echo "Using existing contract at $DATAUNION_ADDRESS"
