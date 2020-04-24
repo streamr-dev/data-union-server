@@ -1,3 +1,4 @@
+"use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -34,7 +35,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var Contract = require("ethers").Contract;
+Object.defineProperty(exports, "__esModule", { value: true });
 var sleep = require("./utils/sleep-promise");
 var throwIfBadAddress = require("./utils/checkArguments").throwIfBadAddress;
 var MonoplasmaWatcher = require("./watcher");
@@ -87,7 +88,7 @@ module.exports = /** @class */ (function () {
                             initialBlockNumber: this.watcher.plasma.currentBlock,
                             initialTimestamp: this.watcher.plasma.currentTimestamp
                         });
-                        this.watcher.on("tokensReceived", function (event) { return _this.onTokensReceived(event)["catch"](_this.log); });
+                        this.watcher.on("tokensReceived", function (event) { return _this.onTokensReceived(event).catch(_this.log); });
                         return [2 /*return*/];
                 }
             });
@@ -157,7 +158,8 @@ module.exports = /** @class */ (function () {
                     this.log("Queued block publish", rootchainBlockNumber);
                 }
                 task = Promise.resolve(this.inProgressPublish)
-                    .then(function () { return _this._publishBlock(rootchainBlockNumber); })["finally"](function () {
+                    .then(function () { return _this._publishBlock(rootchainBlockNumber); })
+                    .finally(function () {
                     // last task cleans up
                     if (_this.inProgressPublish === task) {
                         _this.inProgressPublish = undefined;

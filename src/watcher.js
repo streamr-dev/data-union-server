@@ -1,3 +1,4 @@
+"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
@@ -47,11 +48,13 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+Object.defineProperty(exports, "__esModule", { value: true });
 var EventEmitter = require("events");
-var _a = require("ethers"), Contract = _a.Contract, utils = _a.utils;
+//const { Contract, utils } = require("ethers")
+var ethers_1 = require("ethers");
 var MonoplasmaState = require("./state");
-var _b = require("./utils/events"), replayOn = _b.replayOn, mergeEventLists = _b.mergeEventLists;
-var _c = require("./utils/checkArguments"), throwIfSetButNotContract = _c.throwIfSetButNotContract, throwIfSetButBadAddress = _c.throwIfSetButBadAddress;
+var _a = require("./utils/events"), replayOn = _a.replayOn, mergeEventLists = _a.mergeEventLists;
+var _b = require("./utils/checkArguments"), throwIfSetButNotContract = _b.throwIfSetButNotContract, throwIfSetButBadAddress = _b.throwIfSetButBadAddress;
 var bisectFindFirstIndex = require("./utils/bisectFindFirstIndex");
 var TokenContract = require("../build/ERC20Mintable.json");
 var MonoplasmaJson = require("../build/Monoplasma.json");
@@ -144,7 +147,7 @@ module.exports = /** @class */ (function (_super) {
                             _this.state.lastObservedBlockNumber = blockNumber;
                         });
                         // get initial state from contracts, also works as a sanity check for the config
-                        this.contract = new Contract(this.state.contractAddress, MonoplasmaJson.abi, this.eth);
+                        this.contract = new ethers_1.Contract(this.state.contractAddress, MonoplasmaJson.abi, this.eth);
                         _b = this.state;
                         return [4 /*yield*/, this.contract.token()];
                     case 6:
@@ -153,7 +156,7 @@ module.exports = /** @class */ (function (_super) {
                         return [4 /*yield*/, this.contract.owner()];
                     case 7:
                         _c.adminAddress = _h.sent();
-                        this.token = new Contract(this.state.tokenAddress, TokenContract.abi, this.eth);
+                        this.token = new ethers_1.Contract(this.state.tokenAddress, TokenContract.abi, this.eth);
                         _d = this.state;
                         return [4 /*yield*/, this.contract.blockFreezeSeconds()];
                     case 8:
@@ -206,7 +209,7 @@ module.exports = /** @class */ (function (_super) {
                         // TODO: cache only starting from given block (that operator/validator have loaded state from store)
                         this.channel.on("message", function (type, addresses, meta) {
                             _this.log("Message received: " + type + " " + addresses);
-                            var addressList = addresses.map(utils.getAddress);
+                            var addressList = addresses.map(ethers_1.utils.getAddress);
                             var event = { type: type, addressList: addressList, timestamp: meta.messageId.timestamp };
                             _this.messageCache.push(event);
                         });
@@ -231,7 +234,7 @@ module.exports = /** @class */ (function (_super) {
                             return __generator(this, function (_a) {
                                 switch (_a.label) {
                                     case 0:
-                                        addressList = addresses.map(utils.getAddress);
+                                        addressList = addresses.map(ethers_1.utils.getAddress);
                                         event = { type: type, addressList: addressList, timestamp: meta.messageId.timestamp };
                                         this.log("Members " + type + ": " + addressList);
                                         return [4 /*yield*/, replayOn(this.plasma, [event])];
@@ -248,7 +251,7 @@ module.exports = /** @class */ (function (_super) {
                             return __generator(this, function (_b) {
                                 switch (_b.label) {
                                     case 0:
-                                        this.log("Admin fee changed to " + utils.formatEther(adminFee) + " at block " + event.blockNumber);
+                                        this.log("Admin fee changed to " + ethers_1.utils.formatEther(adminFee) + " at block " + event.blockNumber);
                                         _a = event;
                                         return [4 /*yield*/, this.getBlockTimestamp(event.blockNumber)];
                                     case 1:
@@ -284,7 +287,7 @@ module.exports = /** @class */ (function (_super) {
                             return __generator(this, function (_b) {
                                 switch (_b.label) {
                                     case 0:
-                                        this.log("Received " + utils.formatEther(event.args.value) + " DATA");
+                                        this.log("Received " + ethers_1.utils.formatEther(event.args.value) + " DATA");
                                         _a = event;
                                         return [4 /*yield*/, this.getBlockTimestamp(event.blockNumber)];
                                     case 1:

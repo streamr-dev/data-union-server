@@ -1,6 +1,6 @@
 const EventEmitter = require("events")
 
-const { Contract, utils } = require("ethers")
+import {Contract, utils} from 'ethers';
 
 const MonoplasmaState = require("./state")
 const { replayOn, mergeEventLists } = require("./utils/events")
@@ -42,7 +42,7 @@ function parseLogs(interface, logs) {
  */
 module.exports = class MonoplasmaWatcher extends EventEmitter {
 
-    constructor(eth, joinPartChannel, store) {
+    constructor(eth, joinPartChannel, store : Store) {
         super()
         this.eth = eth
         this.channel = joinPartChannel

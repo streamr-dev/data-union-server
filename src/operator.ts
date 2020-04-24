@@ -1,4 +1,4 @@
-const { Contract } = require("ethers")
+import { Contract, Wallet } from 'ethers';
 
 const sleep = require("./utils/sleep-promise")
 const { throwIfBadAddress } = require("./utils/checkArguments")
@@ -11,8 +11,9 @@ const MonoplasmaJson = require("../build/Monoplasma.json")
 const debug = require("debug")
 
 module.exports = class MonoplasmaOperator {
+    wallet : Wallet;
 
-    constructor(wallet, joinPartChannel, store) {
+    constructor(wallet : Wallet, joinPartChannel, store : Store) {
         this.wallet = wallet
         this.watcher = new MonoplasmaWatcher(wallet.provider, joinPartChannel, store)
         this.lastSavedBlock = null
