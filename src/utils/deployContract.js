@@ -15,7 +15,7 @@ const DataUnionContract = require("../../build/DataunionVault")
 /**
  * Deploy a new DataunionVault contract and create the required joinPartStream
  * @param {Wallet} wallet to do the deployment from, also becomes owner or stream and contract
- * @param {EthereumAddress} operatorAddress community-product-server that should operate the contract
+ * @param {EthereumAddress} operatorAddress data-union-server that should operate the contract
  * @param {EthereumAddress} tokenAddress
  * @param {Number} blockFreezePeriodSeconds security parameter against operator failure (optional, default: 0)
  * @param {Number} adminFee fraction of revenue that goes to product admin, 0...1 (optional, default: 0)

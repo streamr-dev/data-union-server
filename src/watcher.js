@@ -270,7 +270,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         const events = mergeEventLists(mergeEventLists(adminFeeEvents, blockCreateEvents), transferEvents)
 
         // TODO: maybe harvest block timestamps from provider in the background after start-up, save to store?
-        //   Blocking here could last very long during first playback in case of long-lived community...
+        //   Blocking here could last very long during first playback in case of long-lived data union with long join-part-history...
         this.log(`Retrieving block timestamps for ${events.length} events...`)
         for (const event of events) {
             event.timestamp = await this.getBlockTimestamp(event.blockNumber)

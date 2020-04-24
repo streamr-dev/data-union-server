@@ -6,7 +6,7 @@ cd scripts
 export SLEEP_MS=0
 
 export DATAUNION_ADDRESS=`node deploy.js |grep Deployed | grep -oe '0x\w\+'`
-echo "Deployed dataunion at $DATAUNION_ADDRESS"
+echo "Deployed data union at $DATAUNION_ADDRESS"
 
 node add_secret.js
 node join_dataunion.js

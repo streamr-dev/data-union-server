@@ -26,7 +26,7 @@ const BLOCK_FREEZE_SECONDS = 1
 const FileStore = require("../../src/fileStore")
 
 // this is the oldest demo, presented in EthDenver 2019
-// only one operator is run (no server.js), so only one community is being operated
+// only one operator is run (no server.js), so only one dataUnion is being operated
 describe("Revenue sharing demo", () => {
     let operatorProcess
 
@@ -40,7 +40,7 @@ describe("Revenue sharing demo", () => {
         spawn("rm", ["-rf", STORE_DIR])
     })
 
-    // TODO: fix start_operator.js, then fix this test (copy relevant improvements from community-product-demo first)
+    // TODO: fix start_operator.js, then fix this test (copy relevant improvements from data-union-demo first)
     it.skip("should get through the happy path", async function () {
         this.timeout(30000)
         log("--- Running start_operator.js ---")
@@ -100,7 +100,7 @@ describe("Revenue sharing demo", () => {
         }).then(resp => resp.json())
         log(`   Server response: ${JSON.stringify(res1)}`)
 
-        log("   check that there are new users in community")
+        log("   check that there are new users in dataUnion")
         const res1b = await fetch(`http://localhost:${WEBSERVER_PORT}/api/status`).then(resp => resp.json())
         log(`      Status: ${JSON.stringify(res1b)}`)
 

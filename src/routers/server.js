@@ -7,32 +7,32 @@ const dataunionRouter = require("./dataunion")
 
 const log = require("debug")("Streamr::dataunion::routers::server")
 
-/** @type {(server: CommunityProductServer) => express.Router} */
+/** @type {(server: DataUnionServer) => express.Router} */
 module.exports = (server) => {
 
     function parseDataunionState(req, res, next) {
         log("Parsing state")
         let address
         try {
-            address = getAddress(req.params.dataunionAddress)
+            address = getAddress(req.params.dataUnionAddress)
         } catch (e) {   // TODO: check it's actually parsing error?
-            res.status(400).send({error: `Bad Ethereum address: ${req.params.dataunionAddress}`})
+            res.status(400).send({error: `Bad Ethereum address: ${req.params.dataUnionAddress}`})
             return
         }
 
-        const community = server.communities[address]
-        if (!community) {
-            res.status(404).send({error: `We're not operating the community @ ${address}`})
+        const dataUnion = server.dataUnions[address]
+        if (!dataUnion) {
+            res.status(404).send({error: `We're not operating the data union @ ${address}`})
             return
         }
-        if (!community.operator) {
+        if (!dataUnion.operator) {
             // TODO: track how long starting has been in progress, re-try after a timeout?
-            res.status(503).send({error: `Community is being started @ ${address}`, community})
+            res.status(503).send({error: `dataUnion is being started @ ${address}`, dataUnion})
             return
         }
 
-        req.monoplasmaState = community.operator.watcher.plasma
-        req.joinPartStreamId = community.operator.watcher.channel.stream.id
+        req.monoplasmaState = dataUnion.operator.watcher.plasma
+        req.joinPartStreamId = dataUnion.operator.watcher.channel.stream.id
         next()
     }
 
@@ -42,8 +42,8 @@ module.exports = (server) => {
             config: server.operatorConfig,
             dataunions: {},
         }
-        for (const [address, c] of Object.entries(server.communities)) {
-            // is the community already syncing or running?
+        for (const [address, c] of Object.entries(server.dataUnions)) {
+            // is the data union already syncing or running?
             if (c.operator) {
                 const stats = dataunionRouter.getStats(c.operator.watcher.plasma)
                 stats.joinPartStreamId = c.operator.watcher.channel.stream.id
@@ -61,11 +61,11 @@ module.exports = (server) => {
 
     const router = express.Router()
 
-    router.use("/dataunions/:dataunionAddress", parseDataunionState, dataunionRouter)
-    router.use("/communities/:dataunionAddress", parseDataunionState, dataunionRouter)
+    router.use("/dataunions/:dataUnionAddress", parseDataunionState, dataunionRouter)
+    router.use("/dataunions/:dataUnionAddress", parseDataunionState, dataunionRouter)
 
     router.get("/dataunions", getSummary)
-    router.get("/communities", getSummary)
+    router.get("/dataUnions", getSummary)
 
     return router
 }

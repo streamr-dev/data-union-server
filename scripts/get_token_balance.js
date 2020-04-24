@@ -42,10 +42,10 @@ async function start() {
     if (TOKEN_ADDRESS) {
         tokenAddress = await throwIfNotContract(provider, TOKEN_ADDRESS, "environment variable TOKEN_ADDRESS")
     } else {
-        const dataunionAddress = await throwIfNotContract(provider, DATAUNION_ADDRESS, "env variable DATAUNION_ADDRESS")
-        log(`Getting token address from DataunionVault at ${dataunionAddress}`)
-        const dataunion = new Contract(dataunionAddress, DataUnionContract.abi, provider)
-        tokenAddress = await throwIfNotContract(provider, await dataunion.token(), `DataunionVault(${dataunionAddress}).token()`)
+        const dataUnionAddress = await throwIfNotContract(provider, DATAUNION_ADDRESS, "env variable DATAUNION_ADDRESS")
+        log(`Getting token address from DataunionVault at ${dataUnionAddress}`)
+        const dataunion = new Contract(dataUnionAddress, DataUnionContract.abi, provider)
+        tokenAddress = await throwIfNotContract(provider, await dataunion.token(), `DataunionVault(${dataUnionAddress}).token()`)
     }
     log(`Token at ${tokenAddress}`)
     const token = new Contract(tokenAddress, TokenContract.abi, provider)

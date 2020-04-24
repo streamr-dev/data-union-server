@@ -143,7 +143,7 @@ describe("Data Union demo but through a running E&E instance", () => {
 
         // wrap fetch; with the Authorization header the noise is just too much...
         async function GET(url) {
-            url = url.replace("dataunions", "communities")  // TODO: remove once https://streamr.atlassian.net/browse/CORE-1869 lands
+            url = url.replace("dataunions", "dataUnions")  // TODO: remove once https://streamr.atlassian.net/browse/CORE-1869 lands
             return fetch(STREAMR_HTTP_URL + url, {
                 headers: {
                     "Authorization": `Bearer ${sessionToken}`
@@ -151,7 +151,7 @@ describe("Data Union demo but through a running E&E instance", () => {
             }).then(resp => resp.json())
         }
         async function POST(url, bodyObject, sessionTokenOverride, methodOverride) {
-            url = url.replace("dataunions", "communities")  // TODO: remove once https://streamr.atlassian.net/browse/CORE-1869 lands
+            url = url.replace("dataunions", "dataUnions")  // TODO: remove once https://streamr.atlassian.net/browse/CORE-1869 lands
             return fetch(STREAMR_HTTP_URL + url, {
                 method: methodOverride || "POST",
                 body: JSON.stringify(bodyObject),
@@ -203,11 +203,11 @@ describe("Data Union demo but through a running E&E instance", () => {
         assert(productId)
 
         log("1.4) Create joinPartStream")   // done inside deployContract below
-        log("1.5) Deploy DataUnion contract")
+        log("1.5) Deploy data union contract")
         const wallet = new Wallet(privateKey, ganacheProvider)
         const nodeAddress = getAddress(STREAMR_NODE_ADDRESS)
-        const communityContract = await deployContract(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, ADMIN_FEE, config.streamrWsUrl, config.streamrHttpUrl)
-        const communityAddress = communityContract.address
+        const dataUnionContract = await deployContract(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, ADMIN_FEE, config.streamrWsUrl, config.streamrHttpUrl)
+        const dataUnionAddress = dataUnionContract.address
 
         log(`1.6) Wait until Operator starts t=${Date.now()}`)
         let stats = { error: true }
@@ -215,13 +215,13 @@ describe("Data Union demo but through a running E&E instance", () => {
         let sleepTime = 100
         while (stats.error) {
             await sleep(sleepTime *= 2)
-            stats = await GET(`/dataunions/${communityAddress}/stats`).catch(() => ({error: true}))
+            stats = await GET(`/dataunions/${dataUnionAddress}/stats`).catch(() => ({error: true}))
             log(`     Response t=${Date.now()}: ${JSON.stringify(stats)}`)
         }
         clearTimeout(statsTimeout)
 
         log("1.7) Set beneficiary in Product DB entry")
-        product.beneficiaryAddress = communityAddress
+        product.beneficiaryAddress = dataUnionAddress
         const putResponse = await PUT(`/products/${productId}`, product)
         log(`     Response: ${JSON.stringify(putResponse)}`)
 
@@ -238,9 +238,9 @@ describe("Data Union demo but through a running E&E instance", () => {
             "0x0000000000000000000000000000000000000000000000000000000000000009",
         ]
 
-        log("2.1) Add community secret")
-        const secretCreateResponse = await POST(`/dataunions/${communityAddress}/secrets`, {
-            name: "PLEASE DELETE ME, I'm a Community Product server test secret",
+        log("2.1) Add dataUnion secret")
+        const secretCreateResponse = await POST(`/dataunions/${dataUnionAddress}/secrets`, {
+            name: "PLEASE DELETE ME, I'm a data union Product server test secret",
             secret: "test",
         })
         log(`     Response: ${JSON.stringify(secretCreateResponse)}`)
@@ -253,10 +253,10 @@ describe("Data Union demo but through a running E&E instance", () => {
                 url: STREAMR_WS_URL,
                 restUrl: STREAMR_HTTP_URL,
             })
-            const joinResponse = await POST(`/dataunions/${communityAddress}/joinRequests`, {
+            const joinResponse = await POST(`/dataunions/${dataUnionAddress}/joinRequests`, {
                 memberAddress,
                 secret: "test",
-                metadata: { test: "PLEASE DELETE ME, I'm a Community Product server test joinRequest" },
+                metadata: { test: "PLEASE DELETE ME, I'm a data union Product server test joinRequest" },
             }, await tempClient.session.sessionTokenPromise)
             await tempClient.ensureDisconnected()
             log(`     Response: ${JSON.stringify(joinResponse)}`)
@@ -267,23 +267,23 @@ describe("Data Union demo but through a running E&E instance", () => {
         sleepTime = 1000
         while (!(members.length >= 10)) {
             await sleep(sleepTime)
-            members = await GET(`/dataunions/${communityAddress}/members`)
+            members = await GET(`/dataunions/${dataUnionAddress}/members`)
             log("members: ", members)
         }
 
         // TODO: send revenue by purchasing the product on Marketplace
         log("3) Send revenue in and check tokens were distributed")
-        const memberBeforeRevenues = await GET(`/dataunions/${communityAddress}/members/${address}`)
+        const memberBeforeRevenues = await GET(`/dataunions/${dataUnionAddress}/members/${address}`)
         const token = new Contract(config.tokenAddress, ERC20Mintable.abi, wallet)
         for (let i = 0; i < 5; i++) {
             const balance = await token.balanceOf(address)
             log(`   Sending 10 tokens (out of remaining ${formatEther(balance)}) to DataUnion contract...`)
 
-            const transferTx = await token.transfer(communityAddress, parseEther("10"))
+            const transferTx = await token.transfer(dataUnionAddress, parseEther("10"))
             await transferTx.wait(2)
 
             // check total revenue
-            const res3 = await GET(`/dataunions/${communityAddress}/stats`)
+            const res3 = await GET(`/dataunions/${dataUnionAddress}/stats`)
             log(`   Total revenue: ${formatEther(res3.totalEarnings || "0")}`)
         }
 
@@ -294,7 +294,7 @@ describe("Data Union demo but through a running E&E instance", () => {
         // wait until member.withdrawableEarnings is at least expected earnings
         while ((member.withdrawableEarnings - memberBeforeRevenues.withdrawableEarnings) < expectedAdminEarnings) {
             await sleep(1000)
-            member = await GET(`/dataunions/${communityAddress}/members/${address}`)
+            member = await GET(`/dataunions/${dataUnionAddress}/members/${address}`)
         }
 
         // add so CI more reliable until error_frozen issue has a workaround+test
@@ -307,13 +307,13 @@ describe("Data Union demo but through a running E&E instance", () => {
         const balanceBefore = await token.balanceOf(address)
         log(`   Token balance before: ${formatEther(balanceBefore)}`)
 
-        const contract = new Contract(communityAddress, DataUnion.abi, wallet)
+        const contract = new Contract(dataUnionAddress, DataUnion.abi, wallet)
         const withdrawTx = await contract.withdrawAll(member.withdrawableBlockNumber, member.withdrawableEarnings, member.proof)
         log("    withdrawAll done")
         await withdrawTx.wait(2)
         log("    withdrawAll confirmed")
 
-        const res4b = await GET(`/dataunions/${communityAddress}/members/${address}`)
+        const res4b = await GET(`/dataunions/${dataUnionAddress}/members/${address}`)
         log("    member stats after", res4b)
 
         const balanceAfter = await token.balanceOf(address)
@@ -324,7 +324,7 @@ describe("Data Union demo but through a running E&E instance", () => {
 
         log("4.1) Withdraw tokens for another account")
         const address2 = members[1].address // 0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf
-        const member2 = await GET(`/dataunions/${communityAddress}/members/${address2}`)
+        const member2 = await GET(`/dataunions/${dataUnionAddress}/members/${address2}`)
         log("    Member2 stats before", res4b)
         Object.keys(member2).forEach(k => log(`    ${k} ${JSON.stringify(member2[k])}`))
 
@@ -336,7 +336,7 @@ describe("Data Union demo but through a running E&E instance", () => {
         await withdrawTx2.wait(2)
         log("    withdrawAll confirmed")
 
-        const res4c = await GET(`/dataunions/${communityAddress}/members/${address2}`)
+        const res4c = await GET(`/dataunions/${dataUnionAddress}/members/${address2}`)
         log("    Member2 stats after", res4c)
 
         const balanceAfter2 = await token.balanceOf(address2)

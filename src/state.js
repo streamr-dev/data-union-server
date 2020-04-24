@@ -282,13 +282,13 @@ module.exports = class MonoplasmaState {
     }
 
     /**
-     * @param {number} amount of tokens that was added to the Community revenues
+     * @param {number} amount of tokens that was added to the data union revenues
      */
     addRevenue(amount) {
         const activeMembers = this.members.filter(m => m.isActive())
         const activeCount = activeMembers.length
         if (activeCount === 0) {
-            this.log(`No active members in community! Allocating ${amount} to admin account ${this.adminMember.address}`)
+            this.log(`No active members in data union! Allocating ${amount} to admin account ${this.adminMember.address}`)
             this.adminMember.addRevenue(amount)
         } else {
             const amountBN = new BN(amount)
@@ -302,7 +302,7 @@ module.exports = class MonoplasmaState {
     }
 
     /**
-     * Add an active recipient into Community, or re-activate existing one (previously removed)
+     * Add an active recipient into data union, or re-activate existing one (previously removed)
      * @param {string} address of the new member
      * @param {string} name of the new member
      * @returns {boolean} if the added member was new (previously unseen)
@@ -358,11 +358,11 @@ module.exports = class MonoplasmaState {
     /**
      * Monoplasma member to be added
      * @typedef {Object<string, string>} IncomingMember
-     * @property {string} address Ethereum address of the Community member
+     * @property {string} address Ethereum address of the data union member
      * @property {string} name Human-readable string representation
      */
     /**
-     * Add active recipients into Community, or re-activate existing ones (previously removed)
+     * Add active recipients into data union, or re-activate existing ones (previously removed)
      * @param {Array<IncomingMember|string>} members
      * @returns {Array<IncomingMember|string>} members that were actually added
      */

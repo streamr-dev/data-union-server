@@ -39,13 +39,13 @@ const DataUnionServer = require("../../src/server")
 const getServerRouter = require("../../src/routers/server")
 
 // TODO: separate server router and dataunion router
-describe("Community product server router", () => {
+describe("Data Union server router", () => {
     const port = 3031
     const serverURL = `http://localhost:${port}`
 
     let httpServer
     let token
-    let community
+    let dataUnion
     let channel
     before(async function() {
         this.timeout(5000)
@@ -62,7 +62,7 @@ describe("Community product server router", () => {
             await provider.send("evm_mine")
         }
 
-        log("Deploying test token and Community contract...")
+        log("Deploying test token and dataUnion contract...")
         const tokenDeployer = new ContractFactory(TokenContract.abi, TokenContract.bytecode, wallet)
         token = await tokenDeployer.deploy("Router test token", "TEST")
         await token.deployed()
@@ -73,7 +73,7 @@ describe("Community product server router", () => {
         const contractAddress = contract.address
 
         log("Starting DataUnionServer...")
-        const storeDir = path.join(os.tmpdir(), `communitiesRouter-test-${+new Date()}`)
+        const storeDir = path.join(os.tmpdir(), `dataUnionsRouter-test-${+new Date()}`)
         const server = new DataUnionServer(wallet, storeDir, {
             tokenAddress: token.address,
             operatorAddress: wallet.address,
@@ -81,7 +81,7 @@ describe("Community product server router", () => {
         channel = new MockStreamrChannel("dummy-stream-for-router-test")
         server.getStoreFor = () => mockStore(startState, initialBlock, log)
         server.getChannelFor = () => channel
-        community = await server.startOperating(contractAddress)
+        dataUnion = await server.startOperating(contractAddress)
 
         log("Starting CommunitiesRouter...")
         const app = express()
@@ -123,35 +123,35 @@ describe("Community product server router", () => {
     })
 
     it("GET /stats", async () => {
-        const stats = await fetch(`${serverURL}/dataunions/${community.address}/stats`).then(res => res.json())
+        const stats = await fetch(`${serverURL}/dataunions/${dataUnion.address}/stats`).then(res => res.json())
         assert.strictEqual(stats.memberCount.active, 2)
     })
 
     it("GET /members", async () => {
-        const memberList = await fetch(`${serverURL}/dataunions/${community.address}/members`).then(res => res.json())
+        const memberList = await fetch(`${serverURL}/dataunions/${dataUnion.address}/members`).then(res => res.json())
         assert.strictEqual(memberList.length, 2)
     })
 
     it("GET /members/address", async () => {
-        const member = await fetch(`${serverURL}/dataunions/${community.address}/members/${members[0].address}`).then(res => res.json())
+        const member = await fetch(`${serverURL}/dataunions/${dataUnion.address}/members/${members[0].address}`).then(res => res.json())
         assert.strictEqual(member.earnings, "50")
     })
 
     it("GET /members/non-existent-address", async () => {
-        const res = await fetch(`${serverURL}/dataunions/${community.address}/members/0x0000000000000000000000000000000000000001`)
+        const res = await fetch(`${serverURL}/dataunions/${dataUnion.address}/members/0x0000000000000000000000000000000000000001`)
         assert.strictEqual(res.status, 404)
     })
 
-    // Test the case where the member is in the community but too new to have earnings in withdrawable blocks
+    // Test the case where the member is in the data union but too new to have earnings in withdrawable blocks
     // Catch the UnhandledPromiseRejectionWarning: Error: Address 0x0000000000000000000000000000000000000002 not found!
     it("GET /members/new-member-address", async () => {
         const newMemberAddress = "0x0000000000000000000000000000000000000002"
         channel.publish("join", [newMemberAddress])
         await until(async () => {
-            const memberList = await fetch(`${serverURL}/dataunions/${community.address}/members`).then(res => res.json())
+            const memberList = await fetch(`${serverURL}/dataunions/${dataUnion.address}/members`).then(res => res.json())
             return memberList.length > 2
         })
-        const member = await fetch(`${serverURL}/dataunions/${community.address}/members/${newMemberAddress}`).then(res => res.json())
+        const member = await fetch(`${serverURL}/dataunions/${dataUnion.address}/members/${newMemberAddress}`).then(res => res.json())
         assert(!member.error)
         assert.strictEqual(member.withdrawableEarnings, "0")
     })
