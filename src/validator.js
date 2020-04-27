@@ -75,8 +75,8 @@ module.exports = class MonoplasmaValidator {
     }
 
     /**
-     * @param Number blockNumber of the block where exit is attempted
-     * @param List<MonoplasmaMember> members during the block where exit is attempted
+     * @param {number} blockNumber of the block where exit is attempted
+     * @param {List<MonoplasmaMember>} members during the block where exit is attempted
      */
     async exit(blockNumber, members) {
         // TODO: sleep until block freeze period is over

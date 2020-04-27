@@ -63,8 +63,8 @@ async function untilStreamMatches(stream, regex) {
  * Resolves the promise once stream matches given number times for target regex
  * @param {Readable} stream to subscribe to
  * @param {RegExp} regex to use for capture, should have EXACTLY ONE capture pattern and no "g"
- * @param {Number} count how many matches to collect
- * @returns {List<String>} list of 1st captures
+ * @param {number} count how many matches to collect
+ * @returns {List<string>} list of 1st captures
  */
 async function capture(stream, regex, count = 1) {
     let matches = []

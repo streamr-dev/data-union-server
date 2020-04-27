@@ -1,6 +1,6 @@
 const ethers = require("ethers")
 
-/** @typedef {String} EthereumAddress */
+/** @typedef {string} EthereumAddress */
 
 /**
  * Validate Ethereum contract addresses from user input

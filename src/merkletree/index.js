@@ -28,7 +28,7 @@ function wrapErrorObject(err, message) {
 /**
  * Encode a Redux-like action for RPC calls
  * @typedef {Object} Action
- * @property {String} type Action name
+ * @property {string} type Action name
  * @property {Object} payload Arbitrary value as payload
  */
 
@@ -59,7 +59,7 @@ class RPCWorker {
     /**
      * Sends `message` to worker process.
      * Creates new process if needed.
-     * @param {Object|String} message
+     * @param {Object|string} message
      */
     async send(message) {
         return new Promise((resolve, reject) => {

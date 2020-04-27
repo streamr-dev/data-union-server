@@ -23,8 +23,8 @@ const DataUnionServer = require("../../src/server")
  * @param {Wallet} wallet to do the deployment from, also becomes owner or stream and contract
  * @param {EthereumAddress} operatorAddress data-union-server process that should operate the contract
  * @param {EthereumAddress} tokenAddress
- * @param {Number} blockFreezePeriodSeconds
- * @param {Number} adminFeeFraction
+ * @param {number} blockFreezePeriodSeconds
+ * @param {number} adminFeeFraction
  */
 async function deployTestDataunion(wallet, operatorAddress, tokenAddress, blockFreezePeriodSeconds, adminFeeFraction) {
     log(`Deploying MOCK root chain contract (token @ ${tokenAddress}, blockFreezePeriodSeconds = ${blockFreezePeriodSeconds}, no joinPartStream...`)

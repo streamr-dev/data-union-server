@@ -7,7 +7,7 @@ const debug = require("debug")
  * @property {string} tokenAddress Ethereum address of token used by Monoplasma
  */
 /**
- * @param {String} storeDir where json files are stored
+ * @param {string} storeDir where json files are stored
  */
 module.exports = class FileStore {
 

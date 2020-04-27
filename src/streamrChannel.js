@@ -89,8 +89,8 @@ module.exports = class StreamrChannel extends EventEmitter {
 
     /**
      * Start listening to events
-     * @param {Number} syncStartTimestamp resend messages starting from (from beginning if omitted)
-     * @param {Number} playbackTimeoutMs give up with error after timeout (default 10 minutes)
+     * @param {number} syncStartTimestamp resend messages starting from (from beginning if omitted)
+     * @param {number} playbackTimeoutMs give up with error after timeout (default 10 minutes)
      * @returns {Promise<ResendResponseResent>} resolves when all events up to now are received
      */
     async listen(syncStartTimestamp, playbackTimeoutMs = 600000) {

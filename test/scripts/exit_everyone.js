@@ -45,7 +45,7 @@ function startScript(scriptName, envOverrides) {
  * Returns when script says it's done, or exits, or timeouts
  * @param {ChildProcess} scriptProcess to monitor
  * @param {number} timeoutMs after which to throw
- * @returns {String|number} stdout line containing "[DONE]", or exit code if exited
+ * @returns {string|number} stdout line containing "[DONE]", or exit code if exited
  * @throws if timed out
  */
 async function scriptIsDone(scriptProcess, timeoutMs = 30000) {

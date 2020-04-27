@@ -17,10 +17,10 @@ function parseAddress(address) {
 
 /**
  * @typedef {Object} BlockSummary
- * @property {Number} blockNumber
- * @property {Number} timestamp when the Monoplasma block was stored, NOT Ethereum block timestamp
- * @property {Number} memberCount
- * @property {Number} totalEarnings
+ * @property {number} blockNumber
+ * @property {number} timestamp when the Monoplasma block was stored, NOT Ethereum block timestamp
+ * @property {number} memberCount
+ * @property {number} totalEarnings
  */
 
 /**

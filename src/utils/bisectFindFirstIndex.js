@@ -4,7 +4,7 @@
  *   (so only sorted w.r.t. the condition)
  * @param {Array} array
  * @param {Function<Boolean>} condition evaluated on array items
- * @returns {Number} index of first first condition-fulfilling item
+ * @returns {number} index of first first condition-fulfilling item
  */
 module.exports = function bisectFindFirstIndex(array, condition) {
     // search range

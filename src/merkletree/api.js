@@ -11,8 +11,8 @@ const ZERO = "0x0000000000000000000000000000000000000000000000000000000000000000
  * Corresponding code in BalanceVerifier.sol:
  *   bytes32 leafHash = keccak256(abi.encodePacked(account, balance, blockNumber));
  * @param {MonoplasmaMember} member
- * @param {Number} salt e.g. blockNumber
- * @returns {String} keccak256 hash
+ * @param {number} salt e.g. blockNumber
+ * @returns {string} keccak256 hash
  */
 function hashLeaf(member, salt) {
     return solidityKeccak256(["address", "uint256", "uint256"], [member.address, member.earnings.toString(), salt])
@@ -20,9 +20,9 @@ function hashLeaf(member, salt) {
 
 /**
  * Hash intermediate branch nodes together
- * @param {String} data1 left branch
- * @param {String} data2 right branch
- * @returns {String} keccak256 hash
+ * @param {string} data1 left branch
+ * @param {string} data2 right branch
+ * @returns {string} keccak256 hash
  */
 function hashCombined(data1, data2) {
     return data1 < data2 ?
@@ -34,19 +34,19 @@ const MAX_POW_2 = Math.pow(2, 32)
 function roundUpToPowerOfTwo(x) {
     if (x > MAX_POW_2) {
         // guard against infinite loop
-        throw new Error(`Number too big: ${x}. Must be smaller than 2^32.`)
+        throw new Error(`number too big: ${x}. Must be smaller than 2^32.`)
     }
     let i = 1
     while (i < x) { i <<= 1 }
     return i
 }
 
-/** @typedef {String} EthereumAddress */
+/** @typedef {string} EthereumAddress */
 
 /**
  * @typedef {Object} MerkleTree
- * @property {Array<String>} hashes
- * @property {Map<EthereumAddress, Number>} indexOf the index of given address in the hashes array
+ * @property {Array<string>} hashes
+ * @property {Map<EthereumAddress, number>} indexOf the index of given address in the hashes array
  */
 
 /**
@@ -103,7 +103,7 @@ class MerkleTree {
     /**
      * Lazy update, the merkle tree is recalculated only when info is asked from it
      * @param newContents list of MonoplasmaMembers
-     * @param {String | Number} newSalt a number or hex string, e.g. blockNumber
+     * @param {string | number} newSalt a number or hex string, e.g. blockNumber
      */
     update(newContents, newSalt) {
         this.isDirty = true

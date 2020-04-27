@@ -100,7 +100,7 @@ module.exports = class MonoplasmaOperator {
     // TODO: call it commit instead. Replace all mentions of "publish" with "commit".
     /**
      * Sync watcher to the given block and publish the state AFTER it into blockchain
-     * @param {Number} rootchainBlockNumber to sync up to
+     * @param {number} rootchainBlockNumber to sync up to
      * @returns {Promise<TransactionReceipt>}
      */
     async _publishBlock(rootchainBlockNumber) {

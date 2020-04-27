@@ -17,11 +17,11 @@ const DataUnionContract = require("../../build/contracts/DataunionVault")
  * @param {Wallet} wallet to do the deployment from, also becomes owner or stream and contract
  * @param {EthereumAddress} operatorAddress data-union-server that should operate the contract
  * @param {EthereumAddress} tokenAddress
- * @param {Number} blockFreezePeriodSeconds security parameter against operator failure (optional, default: 0)
- * @param {Number} adminFee fraction of revenue that goes to product admin, 0...1 (optional, default: 0)
- * @param {String} streamrWsUrl websocket API URL (optional, default: production mainnet)
- * @param {String} streamrHttpUrl HTTP API URL (optional, default: production mainnet)
- * @param {Number} gasPriceGwei (optional, default: ethers.js default, probably network recommendation)
+ * @param {number} blockFreezePeriodSeconds security parameter against operator failure (optional, default: 0)
+ * @param {number} adminFee fraction of revenue that goes to product admin, 0...1 (optional, default: 0)
+ * @param {string} streamrWsUrl websocket API URL (optional, default: production mainnet)
+ * @param {string} streamrHttpUrl HTTP API URL (optional, default: production mainnet)
+ * @param {number} gasPriceGwei (optional, default: ethers.js default, probably network recommendation)
  */
 async function deployContract(wallet, operatorAddress, tokenAddress, streamrNodeAddress, blockFreezePeriodSeconds = 0, adminFee = 0, streamrWsUrl, streamrHttpUrl, gasPriceGwei) {
     throwIfBadAddress(operatorAddress, "deployContract function argument operatorAddress")

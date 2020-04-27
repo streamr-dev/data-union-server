@@ -21,8 +21,8 @@ module.exports = class MonoplasmaState {
      * @param {Object} store offering persistance for blocks
      * @param {string} adminAddress where revenues go if there are no members
      * @param {Object} adminFeeFraction fraction of revenue that goes to admin. Can be expressed as: number between 0 and 1, string of wei, BN of Wei (1 = 10^18)
-     * @param {Number} initialBlockNumber after which the state is described by this object
-     * @param {Number} initialTimestamp after which the state is described by this object
+     * @param {number} initialBlockNumber after which the state is described by this object
+     * @param {number} initialTimestamp after which the state is described by this object
      */
     constructor({
         blockFreezeSeconds,
@@ -55,9 +55,9 @@ module.exports = class MonoplasmaState {
         this.treeCache = []
         this.treeCacheSize = 5  // TODO: make tuneable? Must be at least 2
 
-        /** @property {Number} currentBlock that was last processed. State described by this object is after that block and all its transactions. */
+        /** @property {number} currentBlock that was last processed. State described by this object is after that block and all its transactions. */
         this.currentBlock = initialBlockNumber
-        /** @property {Number} currentTimestamp that was last processed. State described by this object is at or after that time. */
+        /** @property {number} currentTimestamp that was last processed. State described by this object is at or after that time. */
         this.currentTimestamp = initialTimestamp
 
         /** @property {Array<MonoplasmaMember>} members */
@@ -262,7 +262,7 @@ module.exports = class MonoplasmaState {
     // ///////////////////////////////////
 
     /**
-     * @param {Number|String|BN} adminFeeFraction fraction of revenue that goes to admin (string should be scaled by 10**18, like ether)
+     * @param {number|string|BN} adminFeeFraction fraction of revenue that goes to admin (string should be scaled by 10**18, like ether)
      */
     setAdminFeeFraction(adminFeeFraction) {
         // convert to BN
@@ -398,7 +398,7 @@ module.exports = class MonoplasmaState {
      * @param {number} timestamp in seconds of NewCommit event
      */
     async storeBlock(blockNumber, timestamp) {
-        if (!Number.isSafeInteger(timestamp)) { throw new Error("Timestamp should be a positive Number, got: " + timestamp) }
+        if (!Number.isSafeInteger(timestamp)) { throw new Error("Timestamp should be a positive number, got: " + timestamp) }
         if (!Number.isSafeInteger(blockNumber) || !(blockNumber > 0)) { throw new Error("blockNumber must be a positive integer")}
         const newerBlock = this.latestBlocks.find((block) => block.blockNumber >= blockNumber)
         if (newerBlock) {
