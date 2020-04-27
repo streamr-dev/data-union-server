@@ -2,7 +2,7 @@
 # Set environment variables for scripts so that they point to https://streamr.network/core
 # This is the production environment
 # Source this file to use: `source setup_prod`
-# Also add your mainnet Ethereum account: `export ETHEREUM_PRIVATE_KEY=`
+# Also add your mainnet Ethereum account for any "admin tasks": `export ETHEREUM_PRIVATE_KEY=`
 
 export ETHEREUM_NETWORK=homestead
 export STREAMR_NODE_ADDRESS=0xf3E5A65851C3779f468c9EcB32E6f25D9D68601a
@@ -23,17 +23,40 @@ export MEMBER_ADDRESS=0x7e5DfCeBC4B7A1A93970dec620f20930608B3e7a
 # exit_everyone
 export MIN_WITHDRAWABLE_EARNINGS=1000000000000000000    # 1 DATA
 
+# metrics reporting, see below
+export AWS_METRICS_BATCH_TIME_WINDOW=895  # 15 minutes - safety
+
+
+#####################################################################
+##    SCRIPTING UTILS (assert)
+#####################################################################
+
+SECONDS=0           # bash magic variable that gets incremented every second
+FAIL_COUNT=0
+send_metrics() {
+    if [[ $SECONDS -gt $AWS_METRICS_BATCH_TIME_WINDOW ]]; then
+        aws cloudwatch put-metric-data \
+            --region eu-west-1 \
+            --namespace "hetzner/data-union-server" \
+            --metric-name "${1:-monitoringAlert}" \
+            --value $FAIL_COUNT \
+            --timestamp $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        SECONDS=0
+        FAIL_COUNT=0
+    fi
+}
+
 report_ok () {
-    aws cloudwatch put-metric-data --region eu-west-1 --namespace "hetzner/data-union-server" --metric-name "${1:-monitoringAlert}" --value 0 --timestamp $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    send_metrics $1
 }
 
 report_fail () {
-    aws cloudwatch put-metric-data --region eu-west-1 --namespace "hetzner/data-union-server" --metric-name "${1:-monitoringAlert}" --value 1 --timestamp $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    FAIL_COUNT=$((FAIL_COUNT+1))
+    send_metrics $1
 }
 
 assert_exit_code_zero () {
-    if [ $? -eq 0 ]
-    then
+    if [ $? -eq 0 ]; then
         echo OK $1
         report_ok $1
     else
