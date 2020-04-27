@@ -13,12 +13,12 @@ Web server answers to following HTTP endpoints, read-only, for inspection purpos
 * GET /config
   * Returns the running server configuration
 * GET /dataunions
-  * Returns list of communities the server runs Operators for
-* GET /dataunions/{dataunionAddress}/stats
+  * Returns list of data unions the server runs Operators for
+* GET /dataunions/{dataUnionAddress}/stats
   * Returns Operator stats.
-* GET /dataunions/{dataunionAddress}/members
+* GET /dataunions/{dataUnionAddress}/members
   * Returns list of members
-* GET /dataunions/{dataunionAddress}/members/{memberAddress}
+* GET /dataunions/{dataUnionAddress}/members/{memberAddress}
   * Returns individual member stats (such as balances and withdraw proofs)
 
 All "writing" happens either through Ethereum contracts or the joinPartStream (see [streamrChannel.js](src/streamrChannel.js))

@@ -58,7 +58,7 @@ if (SENTRY_TOKEN) {
 }
 
 // TODO: log Sentry Context/scope:
-//   Sentry.configureScope(scope => scope.setUser({id: community.address}))
+//   Sentry.configureScope(scope => scope.setUser({id: dataUnion.address}))
 const log = QUIET ? (() => {}) : (...args) => {
     console.log(...args)
     Sentry && Sentry.addBreadcrumb({
@@ -104,7 +104,7 @@ async function start() {
     const tokenAddress = await throwIfNotContract(provider, TOKEN_ADDRESS, "environment variable TOKEN_ADDRESS")
 
     const operatorAddress = wallet.address
-    log(`Starting community products server with operator address ${operatorAddress}...`)
+    log(`Starting data union products server with operator address ${operatorAddress}...`)
     const config = {
         tokenAddress,
         operatorAddress,
@@ -140,19 +140,19 @@ async function start() {
             const streamrNodeAddress = process.env.STREAMR_NODE_ADDRESS || "0xFCAd0B19bB29D4674531d6f115237E16AfCE377c" // node address in docker dev environment
             const adminFee = process.env.ADMIN_FEE || 0
 
-            // deploy new communities
+            // deploy new dataUnions
             app.use("/admin/deploy", (req, res) => deployContract(wallet, wallet.address, tokenAddress, streamrNodeAddress, BLOCK_FREEZE_SECONDS || 1000, adminFee, config.streamrWsUrl, config.streamrHttpUrl).then(({contract: { address }}) => res.send({ address })).catch(error => res.status(500).send({error})))
-            app.use("/admin/addTo/:communityAddress", (req, res) => transfer(wallet, req.params.communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
+            app.use("/admin/addTo/:dataUnionAddress", (req, res) => transfer(wallet, req.params.dataUnionAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
 
-            // deploy a test community and provide direct manipulation endpoints for it (useful for seeing if anything is happening)
+            // deploy a test DataunionVault and provide direct manipulation endpoints for it (useful for seeing if anything is happening)
             const contract = await deployContract(wallet, wallet.address, tokenAddress, streamrNodeAddress, BLOCK_FREEZE_SECONDS || 1000, adminFee, config.streamrWsUrl, config.streamrHttpUrl)
-            const communityAddress = contract.address
-            app.use("/admin/addRevenue", (req, res) => transfer(wallet, communityAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
-            app.use("/admin/setAdminFee", (req, res) => setFee(wallet, communityAddress, "0.3").then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
-            app.use("/admin/resetAdminFee", (req, res) => setFee(wallet, communityAddress, 0).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
+            const dataUnionAddress = contract.address
+            app.use("/admin/addRevenue", (req, res) => transfer(wallet, dataUnionAddress, tokenAddress).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
+            app.use("/admin/setAdminFee", (req, res) => setFee(wallet, dataUnionAddress, "0.3").then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
+            app.use("/admin/resetAdminFee", (req, res) => setFee(wallet, dataUnionAddress, 0).then(tr => res.send(tr)).catch(error => res.status(500).send({error})))
 
-            log(`Deployed DataunionVault contract at ${communityAddress}, waiting for server to notice...`)
-            await server.communityIsRunning(communityAddress)
+            log(`Deployed DataunionVault contract at ${dataUnionAddress}, waiting for server to notice...`)
+            await server.dataUnionIsRunning(dataUnionAddress)
             await sleep(500)
 
             log("Adding members...")
@@ -165,12 +165,12 @@ async function start() {
                 "0x4178babe9e5148c6d5fd431cd72884b07ad855a0",
             ])
             log("Waiting for server to notice joins...")
-            while (server.communities[communityAddress].operator.watcher.plasma.members.length > 1) {
+            while (server.dataUnions[dataUnionAddress].operator.watcher.plasma.members.length > 1) {
                 await sleep(1000)
             }
 
             log("Transferring tokens to the contract...")
-            await transfer(wallet, communityAddress, tokenAddress)
+            await transfer(wallet, dataUnionAddress, tokenAddress)
 
             // this is here just so it's easy to add a breakpoint and inspect this scope
             for (;;) {
@@ -197,9 +197,9 @@ const DataUnion = require("../build/DataunionVault")
 async function setFee(wallet, targetAddress, fee) {
     throwIfNotContract(targetAddress, "Monoplasma contract address")
     if (!(fee >= 0 && fee <= 1)) { throw new Error(`Admin fee must be a number between 0...1, got: ${fee}`) }
-    const community = new Contract(targetAddress, DataUnion.abi, wallet)
+    const dataUnion = new Contract(targetAddress, DataUnion.abi, wallet)
     const feeBN = parseEther(fee.toString())
-    const tx = await community.setAdminFee(feeBN)
+    const tx = await dataUnion.setAdminFee(feeBN)
     const tr = await tx.wait(1)
     return tr
 }

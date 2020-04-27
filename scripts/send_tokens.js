@@ -56,7 +56,7 @@ async function start() {
     log("Connected to Ethereum network: ", JSON.stringify(network))
 
     const tokenAddress = await throwIfNotContract(provider, TOKEN_ADDRESS, "env variable TOKEN_ADDRESS")
-    const communityAddress = await throwIfNotContract(provider, DATAUNION_ADDRESS, "env variable DATAUNION_ADDRESS")
+    const dataUnionAddress = await throwIfNotContract(provider, DATAUNION_ADDRESS, "env variable DATAUNION_ADDRESS")
 
     if (DATA_TOKEN_AMOUNT && DATA_WEI_AMOUNT || !DATA_TOKEN_AMOUNT && !DATA_WEI_AMOUNT) { throw new Error("Please specify either env variable DATA_TOKEN_AMOUNT or DATA_WEI_AMOUNT, but not both!") }
     const dataWeiAmount = DATA_WEI_AMOUNT ? bigNumberify(DATA_WEI_AMOUNT) : parseEther(DATA_TOKEN_AMOUNT)
@@ -65,17 +65,17 @@ async function start() {
     if (privateKey.length !== 66) { throw new Error("Malformed private key, must be 64 hex digits long (optionally prefixed with '0x')") }
     const wallet = new Wallet(privateKey, provider)
 
-    log(`Checking DataunionVault contract at ${communityAddress}...`)
-    const community = new Contract(communityAddress, DataUnionContract.abi, provider)
+    log(`Checking DataunionVault contract at ${dataUnionAddress}...`)
+    const dataUnion = new Contract(dataUnionAddress, DataUnionContract.abi, provider)
     const getters = DataUnionContract.abi.filter(f => f.constant && f.inputs.length === 0).map(f => f.name)
     for (const getter of getters) {
-        log(`  ${getter}: ${await community[getter]()}`)
+        log(`  ${getter}: ${await dataUnion[getter]()}`)
     }
 
-    const communityTokenAddress = await community.token()
-    if (communityTokenAddress !== tokenAddress) {
-        // TODO: get tokenAddress from community if not explicitly given?
-        throw new Error(`Mismatch: token address given was ${tokenAddress}, community expects ${communityTokenAddress}`)
+    const dataUnionTokenAddress = await dataUnion.token()
+    if (dataUnionTokenAddress !== tokenAddress) {
+        // TODO: get tokenAddress from dataUnion if not explicitly given?
+        throw new Error(`Mismatch: token address given was ${tokenAddress}, data union expects ${dataUnionTokenAddress}`)
     }
 
     log(`Checking token contract at ${tokenAddress}...`)
@@ -84,7 +84,7 @@ async function start() {
     log("  Token symbol: ", await token.symbol())
     log("  Token decimals: ", await token.decimals())
 
-    log(`Transferring ${formatEther(dataWeiAmount)} DATA from ${wallet.address} to ${communityAddress}...`)
+    log(`Transferring ${formatEther(dataWeiAmount)} DATA from ${wallet.address} to ${dataUnionAddress}...`)
     if (sleepMs) {
         log(`Sleeping ${sleepMs}ms, please check the values and hit Ctrl+C if you're in the least unsure`)
         await sleep(sleepMs)
@@ -92,7 +92,7 @@ async function start() {
 
     const options = {}
     if (GAS_PRICE_GWEI) { options.gasPrice = parseUnits(GAS_PRICE_GWEI, "gwei") }
-    const tx = await token.transfer(communityAddress, dataWeiAmount, options)
+    const tx = await token.transfer(dataUnionAddress, dataWeiAmount, options)
     log(`Follow transaction at https://etherscan.io/tx/${tx.hash}`)
     const tr = await tx.wait(1)
     log(`Receipt: ${JSON.stringify(tr)}`)

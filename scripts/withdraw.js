@@ -55,21 +55,21 @@ async function start() {
     })
     log("Connected to Ethereum network: ", JSON.stringify(network))
 
-    const communityAddress = await throwIfNotContract(provider, DATAUNION_ADDRESS, "env variable DATAUNION_ADDRESS")
+    const dataUnionAddress = await throwIfNotContract(provider, DATAUNION_ADDRESS, "env variable DATAUNION_ADDRESS")
 
     const privateKey = ETHEREUM_PRIVATE_KEY.startsWith("0x") ? ETHEREUM_PRIVATE_KEY : "0x" + ETHEREUM_PRIVATE_KEY
     if (privateKey.length !== 66) { throw new Error("Malformed private key, must be 64 hex digits long (optionally prefixed with '0x')") }
     const wallet = new Wallet(privateKey, provider)
 
-    log(`Checking DataunionVault contract at ${communityAddress}...`)
-    const community = new Contract(communityAddress, DataUnionContract.abi, provider)
+    log(`Checking DataunionVault contract at ${dataUnionAddress}...`)
+    const dataUnion = new Contract(dataUnionAddress, DataUnionContract.abi, provider)
     const getters = DataUnionContract.abi.filter(f => f.constant && f.inputs.length === 0).map(f => f.name)
     for (const getter of getters) {
-        log(`  ${getter}: ${await community[getter]()}`)
+        log(`  ${getter}: ${await dataUnion[getter]()}`)
     }
 
-    const _tokenAddress = await community.token()
-    const tokenAddress = await throwIfNotContract(provider, _tokenAddress, `community(${communityAddress}).token`)
+    const _tokenAddress = await dataUnion.token()
+    const tokenAddress = await throwIfNotContract(provider, _tokenAddress, `dataUnion(${dataUnionAddress}).token`)
 
     log(`Checking token contract at ${tokenAddress}...`)
     const token = new Contract(tokenAddress, TokenContract.abi, wallet)
@@ -84,7 +84,7 @@ async function start() {
     const client = new StreamrClient(opts)
 
     log("Member stats:")
-    const stats = await client.memberStats(communityAddress, wallet.address)
+    const stats = await client.memberStats(dataUnionAddress, wallet.address)
     for (const [key, value] of Object.entries(stats)) {
         log(`  ${key}: ${value}`)
     }
@@ -93,20 +93,20 @@ async function start() {
     }
 
     const earningsBN = new BigNumber(stats.withdrawableEarnings)
-    const withdrawnBN = await community.withdrawn(wallet.address)
+    const withdrawnBN = await dataUnion.withdrawn(wallet.address)
     const unwithdrawnEarningsBN = earningsBN.sub(withdrawnBN)
     log(`  Previously withdrawn earnings: ${withdrawnBN.toString()}`)
     log(`  Previously unwithdrawn earnings: ${unwithdrawnEarningsBN.toString()}`)
 
-    log(`Withdrawing ${formatEther(unwithdrawnEarningsBN)} DATA from ${communityAddress} to ${wallet.address}...`)
+    log(`Withdrawing ${formatEther(unwithdrawnEarningsBN)} DATA from ${dataUnionAddress} to ${wallet.address}...`)
     if (sleepMs) {
         log(`Sleeping ${sleepMs}ms, please check the values and hit Ctrl+C if you're in the least unsure`)
         await sleep(sleepMs)
     }
 
     // TODO: use client once withdraw is available from NPM
-    //const tx = await client.getWithdrawTx(communityAddress)
-    const contract = new Contract(communityAddress, DataUnionContract.abi, wallet)
+    //const tx = await client.getWithdrawTx(dataUnionAddress)
+    const contract = new Contract(dataUnionAddress, DataUnionContract.abi, wallet)
     const options = {}
     if (GAS_PRICE_GWEI) { options.gasPrice = parseUnits(GAS_PRICE_GWEI, "gwei") }
     const tx = await contract.withdrawAll(

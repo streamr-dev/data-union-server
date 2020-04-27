@@ -68,7 +68,7 @@ async function start() {
     })
     log("Connected to Ethereum network: ", JSON.stringify(network))
 
-    const dataunionAddress = await throwIfNotContract(provider, DATAUNION_ADDRESS, "env variable DATAUNION_ADDRESS")
+    const dataUnionAddress = await throwIfNotContract(provider, DATAUNION_ADDRESS, "env variable DATAUNION_ADDRESS")
 
     const rawKeys = [ETHEREUM_PRIVATE_KEY].concat((ETHEREUM_PRIVATE_KEYS || "").split(",")).filter(x => x)
     if (rawKeys.length < 1) {
@@ -76,15 +76,15 @@ async function start() {
     }
     const wallets = rawKeys.map(key => new Wallet(key, provider))   // throws "Error: invalid private key" on bad keys
 
-    log(`Checking DataunionVault contract at ${dataunionAddress}...`)
-    const dataunion = new Contract(dataunionAddress, DataunionJson.abi, wallets[0])
+    log(`Checking DataunionVault contract at ${dataUnionAddress}...`)
+    const dataunion = new Contract(dataUnionAddress, DataunionJson.abi, wallets[0])
     const getters = DataunionJson.abi.filter(f => f.constant && f.inputs.length === 0).map(f => f.name)
     for (const getter of getters) {
         log(`  ${getter}: ${await dataunion[getter]().catch(e => e.message)}`)
     }
 
     const _tokenAddress = await dataunion.token()
-    const tokenAddress = await throwIfNotContract(provider, _tokenAddress, `DataunionVault(${dataunionAddress}).token`)
+    const tokenAddress = await throwIfNotContract(provider, _tokenAddress, `DataunionVault(${dataUnionAddress}).token`)
 
     log(`Checking token contract at ${tokenAddress}...`)
     const token = new Contract(tokenAddress, TokenJson.abi, wallets[0])
@@ -115,11 +115,11 @@ async function start() {
         // }))
         log(`Loaded ${members.length} members`)
     } else {
-        members = await client.getMembers(dataunionAddress)
+        members = await client.getMembers(dataUnionAddress)
         const maxTxCount = MAX_MEMBERS_TO_WITHDRAW && MAX_MEMBERS_TO_WITHDRAW < members.length ? MAX_MEMBERS_TO_WITHDRAW : members.length
         for (let i = 0; i < members.length && txCount < maxTxCount; i++) { // TODO: do filtering already in this loop?
             const member = members[i]
-            const stats = await client.getMemberStats(dataunionAddress, member.address)
+            const stats = await client.getMemberStats(dataUnionAddress, member.address)
             member.earningsBN = new BigNumber(stats.withdrawableEarnings)
             member.withdrawnBN = await dataunion.withdrawn(member.address)
             member.unwithdrawnEarningsBN = member.earningsBN.sub(member.withdrawnBN)
@@ -186,7 +186,7 @@ async function start() {
     }
 
     // split the members in batches and send them in parallel, one at a time from each wallet
-    const contracts = wallets.map(w => new Contract(dataunionAddress, DataunionJson.abi, w))
+    const contracts = wallets.map(w => new Contract(dataUnionAddress, DataunionJson.abi, w))
     // TODO: more functional:
     // members.forChunks(contracts.length, members => {
     //    const receipts = await Promise.all(contracts.map(c => {

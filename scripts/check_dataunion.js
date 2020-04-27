@@ -38,7 +38,7 @@ const error = (e, ...args) => {
 }
 
 const lastArg = process.argv.pop()
-const communityAddressArg = lastArg.endsWith("check_dataunion.js") ? "" : lastArg
+const dataUnionAddressArg = lastArg.endsWith("check_dataunion.js") ? "" : lastArg
 
 async function start() {
     const provider = ETHEREUM_SERVER ? new JsonRpcProvider(ETHEREUM_SERVER) : getDefaultProvider(ETHEREUM_NETWORK)
@@ -47,22 +47,22 @@ async function start() {
     })
     log("Connected to Ethereum network: ", JSON.stringify(network))
 
-    const communityAddress =
-        await throwIfSetButNotContract(provider, communityAddressArg, "command-line argument (Community contract Ethereum address)") ||
+    const dataUnionAddress =
+        await throwIfSetButNotContract(provider, dataUnionAddressArg, "command-line argument (DataunionVault contract Ethereum address)") ||
         await throwIfNotContract(provider, DATAUNION_ADDRESS, "env variable DATAUNION_ADDRESS")
     const streamrNodeAddress = await throwIfSetButBadAddress(STREAMR_NODE_ADDRESS, "env variable STREAMR_NODE_ADDRESS")
 
-    log(`Checking DataunionVault contract at ${communityAddress}...`)
-    const community = new Contract(communityAddress, DataUnionContract.abi, provider)
+    log(`Checking DataunionVault contract at ${dataUnionAddress}...`)
+    const dataUnion = new Contract(dataUnionAddress, DataUnionContract.abi, provider)
     const getters = DataUnionContract.abi.filter(f => f.constant && f.inputs.length === 0).map(f => f.name)
-    const communityProps = {}
+    const dataUnionProps = {}
     for (const getter of getters) {
-        communityProps[getter] = await community[getter]()
-        log(`  ${getter}: ${communityProps[getter]}`)
+        dataUnionProps[getter] = await dataUnion[getter]()
+        log(`  ${getter}: ${dataUnionProps[getter]}`)
     }
 
-    const _tokenAddress = await community.token()
-    const tokenAddress = await throwIfNotContract(provider, _tokenAddress, `DataunionVault(${communityAddress}).token()`)
+    const _tokenAddress = await dataUnion.token()
+    const tokenAddress = await throwIfNotContract(provider, _tokenAddress, `DataunionVault(${dataUnionAddress}).token()`)
 
     log(`Checking token contract at ${tokenAddress}...`)
     const token = new Contract(tokenAddress, TokenContract.abi, provider)
@@ -77,17 +77,17 @@ async function start() {
     const client = new StreamrClient(opts)
 
     log("Data union stats from server")
-    const stats = await client.getCommunityStats(community.address)
+    const stats = await client.getdataUnionStats(dataUnion.address)
     log(`  Members: ${stats.memberCount.active} active / ${stats.memberCount.total} total`)
     log(`  Latest unfrozen block: ${stats.latestWithdrawableBlock.blockNumber} (${stats.latestWithdrawableBlock.memberCount} members)`)
     log(`  Total earnings received: ${formatEther(stats.totalEarnings)}`)
 
-    const expectedBalance = communityProps.totalWithdrawn.sub(stats.totalEarnings).mul(-1)
-    const communityBalance = await token.balanceOf(community.address)
-    const diff = communityBalance.sub(expectedBalance)
-    log(`  Total withdrawn from contract: ${formatEther(communityProps.totalWithdrawn)}`)
+    const expectedBalance = dataUnionProps.totalWithdrawn.sub(stats.totalEarnings).mul(-1)
+    const dataUnionBalance = await token.balanceOf(dataUnion.address)
+    const diff = dataUnionBalance.sub(expectedBalance)
+    log(`  Total withdrawn from contract: ${formatEther(dataUnionProps.totalWithdrawn)}`)
     log(`  Earnings - withdrawn: ${formatEther(expectedBalance)}`)
-    log(`  Contract balance: ${formatEther(communityBalance)}`)
+    log(`  Contract balance: ${formatEther(dataUnionBalance)}`)
     log(`  => Difference: ${formatEther(diff)}`)
     if (diff.lt(0)) {
         log("!!! TOKENS MISSING FROM CONTRACT !!!")
@@ -96,7 +96,7 @@ async function start() {
     // check EE can write into joinPartStream
     if (streamrNodeAddress) {
         log(`  Streamr node address: ${streamrNodeAddress}`)    // TODO: add endpoint for asking this from EE
-        const joinPartStreamId = communityProps.joinPartStream
+        const joinPartStreamId = dataUnionProps.joinPartStream
         log(`Checking joinPartStream ${joinPartStreamId}...`)
         const stream = await client.getStream(joinPartStreamId)
         try {
@@ -142,12 +142,12 @@ async function start() {
 
     log("Listing all members... (NB: withdrawableEarnings isn't displayed, use check_member.js for that)")
     // TODO: use client once withdraw is available from NPM
-    //const memberList = await client.getMembers(communityAddress)
-    const memberList = await getMembers(communityAddress)
+    //const memberList = await client.getMembers(dataUnionAddress)
+    const memberList = await getMembers(dataUnionAddress)
     let sumOfEarnings = new BigNumber(0)
     for (const {address, earnings} of memberList) {
         sumOfEarnings = sumOfEarnings.add(earnings)
-        const withdrawn = await community.withdrawn(address)
+        const withdrawn = await dataUnion.withdrawn(address)
         const balance = withdrawn.sub(earnings).mul(-1)
         log(`  ${address}`)
         log(`    Server: Total earnings: ${formatEther(earnings)}`)
@@ -158,14 +158,14 @@ async function start() {
         }
     }
     log(`Sum of members' earnings: ${formatEther(sumOfEarnings)}`)
-    log(`Total earnings for the community: ${formatEther(stats.totalEarnings)}`)
+    log(`Total earnings for the dataUnion: ${formatEther(stats.totalEarnings)}`)
     log("[DONE]")
 }
 
 start().catch(error)
 
 const fetch = require("node-fetch")
-async function getMembers(communityAddress) {
-    const url = `${STREAMR_HTTP_URL || "https://streamr.network/api/v1"}/dataunions/${communityAddress}/members`
+async function getMembers(dataUnionAddress) {
+    const url = `${STREAMR_HTTP_URL || "https://streamr.network/api/v1"}/dataunions/${dataUnionAddress}/members`
     return fetch(url).then((res) => res.json())
 }

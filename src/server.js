@@ -26,7 +26,7 @@ const SERVER_VERSION = 1
  */
 
 /**
- * @property {Map<EthereumAddress, Community>} communities
+ * @property {Map<EthereumAddress, DataUnion>} dataUnions
  */
 module.exports = class DataUnionServer {
     /**
@@ -41,10 +41,10 @@ module.exports = class DataUnionServer {
         this.eth = wallet.provider
         this.log = log || debug("Streamr::dataunion::server")   // TODO: don't pass log func in constructor
         this.error = error || console.error // eslint-disable-line no-console
-        this.communities = {}       // mapping: Ethereum address => Community object
+        this.dataUnions = {}       // mapping: Ethereum address => dataUnion object
         this.storeDir = storeDir
         this.operatorConfig = operatorConfig || {}
-        this.communityIsRunningPromises = {}
+        this.dataUnionIsRunningPromises = {}
         //this.whitelist = whitelist    // TODO
         //this.blacklist = blacklist
         this.startCalled = false
@@ -67,12 +67,12 @@ module.exports = class DataUnionServer {
 
     async stop() {
         // TODO: hand over operators to another server?
-        const communities = this.communities
-        this.communities = {}
-        this.communityIsRunningPromises = {}
+        const dataUnions = this.dataUnions
+        this.dataUnions = {}
+        this.dataUnionIsRunningPromises = {}
         this.eth.removeAllListeners({ topics: [operatorChangedEventTopic] })
-        await Promise.all(Object.values(communities).map((community) => (
-            community.operator && community.operator.shutdown()
+        await Promise.all(Object.values(dataUnions).map((dataUnion) => (
+            dataUnion.operator && dataUnion.operator.shutdown()
         )))
     }
 
@@ -84,7 +84,7 @@ module.exports = class DataUnionServer {
             topics: [operatorChangedEventTopic, hexZeroPad(this.wallet.address, 32).toLowerCase()]
         }
 
-        // TODO: remove communities that have been switched away, so not to (start and) stop operators during playback
+        // TODO: remove dataUnions that have been switched away, so not to (start and) stop operators during playback
 
         const logs = await this.eth.getLogs(filter)
 
@@ -116,10 +116,10 @@ module.exports = class DataUnionServer {
         }), { concurrency: 6 })
 
         this.log(`Finished playback of ${total} operator change events in ${Date.now() - startAllTime}ms.`)
-        const numCommunities = Object.keys(this.communities).length
+        const numCommunities = Object.keys(this.dataUnions).length
         if (numErrors && numErrors === numCommunities) {
             // kill if all operators errored
-            throw new Error(`All ${numCommunities} communities failed to start. Shutting down.`)
+            throw new Error(`All ${numCommunities} dataUnions failed to start. Shutting down.`)
         }
     }
 
@@ -139,24 +139,24 @@ module.exports = class DataUnionServer {
     }
 
     /**
-     * Filter how to respond to OperatorChanged events, pass new communities to startOperating
+     * Filter how to respond to OperatorChanged events, pass new dataUnions to startOperating
      * TODO: abuse defenses could be replaced with bytecode checking or similar if feasible
      * @param {string} address of Data Union that changed its operator
      */
     async onOperatorChangedEventAt(address) {
         const contract = new Contract(address, DataUnionContract.abi, this.eth)
         // create the promise to prevent later (duplicate) creation
-        const isRunningPromise = this.communityIsRunning(address)
-        const status = this.communityIsRunningPromises[address]
-        const { communities } = this
-        const community = communities[address]
+        const isRunningPromise = this.dataUnionIsRunning(address)
+        const status = this.dataUnionIsRunningPromises[address]
+        const { dataUnions } = this
+        const dataUnion = dataUnions[address]
         const newOperatorAddress = getAddress(await contract.operator())
         const contractVersion = await this.getVersionOfContractAt(address)
         const weShouldOperate = SERVER_VERSION === contractVersion && newOperatorAddress === this.wallet.address
-        if (!community) {
+        if (!dataUnion) {
             if (weShouldOperate) {
                 // rapid event spam stopper (from one contract)
-                communities[address] = {
+                dataUnions[address] = {
                     state: "launching",
                     eventDetectedAt: Date.now(),
                 }
@@ -170,11 +170,11 @@ module.exports = class DataUnionServer {
                 }
 
                 if (error) {
-                    if (communities[address]) {
-                        communities[address] = {
+                    if (dataUnions[address]) {
+                        dataUnions[address] = {
                             state: "failed",
                             error,
-                            eventDetectedAt: communities[address].eventDetectedAt,
+                            eventDetectedAt: dataUnions[address].eventDetectedAt,
                             failedAt: Date.now(),
                         }
                     }
@@ -183,14 +183,14 @@ module.exports = class DataUnionServer {
                     status.setRunning(result)
                 }
             } else {
-                this.log(`Detected a community for operator ${newOperatorAddress}, ignoring.`)
+                this.log(`Detected a dataUnion for operator ${newOperatorAddress}, ignoring.`)
                 status.setRunning() // I guess?
             }
         } else {
-            if (!community.operator || !community.operator.contract) {
-                // abuse mitigation: only serve one community per event.address
+            if (!dataUnion.operator || !dataUnion.operator.contract) {
+                // abuse mitigation: only serve one dataUnion per event.address
                 //   normally DataUnion shouldn't send several requests (potential spam attack attempt)
-                this.error(`Too rapid OperatorChanged events from ${address}, community is still launching`)
+                this.error(`Too rapid OperatorChanged events from ${address}, dataUnion is still launching`)
                 return
             }
             if (weShouldOperate) {
@@ -200,39 +200,39 @@ module.exports = class DataUnionServer {
 
             // operator was changed, we can stop running the operator process
             // TODO: make sure the operator was in fact started first
-            await community.operator.shutdown()
-            delete communities[address]
+            await dataUnion.operator.shutdown()
+            delete dataUnions[address]
         }
-        // forward community start success/failure
+        // forward dataUnion start success/failure
         return isRunningPromise
     }
 
     /**
-     * Helper function to await community deployments (after smart contract sent)
-     * @param {EthereumAddress} address of the community to watch
-     * @returns {Promise} that resolves when community is successfully started, or fails if starting fails
+     * Helper function to await dataUnion deployments (after smart contract sent)
+     * @param {EthereumAddress} address of the data union to watch
+     * @returns {Promise} that resolves when dataUnion is successfully started, or fails if starting fails
      */
-    async communityIsRunning(address) {
-        if (!(address in this.communityIsRunningPromises)) {
+    async dataUnionIsRunning(address) {
+        if (!(address in this.dataUnionIsRunningPromises)) {
             let setRunning, setFailed
             const promise = new Promise((done, fail) => {
                 setRunning = done
                 setFailed = fail
             })
-            this.communityIsRunningPromises[address] = {
+            this.dataUnionIsRunningPromises[address] = {
                 promise, setRunning, setFailed
             }
         }
-        return this.communityIsRunningPromises[address].promise
+        return this.dataUnionIsRunningPromises[address].promise
     }
 
     /**
-     * Create a join/part channel for the community when operator is being created
+     * Create a join/part channel for the data union when operator is being created
      * Separated from startOperating to be better able to inject mocks in testing
-     * @param {EthereumAddress} communityAddress of the community to be operated
+     * @param {EthereumAddress} dataUnionAddress of the data union to be operated
      */
-    async getChannelFor(communityAddress) {
-        const address = getAddress(communityAddress)
+    async getChannelFor(dataUnionAddress) {
+        const address = getAddress(dataUnionAddress)
         const contract = new Contract(address, DataUnionContract.abi, this.eth)
 
         // throws if joinPartStreamId doesn't exist
@@ -246,26 +246,26 @@ module.exports = class DataUnionServer {
     }
 
     /**
-     * Create a state and block store for the community when operator is being created
+     * Create a state and block store for the data union when operator is being created
      * Separated from startOperating to be better able to inject mocks in testing
-     * @param {EthereumAddress} communityAddress of the community to be operated
+     * @param {EthereumAddress} dataUnionAddress of the data union to be operated
      */
-    async getStoreFor(communityAddress) {
-        const address = getAddress(communityAddress)
+    async getStoreFor(dataUnionAddress) {
+        const address = getAddress(dataUnionAddress)
         const storeDir = `${this.storeDir}/${address}`
-        this.log(`Storing community ${communityAddress} data at ${storeDir}`)
+        this.log(`Storing dataUnion ${dataUnionAddress} data at ${storeDir}`)
         const fileStore = new FileStore(storeDir)
         return fileStore
     }
 
-    async startOperating(communityAddress) {
-        const address = getAddress(communityAddress)
+    async startOperating(dataUnionAddress) {
+        const address = getAddress(dataUnionAddress)
         const contract = new Contract(address, DataUnionContract.abi, this.eth)
 
         const operatorAddress = getAddress(await contract.operator())
         if (operatorAddress !== this.wallet.address) {
             // TODO: reconsider throwing here, since no way to *atomically* check operator before starting
-            throw new Error(`startOperating: Community requesting operator ${operatorAddress}, not a job for me (${this.wallet.address})`)
+            throw new Error(`startOperating: dataUnion requesting operator ${operatorAddress}, not a job for me (${this.wallet.address})`)
         }
 
         const operatorChannel = await this.getChannelFor(address) // throws if joinPartStream doesn't exist
@@ -274,21 +274,21 @@ module.exports = class DataUnionServer {
         const operator = new MonoplasmaOperator(this.wallet, operatorChannel, operatorStore)
         await operator.start(config)
 
-        /* TODO: move start after adding community to this.communities, to enable seeing a "syncing" community
-        const community = {
+        /* TODO: move start after adding dataUnion to this.dataUnions, to enable seeing a "syncing" dataUnion
+        const dataUnion = {
             state: "syncing",
         */
-        const community = {
+        const dataUnion = {
             state: "running",
             address,
             operator,
             joinPartStreamId: operatorChannel.stream.id,
         }
-        this.communities[address] = community
+        this.dataUnions[address] = dataUnion
         /*
         await operator.start(config)
-        community.state = "running"
+        dataUnion.state = "running"
         */
-        return community
+        return dataUnion
     }
 }

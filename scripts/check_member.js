@@ -52,17 +52,17 @@ async function start() {
         wallet = new Wallet(privateKey, provider)
     }
 
-    const dataunionAddress = await throwIfNotContract(provider, DATAUNION_ADDRESS, "env variable DATAUNION_ADDRESS")
+    const dataUnionAddress = await throwIfNotContract(provider, DATAUNION_ADDRESS, "env variable DATAUNION_ADDRESS")
     const memberAddress = wallet && wallet.address || await throwIfBadAddress(MEMBER_ADDRESS, "env variable MEMBER_ADDRESS")
 
-    log(`Checking DataunionVault contract at ${dataunionAddress}...`)
-    const dataunion = new Contract(dataunionAddress, DataUnionContract.abi, provider)
+    log(`Checking DataunionVault contract at ${dataUnionAddress}...`)
+    const dataunion = new Contract(dataUnionAddress, DataUnionContract.abi, provider)
 
     log(`  Token contract at ${tokenAddress}...`)
-    const tokenAddress = await throwIfNotContract(provider, await dataunion.token(), `DataunionVault(${dataunionAddress}).token()`)
+    const tokenAddress = await throwIfNotContract(provider, await dataunion.token(), `DataunionVault(${dataUnionAddress}).token()`)
     const token = new Contract(tokenAddress, TokenContract.abi, provider)
     const DATA = await token.symbol()
-    log(`  Data union token balance: ${formatEther(await token.balanceOf(dataunionAddress))} ${DATA}`)
+    log(`  Data union token balance: ${formatEther(await token.balanceOf(dataUnionAddress))} ${DATA}`)
     log(`  ${memberAddress} token balance: ${formatEther(await token.balanceOf(memberAddress))} ${DATA}`)
 
     log("Connecting to Streamr...")
@@ -72,7 +72,7 @@ async function start() {
     const client = new StreamrClient(opts)
 
     log(`Member stats for ${memberAddress}...`)
-    const stats = await client.getMemberStats(dataunionAddress, memberAddress)
+    const stats = await client.getMemberStats(dataUnionAddress, memberAddress)
     if (stats.error) {
         log(`Error from server: ${JSON.stringify(stats)}`)
         return

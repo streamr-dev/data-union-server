@@ -39,7 +39,7 @@ function summarizeBlock(block) {
 
 /**
  * Returns the "real-time plasma" stats
- * @returns {Object} summary of different stats and config of the community the watcher is watching
+ * @returns {Object} summary of different stats and config of the data union the watcher is watching
  */
 function getStats(monoplasmaState) {
     const memberCount = monoplasmaState.getMemberCount()
@@ -74,14 +74,14 @@ router.get("/", (req, res) => {
 
 router.get("/stats", (req, res) => {
     const state = req.monoplasmaState
-    //log(`HTTP ${state.dataunionAddress}> Requested community stats`)
+    //log(`HTTP ${state.dataUnionAddress}> Requested data union stats`)
     const result = getStats(state)
     res.send(result)
 })
 
 router.get("/members", (req, res) => {
     const state = req.monoplasmaState
-    //log(`HTTP ${state.dataunionAddress}> Requested monoplasma members`)
+    //log(`HTTP ${state.dataUnionAddress}> Requested monoplasma members`)
 
     const members = state.getMembers()
     res.send(members)
@@ -90,19 +90,19 @@ router.get("/members", (req, res) => {
 // NOTE: this function gets the highest query load
 router.get("/members/:address", (req, res) => {
     const state = req.monoplasmaState
-    //log(`HTTP ${state.dataunionAddress}> Requested member ${address}`)
+    //log(`HTTP ${state.dataUnionAddress}> Requested member ${address}`)
 
     const address = parseAddress(req.params.address)
     if (!address) {
         res.status(400).send({error: `Bad Ethereum address: ${req.params.address}`})
         return
     }
-    log(`HTTP ${req.params.communityAddress}> Requested member ${address}`)
+    log(`HTTP ${req.params.dataUnionAddress}> Requested member ${address}`)
     // TODO: revert to plasma.getMember after monoplasma update
     //const member = state.getMember(address)
     const member = state.getMembers().find(m => m.address === address)
     if (!member) {
-        res.status(404).send({error: `Member not found: ${address} in ${req.params.communityAddress}`})
+        res.status(404).send({error: `Member not found: ${address} in ${req.params.dataUnionAddress}`})
         return
     }
 

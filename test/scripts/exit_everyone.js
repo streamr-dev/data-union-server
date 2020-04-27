@@ -13,9 +13,7 @@ const { throwIfNotContract } = require("../../src/utils/checkArguments")
 const TokenContract = require("../../build/ERC20Detailed.json")
 const DataUnionContract = require("../../build/DataunionVault.json")
 
-//const log = require("debug")("Streamr::CPS::test::integration::exit-everyone-script")
-const log = console.log
-console.log(process.env)
+const log = require("debug")("Streamr::CPS::test::integration::exit-everyone-script")
 
 const { untilStreamContains, untilStreamMatches } = require("../utils/await-until")
 
