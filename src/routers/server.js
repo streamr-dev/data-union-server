@@ -3,14 +3,14 @@ const {
     utils: { getAddress }
 } = require("ethers")
 
-const dataunionRouter = require("./dataunion")
+const dataUnionRouter = require("./dataunion")
 
 const log = require("debug")("Streamr::dataunion::routers::server")
 
 /** @type {(server: DataUnionServer) => express.Router} */
 module.exports = (server) => {
 
-    function parseDataunionState(req, res, next) {
+    function parseDataUnionState(req, res, next) {
         log("Parsing state")
         let address
         try {
@@ -45,7 +45,7 @@ module.exports = (server) => {
         for (const [address, c] of Object.entries(server.dataUnions)) {
             // is the data union already syncing or running?
             if (c.operator) {
-                const stats = dataunionRouter.getStats(c.operator.watcher.plasma)
+                const stats = dataUnionRouter.getStats(c.operator.watcher.plasma)
                 stats.joinPartStreamId = c.operator.watcher.channel.stream.id
                 result.dataunions[address] = stats
             } else {

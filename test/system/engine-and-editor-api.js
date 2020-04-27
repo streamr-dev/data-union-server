@@ -34,7 +34,7 @@ const {
 } = require("../CONFIG")
 
 /**
- * Same as dataunion-demo.js except only through E&E APIs,
+ * Same as data-union-demo.js except only through E&E APIs,
  *   "more end-to-end" because it won't poke the stream and server directly, only talks to E&E
  * Only needs to run against streamr-ganache docker, so uses ETHEREUM_SERVER from CONFIG
  *
