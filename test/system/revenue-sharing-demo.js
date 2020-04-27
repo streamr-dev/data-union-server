@@ -14,8 +14,8 @@ const {
 const sleep = require("../../src/utils/sleep-promise")
 const { untilStreamContains, untilStreamMatches, capture } = require("../utils/await-until")
 
-const ERC20Mintable = require("../../build/ERC20Mintable.json")
-const MonoplasmaJson = require("../../build/Monoplasma.json")
+const ERC20Mintable = require("../../build/contracts/TestToken.json")
+const MonoplasmaJson = require("../../build/contracts/DataunionVault.json")
 
 const STORE_DIR = __dirname + `/test-store-${+new Date()}`
 const GANACHE_PORT = 8547

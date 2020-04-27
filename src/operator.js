@@ -40,7 +40,7 @@ var sleep = require("./utils/sleep-promise");
 var throwIfBadAddress = require("./utils/checkArguments").throwIfBadAddress;
 var MonoplasmaWatcher = require("./watcher");
 var MonoplasmaState = require("./state");
-var MonoplasmaJson = require("../build/Monoplasma.json");
+var MonoplasmaJson = require("../build/contracts/DataunionVault.json");
 var debug = require("debug");
 module.exports = /** @class */ (function () {
     function MonoplasmaOperator(wallet, joinPartChannel, store) {

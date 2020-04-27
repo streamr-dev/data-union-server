@@ -1,13 +1,15 @@
-const EventEmitter = require("events")
+import EventEmitter from "events"
 
-import {Contract, utils} from 'ethers';
+import {Contract, utils} from "ethers"
 
-const MonoplasmaState = require("./state")
-const { replayOn, mergeEventLists } = require("./utils/events")
-const { throwIfSetButNotContract, throwIfSetButBadAddress } = require("./utils/checkArguments")
-const bisectFindFirstIndex = require("./utils/bisectFindFirstIndex")
+import MonoplasmaState from "./state"
+import { replayOn, mergeEventLists } from "./utils/events"
+import { throwIfSetButNotContract, throwIfSetButBadAddress, EthereumAddress } from "./utils/checkArguments"
+import bisectFindFirstIndex from "./utils/bisectFindFirstIndex"
 
-const TokenContract = require("../build/ERC20Mintable.json")
+import * as TokenContract from "../build/ERC20Mintable.json"
+import { Provider } from "ethers/providers"
+import { StreamrChannel } from "./streamrChannel"
 const MonoplasmaJson = require("../build/Monoplasma.json")
 
 const log = require("debug")("Streamr::dataunion::watcher")
@@ -21,13 +23,13 @@ const log = require("debug")("Streamr::dataunion::watcher")
  * It's here only until ethers.js v5 is out: "if you use v5, you can use contract.queryFilter, which will include the parsed events" https://github.com/ethers-io/ethers.js/issues/37
  *
  * @see https://github.com/ethers-io/ethers.js/blob/master/utils/interface.js#L357
- * @param {utils.Interface} interface from ethers Contract.interface
+ * @param {utils.Interface} contractAbi from ethers Contract.interface
  * @param {Array<utils.LogDescription>} logs from Provider.getLogs
  */
-function parseLogs(interface, logs) {
+function parseLogs(contractAbi: utils.Interface, logs: Array<utils.LogDescription>) {
     for (const log of logs) {
-        for (const type in interface.events) {
-            const event = interface.events[type]
+        for (const type in contractAbi.events) {
+            const event = contractAbi.events[type]
             if (event.topic === log.topics[0]) {
                 log.event = event.name
                 log.args = event.decode(log.data, log.topics)
@@ -40,9 +42,14 @@ function parseLogs(interface, logs) {
  * MonoplasmaWatcher hooks to the Ethereum root chain contract and Streamr join/part stream
  * It syncs the state from Ethereum and Streamr into the store
  */
-module.exports = class MonoplasmaWatcher extends EventEmitter {
+export class MonoplasmaWatcher extends EventEmitter {
+    eth: Provider
+    channel: StreamrChannel
+    store: Store
 
-    constructor(eth, joinPartChannel, store : Store) {
+    messageCache: Array
+
+    constructor(eth: Provider, joinPartChannel, store : Store) {
         super()
         this.eth = eth
         this.channel = joinPartChannel
@@ -62,7 +69,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
      * @param {MonoplasmaConfig} config
      * @returns {Promise} resolves when MonoplasmaState is synced and listeners added
      */
-    async start(config) {
+    async start(config: MonoplasmaConfig): Promise<any> {
         await throwIfSetButNotContract(this.eth, config.contractAddress, "contractAddress from initial config")
         this.log = log.extend(config.contractAddress)
 
@@ -141,7 +148,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
 
         // replay and cache messages until in sync
         // TODO: cache only starting from given block (that operator/validator have loaded state from store)
-        this.channel.on("message", (type, addresses, meta) => {
+        this.channel.on("message", (type: string, addresses: Array<EthereumAddress>, meta) => {
             this.log(`Message received: ${type} ${addresses}`)
             const addressList = addresses.map(utils.getAddress)
             const event = { type, addressList, timestamp: meta.messageId.timestamp }
@@ -223,7 +230,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
      * Clone given state and overwrite current MonoplasmaState of the watcher
      * @param {MonoplasmaState} monoplasmaState original to be copied
      */
-    setState(monoplasmaState) {
+    setState(monoplasmaState: MonoplasmaState) {
         this.plasma = new MonoplasmaState({
             blockFreezeSeconds: this.state.blockFreezeSeconds,
             initialMembers: monoplasmaState.members,
@@ -240,7 +247,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
      * @param {Number} toBlock is blockNumber from BlockCreated event
      * @param {MonoplasmaState} plasma to sync, default is this watcher's "realtime state"
      */
-    async playbackUntilBlock(toBlock, plasma) {
+    async playbackUntilBlock(toBlock: number, plasma: MonoplasmaState) {
         if (!plasma) { plasma = this.plasma }
         const fromBlock = plasma.currentBlock + 1 || 0      // JSON RPC filters are inclusive, hence +1
         if (toBlock <= fromBlock) {
@@ -270,7 +277,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         const events = mergeEventLists(mergeEventLists(adminFeeEvents, blockCreateEvents), transferEvents)
 
         // TODO: maybe harvest block timestamps from provider in the background after start-up, save to store?
-        //   Blocking here could last very long during first playback in case of long-lived community...
+        //   Blocking here could last very long during first playback in case of long-lived data union with long join-part-history...
         this.log(`Retrieving block timestamps for ${events.length} events...`)
         for (const event of events) {
             event.timestamp = await this.getBlockTimestamp(event.blockNumber)
@@ -308,7 +315,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
      * TODO: also store the cache? It's immutable after all...
      * @param {Number} blockNumber
      */
-    async getBlockTimestamp(blockNumber) {
+    async getBlockTimestamp(blockNumber: number) {
         if (!(blockNumber in this.blockTimestampCache)) {
             this.log(`blockTimestampCache miss for block number ${blockNumber}`)
             this.blockTimestampCache[blockNumber] = (async () => {
@@ -325,7 +332,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
     /**
      * @returns {BigNumber} the number of token-wei held in the Monoplasma contract
      */
-    async getContractTokenBalance() {
+    async getContractTokenBalance(): BigNumber {
         const balance = await this.token.methods.balanceOf(this.state.contractAddress).call()
         return balance
     }

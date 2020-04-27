@@ -12,8 +12,8 @@ const StreamrClient = require("streamr-client")
 
 const { throwIfNotContract, throwIfBadAddress } = require("../src/utils/checkArguments")
 
-const TokenContract = require("../build/ERC20Detailed.json")
-const DataUnionContract = require("../build/DataunionVault.json")
+const TokenContract = require("../build/contracts/TestToken")
+const DataUnionContract = require("../build/contracts/DataunionVault.json")
 
 const {
     ETHEREUM_SERVER,            // explicitly specify server address

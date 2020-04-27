@@ -1,6 +1,6 @@
 const { ContractFactory } = require("ethers")
 
-const TokenContract = require("../../build/TestToken")
+const TokenContract = require("../../build/contracts/TestToken")
 
 module.exports = async function deployTestToken(wallet, tokenName, tokenSymbol, log) {
     log && log("Deploying a dummy token contract...")

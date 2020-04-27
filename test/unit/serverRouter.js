@@ -9,8 +9,8 @@ const { Wallet, ContractFactory, providers: { Web3Provider } } = require("ethers
 
 const log = require("debug")("Streamr::dataunion::test::unit::server-router")
 
-const DataUnionContract = require("../../build/DataunionVault")
-const TokenContract = require("../../build/TestToken")
+const DataUnionContract = require("../../build/contracts/DataunionVault")
+const TokenContract = require("../../build/contracts/TestToken")
 
 const ganache = require("ganache-core")
 

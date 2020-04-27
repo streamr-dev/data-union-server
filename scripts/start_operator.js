@@ -11,7 +11,7 @@ const bodyParser = require("body-parser")
 
 const { Wallet, Contract, providers: { JsonRpcProvider } } = require("ethers")
 
-const DataUnionJson = require("../build/DataunionVault.json")
+const DataUnionJson = require("../build/contracts/DataunionVault.json")
 
 const FileStore = require("../src/fileStore")
 const Operator = require("../src/operator")

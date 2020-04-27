@@ -182,7 +182,7 @@ async function start() {
     log("[DONE]")
 }
 
-const ERC20Mintable = require("../build/ERC20Mintable.json")
+const ERC20Mintable = require("../build/contracts/TestToken.json")
 async function transfer(wallet, targetAddress, tokenAddress, amount) {
     throwIfBadAddress(targetAddress, "token transfer target address")
     // TODO: null token address => attempt ether transfer?
@@ -193,7 +193,7 @@ async function transfer(wallet, targetAddress, tokenAddress, amount) {
     return tr
 }
 
-const DataUnion = require("../build/DataunionVault")
+const DataUnion = require("../build/contracts/DataunionVault")
 async function setFee(wallet, targetAddress, fee) {
     throwIfNotContract(targetAddress, "Monoplasma contract address")
     if (!(fee >= 0 && fee <= 1)) { throw new Error(`Admin fee must be a number between 0...1, got: ${fee}`) }

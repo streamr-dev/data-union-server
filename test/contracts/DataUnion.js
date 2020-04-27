@@ -3,8 +3,8 @@
 const log = require("debug")("Streamr::dataunion::test::contracts::DataunionVault")
 
 const etherlime = require("etherlime")
-const DataUnion = require("../../build/DataunionVault")
-const TestToken = require("../../build/TestToken")
+const DataUnion = require("../../build/contracts/DataunionVault")
+const TestToken = require("../../build/contracts/TestToken")
 //const assert = require("assert")
 
 describe("DataunionVault", () => {

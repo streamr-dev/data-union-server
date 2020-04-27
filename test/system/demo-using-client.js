@@ -16,8 +16,8 @@ const {
 const sleep = require("../../src/utils/sleep-promise")
 const { untilStreamContains } = require("../utils/await-until")
 
-const ERC20Mintable = require("../../build/ERC20Mintable.json")
-const DataUnion = require("../../build/DataunionVault")
+const ERC20Mintable = require("../../build/contracts/TestToken.json")
+const DataUnion = require("../../build/contracts/DataunionVault")
 
 const STORE_DIR = __dirname + `/test-store-${+new Date()}`
 const BLOCK_FREEZE_SECONDS = 1

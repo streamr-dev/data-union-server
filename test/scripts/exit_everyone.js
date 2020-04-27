@@ -10,8 +10,8 @@ const {
 
 const { throwIfNotContract } = require("../../src/utils/checkArguments")
 
-const TokenContract = require("../../build/ERC20Detailed.json")
-const DataUnionContract = require("../../build/DataunionVault.json")
+const TokenContract = require("../../build/contracts/TestToken")
+const DataUnionContract = require("../../build/contracts/DataunionVault.json")
 
 const log = require("debug")("Streamr::CPS::test::integration::exit-everyone-script")
 

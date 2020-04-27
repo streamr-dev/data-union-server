@@ -5,7 +5,7 @@ const { throwIfBadAddress } = require("./utils/checkArguments")
 const MonoplasmaState = require("./state")
 const MonoplasmaWatcher = require("./watcher")
 
-const MonoplasmaJson = require("../build/Monoplasma.json")
+const MonoplasmaJson = require("../build/contracts/DataunionVault.json")
 
 const debug = require("debug")
 

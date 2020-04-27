@@ -17,7 +17,7 @@ const ganache = require("ganache-core")
 const ganacheBlockIntervalSeconds = 0
 const fakeTxCount = 20
 
-const ERC20Mintable = require("../build/ERC20Mintable.json")
+const ERC20Mintable = require("../build/contracts/TestToken.json")
 
 function error(err) {
     console.error(err.stack)

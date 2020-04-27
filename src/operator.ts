@@ -6,12 +6,13 @@ const { throwIfBadAddress } = require("./utils/checkArguments")
 const MonoplasmaWatcher = require("./watcher")
 const MonoplasmaState = require("./state")
 
-const MonoplasmaJson = require("../build/Monoplasma.json")
+const MonoplasmaJson = require("../build/contracts/DataunionVault.json")
 
 const debug = require("debug")
 
 module.exports = class MonoplasmaOperator {
-    wallet : Wallet;
+    wallet : Wallet
+    watcher: MonoplasmaWatcher
 
     constructor(wallet : Wallet, joinPartChannel, store : Store) {
         this.wallet = wallet

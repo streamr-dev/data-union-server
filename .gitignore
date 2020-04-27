@@ -5,3 +5,9 @@ demo
 .etherlime-store
 store
 .env
+build
+
+# problem with some of these is compilation might still change the AST
+# this creates spurious noise to git diffs  ):
+!build/contracts/DataunionVault.json
+!build/contracts/TestToken.json

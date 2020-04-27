@@ -10,7 +10,7 @@ const FileStore = require("./fileStore")
 const MonoplasmaOperator = require("./operator")
 const StreamrChannel = require("./streamrChannel")
 
-const DataUnionContract = require("../build/DataunionVault.json")
+const DataUnionContract = require("../build/contracts/DataunionVault.json")
 
 const { throwIfNotSet } = require("./utils/checkArguments")
 

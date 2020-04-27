@@ -8,7 +8,7 @@ const log = require("debug")("Streamr::CPS::utils::deployContract")
 
 const { throwIfBadAddress, throwIfNotContract } = require("./checkArguments")
 
-const DataUnionContract = require("../../build/DataunionVault")
+const DataUnionContract = require("../../build/contracts/DataunionVault")
 
 /** @typedef {string} EthereumAddress */
 

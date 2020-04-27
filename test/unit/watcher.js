@@ -11,8 +11,8 @@ const {
 } = require("ethers")
 const ganache = require("ganache-core")
 
-const DataUnionContract = require("../../build/DataunionVault")
-const TokenContract = require("../../build/TestToken")
+const DataUnionContract = require("../../build/contracts/DataunionVault")
+const TokenContract = require("../../build/contracts/TestToken")
 
 const sleep = require("../../src/utils/sleep-promise")
 

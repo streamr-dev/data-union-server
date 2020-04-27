@@ -16,7 +16,7 @@ const { untilStreamContains, untilStreamMatches, capture } = require("../utils/a
 const sleep = require("../../src/utils/sleep-promise")
 const deployContract = require("../../src/utils/deployContract")
 
-const DataUnionContract = require("../../build/DataunionVault")
+const DataUnionContract = require("../../build/contracts/DataunionVault")
 
 const { streamrWs, streamrHttp, streamrNodeAddress } = require("../CONFIG")
 
