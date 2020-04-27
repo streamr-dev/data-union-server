@@ -2,7 +2,7 @@ const fetch = require("node-fetch")
 const { spawn } = require("child_process")
 const assert = require("assert")
 
-const log = require("debug")("Streamr::CPS::test::integration::deploy-community-script")
+const log = require("debug")("Streamr::CPS::test::integration::deploy-dataUnion-script")
 
 const {
     Contract,
@@ -93,7 +93,7 @@ async function runDeployScript(ETHEREUM_SERVER, ETHEREUM_PRIVATE_KEY, OPERATOR_A
     }
 }
 
-describe.skip("Deploy community script", () => {
+describe.skip("Deploy data union script", () => {
     let processesToCleanUp = []
     afterEach(async () => {
         for (const p of processesToCleanUp) {
@@ -102,7 +102,7 @@ describe.skip("Deploy community script", () => {
         }
     })
 
-    it("successfully deploys a community using the script", async function() {
+    it("successfully deploys a data union using the script", async function() {
         this.timeout(60000)
         const {
             providerUrl,
@@ -132,15 +132,15 @@ describe.skip("Deploy community script", () => {
         processesToCleanUp.push(deployProcess)
 
         const provider = new JsonRpcProvider(providerUrl)
-        const communityContract = new Contract(contractAddress, DataUnionContract.abi, provider)
-        const freeze = await communityContract.blockFreezeSeconds()
+        const dataUnionContract = new Contract(contractAddress, DataUnionContract.abi, provider)
+        const freeze = await dataUnionContract.blockFreezeSeconds()
         assert.strictEqual(freeze.toString(), BLOCK_FREEZE_SECONDS.toString())
 
         log("Waiting for the operator to notice...")
         let stats = { error: true }
         while (stats.error) {
             await sleep(100)
-            stats = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityContract.address}/stats`).then(resp => resp.json())
+            stats = await fetch(`http://localhost:${WEBSERVER_PORT}/dataunions/${dataUnionContract.address}/stats`).then(resp => resp.json())
         }
 
         assert.strictEqual(stats.totalEarnings, "0")
@@ -148,7 +148,7 @@ describe.skip("Deploy community script", () => {
         assert(joinPartStreamId)    // TODO: assert it's readable to all
     })
 
-    it("successfully deploys a community using the helper function directly", async function() {
+    it("successfully deploys a data union using the helper function directly", async function() {
         this.timeout(60000)
         const {
             providerUrl,
@@ -165,15 +165,15 @@ describe.skip("Deploy community script", () => {
         const wallet = new Wallet(keys[3], provider)
 
         const nodeAddress = getAddress(streamrNodeAddress)
-        const communityContract = await deployContract(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, ADMIN_FEE, config.streamrWsUrl, config.streamrHttpUrl)
+        const dataUnionContract = await deployContract(wallet, config.operatorAddress, config.tokenAddress, nodeAddress, BLOCK_FREEZE_SECONDS, ADMIN_FEE, config.streamrWsUrl, config.streamrHttpUrl)
 
-        const freeze = await communityContract.blockFreezeSeconds()
+        const freeze = await dataUnionContract.blockFreezeSeconds()
         assert.strictEqual(freeze.toString(), BLOCK_FREEZE_SECONDS.toString())
 
         let stats = { error: true }
         while (stats.error) {
             await sleep(100)
-            stats = await fetch(`http://localhost:${WEBSERVER_PORT}/communities/${communityContract.address}/stats`).then(resp => resp.json())
+            stats = await fetch(`http://localhost:${WEBSERVER_PORT}/dataunions/${dataUnionContract.address}/stats`).then(resp => resp.json())
         }
 
         assert.strictEqual(stats.totalEarnings, "0")

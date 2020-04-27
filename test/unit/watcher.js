@@ -41,7 +41,7 @@ describe("MonoplasmaWatcher", () => {
     let watcher
     let wallet
     let token
-    let community
+    let dataUnion
     let joinPartChannel
     let store
     before(async function () {
@@ -66,16 +66,16 @@ describe("MonoplasmaWatcher", () => {
         joinPartChannel = new MockStreamrChannel("dummy-stream-for-watcher-test")
         store = mockStore(startState, initialBlock, log)
 
-        log("Deploying test token and Community contract...")
+        log("Deploying test token and dataUnion contract...")
         const tokenDeployer = new ContractFactory(TokenContract.abi, TokenContract.bytecode, wallet)
         token = await tokenDeployer.deploy("Test token", "TEST")
         await token.deployed()
     })
 
     beforeEach(async function () {
-        const communityDeployer = new ContractFactory(DataUnionContract.abi, DataUnionContract.bytecode, wallet)
-        community = await communityDeployer.deploy(wallet.address, "dummy-stream-id", token.address, 1000, 0)
-        await community.deployed()
+        const dataUnionDeployer = new ContractFactory(DataUnionContract.abi, DataUnionContract.bytecode, wallet)
+        dataUnion = await dataUnionDeployer.deploy(wallet.address, "dummy-stream-id", token.address, 1000, 0)
+        await dataUnion.deployed()
         await startWatcher()
     })
 
@@ -86,14 +86,14 @@ describe("MonoplasmaWatcher", () => {
             tokenAddress: token.address,
             adminAddress: wallet.address,
             operatorAddress: wallet.address,
-            contractAddress: community.address,
+            contractAddress: dataUnion.address,
         })
     }
 
     it("catches Transfer events", async () => {
         const cb = sinon.fake()
         watcher.on("tokensReceived", cb)
-        const tx = await token.transfer(community.address, 1)
+        const tx = await token.transfer(dataUnion.address, 1)
         const tr = await tx.wait(1)
         await sleep(wallet.provider.pollingInterval * 2 + 100)
         assert(tr.logs.length > 0)
@@ -103,7 +103,7 @@ describe("MonoplasmaWatcher", () => {
     it("catches BlockCreate events", async () => {
         const cb = sinon.fake()
         watcher.on("blockCreated", cb)
-        const tx = await community.commit(1, "0x1234567812345678123456781234567812345678123456781234567812345678", "")
+        const tx = await dataUnion.commit(1, "0x1234567812345678123456781234567812345678123456781234567812345678", "")
         const tr = await tx.wait(1)
         await sleep(wallet.provider.pollingInterval * 2 + 100)
         assert(tr.logs.length > 0)
@@ -119,9 +119,9 @@ describe("MonoplasmaWatcher", () => {
     })
 
     it("splits tokens between members and updates the state correctly during playback", async function () {
-        await community.setAdminFee(parseEther("0.5"))
-        await token.transfer(community.address, 40)
-        await token.transfer(community.address, 40)
+        await dataUnion.setAdminFee(parseEther("0.5"))
+        await token.transfer(dataUnion.address, 40)
+        await token.transfer(dataUnion.address, 40)
 
         await sleep(1000)
         await startWatcher()
@@ -136,13 +136,13 @@ describe("MonoplasmaWatcher", () => {
 
     it("interleaves join messages and Transfer events correctly during playback", async function () {
         this.timeout(10000)
-        await community.setAdminFee(parseEther("0.5"))
+        await dataUnion.setAdminFee(parseEther("0.5"))
         await sleep(1000)
         log("Admin fee: " + watcher.plasma.adminFeeFraction)
 
         log(JSON.stringify(watcher.plasma.getMembers()))
 
-        await token.transfer(community.address, 40) // -> 20/2 = 10 for members, 20 for admin
+        await token.transfer(dataUnion.address, 40) // -> 20/2 = 10 for members, 20 for admin
         await sleep(1000)
         log(JSON.stringify(watcher.plasma.getMembers()))
         const afterTransfer1 = await wallet.provider.getBlock()
@@ -153,7 +153,7 @@ describe("MonoplasmaWatcher", () => {
 
         log(JSON.stringify(watcher.plasma.getMembers()))
 
-        await token.transfer(community.address, 30) // -> 15/3 = 5 for members, 15 for admin
+        await token.transfer(dataUnion.address, 30) // -> 15/3 = 5 for members, 15 for admin
         await sleep(1000)
         log(JSON.stringify(watcher.plasma.getMembers()))
         const afterTransfer2 = await wallet.provider.getBlock()
@@ -161,7 +161,7 @@ describe("MonoplasmaWatcher", () => {
             watcher.on("join", done)
             joinPartChannel.publish("join", ["0x2234567812345678123456781234567812345678"])
         })
-        await token.transfer(community.address, 40) // -> 20/4 = 5 for members, 20 for admin
+        await token.transfer(dataUnion.address, 40) // -> 20/4 = 5 for members, 20 for admin
 
         await sleep(1000)
         log(JSON.stringify(watcher.plasma.getMembers()))

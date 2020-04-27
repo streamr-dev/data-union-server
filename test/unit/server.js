@@ -90,30 +90,30 @@ describe("DataUnionServer", function () {
         await until(() => server.onOperatorChangedEventAt.calledOnce)
         assert.strictEqual(contract.address, server.onOperatorChangedEventAt.getCall(0).args[0])
 
-        await server.communityIsRunning(contract.address)
+        await server.dataUnionIsRunning(contract.address)
 
         assert(server.startOperating.calledOnce)
         assert.strictEqual(contract.address, server.startOperating.getCall(0).args[0])
 
-        const clist = Object.keys(server.communities)
+        const clist = Object.keys(server.dataUnions)
         assert.strictEqual(1, clist.length)
-        assert(server.communities[contract.address])
+        assert(server.dataUnions[contract.address])
         await server.stop()
     })
 
     it("stops operators when server is stopped", async function () {
         await server.start()
         const contract = await deployTestDataunion(wallet, wallet.address, tokenAddress, 1000, 0)
-        await server.communityIsRunning(contract.address)
+        await server.dataUnionIsRunning(contract.address)
 
-        const { communities } = server
-        assert(Object.keys(communities), "has at least 1 community")
+        const { dataUnions } = server
+        assert(Object.keys(dataUnions), "has at least 1 dataUnion")
 
         await server.stop()
 
-        assert.equal(Object.keys(server.communities).length, 0, "server.communities is empty after stop")
-        Object.values(communities).forEach((community) => {
-            assert.ok(community.operator.watcher.channel.isClosed())
+        assert.equal(Object.keys(server.dataUnions).length, 0, "server.dataUnions is empty after stop")
+        Object.values(dataUnions).forEach((dataUnion) => {
+            assert.ok(dataUnion.operator.watcher.channel.isClosed())
         })
     })
 
@@ -132,12 +132,12 @@ describe("DataUnionServer", function () {
 
             // NOTE start AFTER operator is changed
             await server.start()
-            await server.communityIsRunning(contract.address)
-            //await server.communityIsRunning(contract2.address)    // TODO: should NOT be running, should never be started!
+            await server.dataUnionIsRunning(contract.address)
+            //await server.dataUnionIsRunning(contract2.address)    // TODO: should NOT be running, should never be started!
 
             assert.strictEqual(onError.callCount, 0, "should not have called error handler")
-            assert(server.communities[contract.address], "contract1 should be handled")
-            assert(!server.communities[contract2.address], "contract2 should be ignored")
+            assert(server.dataUnions[contract.address], "contract1 should be handled")
+            assert(!server.dataUnions[contract2.address], "contract2 should be ignored")
             await server.stop()
             assert.strictEqual(onError.callCount, 0, "should not have called error handler")
         })
@@ -152,11 +152,11 @@ describe("DataUnionServer", function () {
             const contract2 = await deployTestDataunion(wallet, wallet.address, tokenAddress, 1000, 0)
             log(`Deployed contract at ${contract2.address}`)
 
-            await server.communityIsRunning(contract.address)
-            await server.communityIsRunning(contract2.address)
+            await server.dataUnionIsRunning(contract.address)
+            await server.dataUnionIsRunning(contract2.address)
 
-            assert(server.communities[contract.address], "contract1 should be handled")
-            assert(server.communities[contract2.address], "contract2 should be handled")
+            assert(server.dataUnions[contract.address], "contract1 should be handled")
+            assert(server.dataUnions[contract2.address], "contract2 should be handled")
 
             // should ignore this contract
             sinon.spy(server, "onOperatorChangedEventAt")
@@ -165,9 +165,9 @@ describe("DataUnionServer", function () {
             await server.onOperatorChangedEventAt.returnValues[0]   // wait until handler returns
 
             assert.strictEqual(onError.callCount, 0, "should not have called error handler")
-            assert(server.communities[contract.address], "contract1 should be handled")
+            assert(server.dataUnions[contract.address], "contract1 should be handled")
             // contract should no longer be handled
-            assert(!server.communities[contract2.address], "contract2 should be ignored")
+            assert(!server.dataUnions[contract2.address], "contract2 should be ignored")
             await server.stop()
             assert.strictEqual(onError.callCount, 0, "should not have called error handler")
         })
@@ -177,7 +177,7 @@ describe("DataUnionServer", function () {
         })
     })
 
-    it("resumes operating communities it's operated before (e.g. a crash)", async function () {
+    it("resumes operating dataUnions it's operated before (e.g. a crash)", async function () {
         const onError = sinon.spy(server, "error")
         await server.start()
 
@@ -187,8 +187,8 @@ describe("DataUnionServer", function () {
         const contract2 = await deployTestDataunion(wallet, wallet.address, tokenAddress, 1000, 0)
         log(`Deployed contract at ${contract2.address}`)
 
-        await server.communityIsRunning(contract.address)
-        await server.communityIsRunning(contract2.address)
+        await server.dataUnionIsRunning(contract.address)
+        await server.dataUnionIsRunning(contract2.address)
 
         // should ignore this contract
         await contract2.setOperator("0x0000000000000000000000000000000000000001")
@@ -205,13 +205,13 @@ describe("DataUnionServer", function () {
         const onError2 = sinon.spy(server2, "error")
         await server2.start()
 
-        assert(server2.communities[contract.address], "contract1 should be handled")
-        assert(!server2.communities[contract2.address], "contract2 should be ignored")
+        assert(server2.dataUnions[contract.address], "contract1 should be handled")
+        assert(!server2.dataUnions[contract2.address], "contract2 should be ignored")
         assert.strictEqual(onError2.callCount, 0, "should not have called error handler")
         await server2.stop()
     })
 
-    it("will not fail to start if there is an error playing back a community", async function () {
+    it("will not fail to start if there is an error playing back a dataUnion", async function () {
         const onError = sinon.spy(server, "error")
 
         await server.start()
@@ -222,8 +222,8 @@ describe("DataUnionServer", function () {
         const contract2 = await deployTestDataunion(wallet, wallet.address, tokenAddress, 1000, 0)
         log(`Deployed contract at ${contract2.address}`)
 
-        await server.communityIsRunning(contract.address)
-        await server.communityIsRunning(contract2.address)
+        await server.dataUnionIsRunning(contract.address)
+        await server.dataUnionIsRunning(contract2.address)
         log("Communities running")
 
         await server.stop()
@@ -235,7 +235,7 @@ describe("DataUnionServer", function () {
         const server2 = new DataUnionServer(wallet, storeDir, config, log, log)
         sinon.stub(server2, "getChannelFor")
             .callsFake(() => new MockStreamrChannel("dummy-stream-id"))
-            // force one community startup to fail when getting channel
+            // force one dataUnion startup to fail when getting channel
             .withArgs(contract.address).callsFake(async function (add) {
                 throw new Error("expected fail " + add)
             })
@@ -246,7 +246,7 @@ describe("DataUnionServer", function () {
         assert.strictEqual(onError2.callCount, 1, "should have called error handler once")
     })
 
-    it("will fail to start if there is an error playing back all communities", async function () {
+    it("will fail to start if there is an error playing back all dataUnions", async function () {
         const onError = sinon.spy(server, "error")
         await server.start()
 

@@ -129,6 +129,8 @@ module.exports = class StreamrChannel extends EventEmitter {
             sub.on("error", fail)
             sub.on("resent", done)
             sub.on("no_resend", done)
+            // possible substitute to two lines above:
+            // sub.on("initial_resend_done", done)
             setTimeout(fail, playbackTimeoutMs)
         })
         log(`Playback of ${this.stream.id} done`)

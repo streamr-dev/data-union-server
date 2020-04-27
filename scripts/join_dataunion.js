@@ -40,11 +40,12 @@ async function start() {
     })
     log("Connected to Ethereum network: ", JSON.stringify(network))
 
+    if (!ETHEREUM_PRIVATE_KEY) { throw new Error("Must set ETHEREUM_PRIVATE_KEY environment variable!") }
     const privateKey = ETHEREUM_PRIVATE_KEY.startsWith("0x") ? ETHEREUM_PRIVATE_KEY : "0x" + ETHEREUM_PRIVATE_KEY
     if (privateKey.length !== 66) { throw new Error("Malformed private key, must be 64 hex digits long (optionally prefixed with '0x')") }
     const memberAddress = computeAddress(privateKey)
 
-    const communityAddress = await throwIfNotContract(provider, DATAUNION_ADDRESS, "env variable DATAUNION_ADDRESS")
+    const dataUnionAddress = await throwIfNotContract(provider, DATAUNION_ADDRESS, "env variable DATAUNION_ADDRESS")
 
     log("Connecting to Streamr...")
     const opts = { auth: { privateKey } }
@@ -53,10 +54,10 @@ async function start() {
     const client = new StreamrClient(opts)
 
     log(`secret: ${SECRET}`)
-    log(`Adding https://streamr.com/api/v1/communities/${communityAddress}/members/${memberAddress} ...`)
-    const res = await client.joinCommunity(communityAddress, SECRET)
+    log(`Adding https://streamr.com/api/v1/dataunions/${dataUnionAddress}/members/${memberAddress} ...`)
+    const res = await client.joindataUnion(dataUnionAddress, SECRET)
 
-    log(`Community join sent, response: ${JSON.stringify(res)}`)
+    log(`dataUnion join sent, response: ${JSON.stringify(res)}`)
     log(`Network was ${JSON.stringify(network)}`)
     log("[DONE]")
 }

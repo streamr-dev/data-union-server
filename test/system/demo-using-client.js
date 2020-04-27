@@ -35,7 +35,7 @@ const {
 } = require("../CONFIG")
 
 /**
- * Same as community-product-demo.js except only using StreamrClient.
+ * Same as data-union-demo.js except only using StreamrClient.
  * Only needs to run against streamr-ganache docker, so uses ETHEREUM_SERVER from CONFIG
  *
  * Point of view is of external dataunion integrator that depends on streamr-client-javascript, e.g. Swash team
@@ -44,7 +44,7 @@ const {
 // NB: THIS TEST WON'T ACTUALLY RUN BEFORE STUFF IS ADDED TO streamr-javascript-client
 // TODO: add client.createProduct to streamr-javascript-client
 // TODO: add client.updateProduct to streamr-javascript-client
-describe.skip("Community product demo but through a running E&E instance", () => {
+describe.skip("Data Union demo but through a running E&E instance", () => {
     let operatorProcess
 
     before(() => {
@@ -134,11 +134,11 @@ describe.skip("Community product demo but through a running E&E instance", () =>
             tokenAddress: TOKEN_ADDRESS,
         })
 
-        log("1) Create a new Community product")
+        log("1) Create a new data union product")
         log("1.1) Create a stream that's going to go into the product")
         const streamJson = {
-            "name": "Community Product server test stream " + Date.now(),
-            "description": "PLEASE DELETE ME, I'm a Community Product server test stream",
+            "name": "dataUnion Product server test stream " + Date.now(),
+            "description": "PLEASE DELETE ME, I'm a data union Product server test stream",
             "config": {
                 "fields": [{
                     "name": "string",
@@ -151,8 +151,8 @@ describe.skip("Community product demo but through a running E&E instance", () =>
 
         log("1.3) Create product in the database")
         const productJson = {
-            "name": "Community Product server test product " + Date.now(),
-            "description": "PLEASE DELETE ME, I'm a Community Product server test product",
+            "name": "dataUnion Product server test product " + Date.now(),
+            "description": "PLEASE DELETE ME, I'm a data union Product server test product",
             "imageUrl": "https://www.streamr.com/uploads/to-the-moon.png",
             "category": "other",        // TODO: curiously, test-category-id doesn't exist in docker mysql
             "streams": [ stream.id ],
@@ -170,18 +170,18 @@ describe.skip("Community product demo but through a running E&E instance", () =>
         const productId = productCreateResponse.id
         assert(productId)
 
-        log("1.4) Create joinPartStream")       // done inside deployCommunity below
-        log("1.5) Deploy DataUnion contract")
-        const community = await client.deployCommunity({
+        log("1.4) Create joinPartStream")       // done inside deploydataUnion below
+        log("1.5) Deploy data union contract")
+        const dataUnion = await client.deploydataUnion({
             adminFee: ADMIN_FEE,
             blockFreezePeriodSeconds: BLOCK_FREEZE_SECONDS,
         })
 
         log("1.6) Wait until Operator starts")
-        await community.isReady()
+        await dataUnion.isReady()
 
         log("1.7) Set beneficiary in Product DB entry")
-        productJson.beneficiaryAddress = community.address
+        productJson.beneficiaryAddress = dataUnion.address
         const putResponse = await client.updateProduct(productJson)
         log(`     Response: ${JSON.stringify(putResponse)}`)
 
@@ -198,8 +198,8 @@ describe.skip("Community product demo but through a running E&E instance", () =>
             "0x0000000000000000000000000000000000000000000000000000000000000009",
         ]
 
-        log("2.1) Add community secret")
-        const secretCreateResponse = await client.createSecret(community.address, "test", "PLEASE DELETE ME, I'm a Community Product server test secret")
+        log("2.1) Add dataUnion secret")
+        const secretCreateResponse = await client.createSecret(dataUnion.address, "test", "PLEASE DELETE ME, I'm a data union Product server test secret")
         log(`     Response: ${JSON.stringify(secretCreateResponse)}`)
 
         log("2.2) Send JoinRequests")
@@ -209,13 +209,13 @@ describe.skip("Community product demo but through a running E&E instance", () =>
                 url: STREAMR_WS_URL,
                 restUrl: STREAMR_HTTP_URL,
             })
-            const joinResponse = await tempClient.joinCommunity(community.address, "test")
+            const joinResponse = await tempClient.joindataUnion(dataUnion.address, "test")
             log(`     Response: ${JSON.stringify(joinResponse)}`)
         }
 
         log("2.3) Wait until members have been added")
         const member9address = computeAddress(memberKeys[9])
-        await client.hasJoined(community.address, member9address)
+        await client.hasJoined(dataUnion.address, member9address)
 
         // TODO: send revenue by purchasing the product on Marketplace
         log("3) Send revenue in and check tokens were distributed")
@@ -225,21 +225,21 @@ describe.skip("Community product demo but through a running E&E instance", () =>
             const balance = await token.balanceOf(address)
             log(`   Sending 10 tokens (out of remaining ${formatEther(balance)}) to DataUnion contract...`)
 
-            const transferTx = await token.transfer(community.address, parseEther("10"))
+            const transferTx = await token.transfer(dataUnion.address, parseEther("10"))
             await transferTx.wait(2)
 
             // check total revenue
-            const res3 = await client.getCommunityStats(community.address)
+            const res3 = await client.getdataUnionStats(dataUnion.address)
             log(`   Total revenue: ${formatEther(res3.totalEarnings)}`)
         }
 
         log("3.1) Wait for blocks to unfreeze...") //... and also that state updates.
-        const before = await client.getMemberStats(community.address)
+        const before = await client.getMemberStats(dataUnion.address)
         let member = { withdrawableEarnings: 0 }
         // TODO: what's the expected final withdrawableEarnings?
         while (member.withdrawableEarnings < 1 + before.withdrawableEarnings) {
             await sleep(1000)
-            member = await client.getMemberStats(community.address)
+            member = await client.getMemberStats(dataUnion.address)
             log(JSON.stringify(member))
         }
 
@@ -248,11 +248,11 @@ describe.skip("Community product demo but through a running E&E instance", () =>
         const balanceBefore = await token.balanceOf(address)
         log(`   Token balance before: ${formatEther(balanceBefore)}`)
 
-        const contract = new Contract(community.address, DataUnion.abi, wallet)
+        const contract = new Contract(dataUnion.address, DataUnion.abi, wallet)
         const withdrawTx = await contract.withdrawAll(member.withdrawableBlockNumber, member.withdrawableEarnings, member.proof)
         await withdrawTx.wait(1)
 
-        const res4b = await client.getMemberStats(community.address)
+        const res4b = await client.getMemberStats(dataUnion.address)
         log(JSON.stringify(res4b))
 
         const balanceAfter = await token.balanceOf(address)
