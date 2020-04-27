@@ -143,7 +143,6 @@ describe("Data Union demo but through a running E&E instance", () => {
 
         // wrap fetch; with the Authorization header the noise is just too much...
         async function GET(url) {
-            url = url.replace("dataunions", "dataUnions")  // TODO: remove once https://streamr.atlassian.net/browse/CORE-1869 lands
             return fetch(STREAMR_HTTP_URL + url, {
                 headers: {
                     "Authorization": `Bearer ${sessionToken}`
@@ -151,7 +150,6 @@ describe("Data Union demo but through a running E&E instance", () => {
             }).then(resp => resp.json())
         }
         async function POST(url, bodyObject, sessionTokenOverride, methodOverride) {
-            url = url.replace("dataunions", "dataUnions")  // TODO: remove once https://streamr.atlassian.net/browse/CORE-1869 lands
             return fetch(STREAMR_HTTP_URL + url, {
                 method: methodOverride || "POST",
                 body: JSON.stringify(bodyObject),
