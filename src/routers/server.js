@@ -61,11 +61,11 @@ module.exports = (server) => {
 
     const router = express.Router()
 
-    router.use("/dataunions/:dataUnionAddress", parseDataunionState, dataunionRouter)
-    router.use("/dataunions/:dataUnionAddress", parseDataunionState, dataunionRouter)
+    router.use("/dataunions/:dataUnionAddress", parseDataUnionState, dataUnionRouter)
+    router.use("/communities/:dataUnionAddress", parseDataUnionState, dataUnionRouter)
 
     router.get("/dataunions", getSummary)
-    router.get("/dataUnions", getSummary)
+    router.get("/communities", getSummary)
 
     return router
 }
