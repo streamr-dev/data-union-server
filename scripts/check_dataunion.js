@@ -77,7 +77,8 @@ async function start() {
     const client = new StreamrClient(opts)
 
     log("Data union stats from server")
-    const stats = await client.getdataUnionStats(dataUnion.address)
+    //const stats = await client.getDataUnionStats(dataUnion.address)
+    const stats = await client.getCommunityStats(dataUnion.address)
     log(`  Members: ${stats.memberCount.active} active / ${stats.memberCount.total} total`)
     log(`  Latest unfrozen block: ${stats.latestWithdrawableBlock.blockNumber} (${stats.latestWithdrawableBlock.memberCount} members)`)
     log(`  Total earnings received: ${formatEther(stats.totalEarnings)}`)
