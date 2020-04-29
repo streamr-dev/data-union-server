@@ -172,7 +172,7 @@ describe.skip("Data Union demo but through a running E&E instance", () => {
 
         log("1.4) Create joinPartStream")       // done inside deploydataUnion below
         log("1.5) Deploy data union contract")
-        const dataUnion = await client.deploydataUnion({
+        const dataUnion = await client.deployDataUnion({
             adminFee: ADMIN_FEE,
             blockFreezePeriodSeconds: BLOCK_FREEZE_SECONDS,
         })
@@ -209,7 +209,7 @@ describe.skip("Data Union demo but through a running E&E instance", () => {
                 url: STREAMR_WS_URL,
                 restUrl: STREAMR_HTTP_URL,
             })
-            const joinResponse = await tempClient.joindataUnion(dataUnion.address, "test")
+            const joinResponse = await tempClient.joinDataUnion(dataUnion.address, "test")
             log(`     Response: ${JSON.stringify(joinResponse)}`)
         }
 
@@ -229,7 +229,8 @@ describe.skip("Data Union demo but through a running E&E instance", () => {
             await transferTx.wait(2)
 
             // check total revenue
-            const res3 = await client.getdataUnionStats(dataUnion.address)
+            //const res3 = await client.getDataUnionStats(dataUnion.address)
+            const res3 = await client.getCommunityStats(dataUnion.address)
             log(`   Total revenue: ${formatEther(res3.totalEarnings)}`)
         }
 
