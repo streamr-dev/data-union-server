@@ -20,7 +20,7 @@ RUN chown -R node /home/node/
 USER node
 WORKDIR /home/node
 RUN npm ci
-RUN npm run build-contracts
+RUN npm prune --production
 
 FROM ubuntu:16.04
 ARG NODE_VERSION="v12.16.1"
