@@ -90,6 +90,7 @@ router.get("/members", (req, res) => {
 // NOTE: this function gets the highest query load
 router.get("/members/:address", (req, res) => {
     const state = req.monoplasmaState
+    // TODO: dataUnionAddress = state.contractAddress
     //log(`HTTP ${state.dataUnionAddress}> Requested member ${address}`)
 
     const address = parseAddress(req.params.address)
