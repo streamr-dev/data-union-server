@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.com/streamr-dev/data-union-server.svg?token=9unddqKugX2cPcyhtVxp&branch=master)](https://travis-ci.com/streamr-dev/data-union-server)
 
 # Running
-
+`npm run compile-typescript`
 `node scripts/start_server.js`
 
 Starts a Ganache instance in port 8545, deploys a test token, and starts a web server in port 8080.
