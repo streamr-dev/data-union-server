@@ -236,12 +236,12 @@ describe("Data Union demo but through a running E&E instance", () => {
             "0x0000000000000000000000000000000000000000000000000000000000000009",
         ]
 
-        log("2.1) Add dataUnion secret")
+        log("2.1) Add data union secret")
         const secretCreateResponse = await POST(`/dataunions/${dataUnionAddress}/secrets`, {
             name: "PLEASE DELETE ME, I'm a data union Product server test secret",
-            secret: "test",
         })
         log(`     Response: ${JSON.stringify(secretCreateResponse)}`)
+        const { secret } = secretCreateResponse
 
         log("2.2) Send JoinRequests")
         for (const privateKey of memberKeys) {
@@ -253,7 +253,7 @@ describe("Data Union demo but through a running E&E instance", () => {
             })
             const joinResponse = await POST(`/dataunions/${dataUnionAddress}/joinRequests`, {
                 memberAddress,
-                secret: "test",
+                secret,
                 metadata: { test: "PLEASE DELETE ME, I'm a data union Product server test joinRequest" },
             }, await tempClient.session.sessionTokenPromise)
             await tempClient.ensureDisconnected()
