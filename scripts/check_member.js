@@ -57,9 +57,9 @@ async function start() {
 
     log(`Checking DataunionVault contract at ${dataUnionAddress}...`)
     const dataunion = new Contract(dataUnionAddress, DataUnionContract.abi, provider)
+    const tokenAddress = await throwIfNotContract(provider, await dataunion.token(), `DataunionVault(${dataUnionAddress}).token()`)
 
     log(`  Token contract at ${tokenAddress}...`)
-    const tokenAddress = await throwIfNotContract(provider, await dataunion.token(), `DataunionVault(${dataUnionAddress}).token()`)
     const token = new Contract(tokenAddress, TokenContract.abi, provider)
     const DATA = await token.symbol()
     log(`  Data union token balance: ${formatEther(await token.balanceOf(dataUnionAddress))} ${DATA}`)
@@ -72,11 +72,10 @@ async function start() {
     const client = new StreamrClient(opts)
 
     log(`Member stats for ${memberAddress}...`)
-    const stats = await client.getMemberStats(dataUnionAddress, memberAddress)
-    if (stats.error) {
-        log(`Error from server: ${JSON.stringify(stats)}`)
-        return
-    }
+    const stats = await client.getMemberStats(dataUnionAddress, memberAddress).catch(e => {
+        log(`Error from server: ${e}`)
+        process.exit(1)
+    })
     for (const [key, value] of Object.entries(stats)) {
         log(`  Server: ${key}: ${value}`)
     }
