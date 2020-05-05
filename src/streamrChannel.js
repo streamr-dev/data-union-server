@@ -13,6 +13,9 @@ const State = {
     CLIENT: "client",
 }
 
+/** Read-only clients for watchers */
+const sharedClients = {}
+
 /**
  * @typedef {string} Address Ethereum address
  */
@@ -96,7 +99,11 @@ module.exports = class StreamrChannel extends EventEmitter {
     async listen(syncStartTimestamp, playbackTimeoutMs = 600000) {
         if (this.mode) { return Promise.reject(new Error(`Already started as ${this.mode}`))}
 
-        this.client = new StreamrClient(this.clientOptions)
+        // share the client on each Streamr server. Authentication doesn't matter since all joinPartStreams should be public
+        if (!sharedClients[this.clientOptions.url]) {
+            sharedClients[this.clientOptions.url] = new StreamrClient(this.clientOptions)
+        }
+        this.client = sharedClients[this.clientOptions.url]
         this.stream = await this.client.getStream(this.joinPartStreamId) // will throw if joinPartStreamId is bad
 
         const self = this
