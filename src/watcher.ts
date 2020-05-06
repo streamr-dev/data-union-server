@@ -21,13 +21,13 @@ const log = require("debug")("Streamr::dataunion::watcher")
  * It's here only until ethers.js v5 is out: "if you use v5, you can use contract.queryFilter, which will include the parsed events" https://github.com/ethers-io/ethers.js/issues/37
  *
  * @see https://github.com/ethers-io/ethers.js/blob/master/utils/interface.js#L357
- * @param {utils.Interface} interface from ethers Contract.interface
+ * @param {utils.Interface} iface from ethers Contract.interface
  * @param {Array<utils.LogDescription>} logs from Provider.getLogs
  */
-function parseLogs(interface, logs) {
+function parseLogs(iface, logs) {
     for (const log of logs) {
-        for (const type in interface.events) {
-            const event = interface.events[type]
+        for (const type in iface.events) {
+            const event = iface.events[type]
             if (event.topic === log.topics[0]) {
                 log.event = event.name
                 log.args = event.decode(log.data, log.topics)
