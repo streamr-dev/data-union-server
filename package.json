@@ -7,6 +7,7 @@
     "start": "node ./scripts/start_server.js",
     "inspect": "node --inspect-brk ./scripts/start_server.js",
     "lint": "eslint src test scripts",
+    "typescript-compile": "tsc --skipLibCheck -p ./tsconfig.json",
     "flatten": "etherlime --solcVersion=0.5.16 flatten DataunionVault.sol",
     "build-contracts": "etherlime --solcVersion=0.5.16 compile && npm run flatten",
     "docker-build": "docker build -t streamr/data-union-server:local .",
@@ -28,6 +29,7 @@
   },
   "dependencies": {
     "@sentry/node": "5.11.2",
+    "@types/node": "13.13.2",
     "body-parser": "1.19.0",
     "cors": "2.8.5",
     "debug": "4.1.1",
@@ -42,12 +44,16 @@
   },
   "devDependencies": {
     "etherlime": "2.2.4",
+    "@types/debug": "4.1.5",
+    "@typescript-eslint/eslint-plugin": "2.29.0",
+    "@typescript-eslint/parser": "2.29.0",
     "eslint": "6.8.0",
     "ganache-cli": "6.8.2",
     "ganache-core": "2.10.2",
     "husky": "4.2.1",
     "mocha": "7.0.1",
     "node-fetch": "2.6.0",
-    "sinon": "8.1.1"
+    "sinon": "8.1.1",
+    "typescript": "3.8.3"
   }
 }
