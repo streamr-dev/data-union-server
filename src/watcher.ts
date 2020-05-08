@@ -1,6 +1,7 @@
 const EventEmitter = require("events")
 
-import {Contract, utils} from 'ethers';
+import { Contract, utils } from "ethers"
+import { BigNumber } from "ethers/utils"
 
 const MonoplasmaState = require("./state")
 const { replayOn, mergeEventLists } = require("./utils/events")
@@ -11,9 +12,6 @@ const TokenContract = require("../build/ERC20Mintable.json")
 const MonoplasmaJson = require("../build/Monoplasma.json")
 
 const log = require("debug")("Streamr::dataunion::watcher")
-
-// TODO: this typedef is foobar. How to get the real thing with JSDoc?
-/** @typedef {number} BigNumber */
 
 /**
  * Rewrote ethers.js parseLog mainly because of naming incompatibilities (also use of "this"... hrrr...)
@@ -325,7 +323,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
     /**
      * @returns {BigNumber} the number of token-wei held in the Monoplasma contract
      */
-    async getContractTokenBalance() {
+    async getContractTokenBalance(): Promise<BigNumber> {
         const balance = await this.token.methods.balanceOf(this.state.contractAddress).call()
         return balance
     }
