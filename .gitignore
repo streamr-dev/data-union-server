@@ -6,3 +6,4 @@ demo
 store
 .env
 build
+*.js.map
