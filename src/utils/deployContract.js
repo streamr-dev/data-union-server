@@ -50,7 +50,7 @@ async function deployContract(wallet, operatorAddress, tokenAddress, streamrNode
     log("Grant E&E write", JSON.stringify(res2))
 
     const options = {}
-    if (gasPriceGwei) { options.gasPrice = parseUnits(gasPriceGwei, "gwei") }
+    if (gasPriceGwei) { options.gasPrice = parseUnits(gasPriceGwei.toString(), "gwei") }
 
     log(`Deploying root chain contract (token @ ${tokenAddress}, blockFreezePeriodSeconds = ${blockFreezePeriodSeconds}, joinPartStream = ${stream.id}, adminFee = ${adminFee})...`)
     const deployer = new ContractFactory(DataUnionContract.abi, DataUnionContract.bytecode, wallet)
