@@ -58,8 +58,6 @@ var bisectFindFirstIndex = require("./utils/bisectFindFirstIndex");
 var TokenContract = require("../build/ERC20Mintable.json");
 var MonoplasmaJson = require("../build/Monoplasma.json");
 var log = require("debug")("Streamr::dataunion::watcher");
-// TODO: this typedef is foobar. How to get the real thing with JSDoc?
-/** @typedef {number} BigNumber */
 /**
  * Rewrote ethers.js parseLog mainly because of naming incompatibilities (also use of "this"... hrrr...)
  * This one pulls an ugly one and mutates incoming logs (adds "event" and "args")

@@ -57,6 +57,7 @@ module.exports = class StreamrChannel extends EventEmitter {
 
     /**
      * After this, call .publish(type, data) to send
+     * @returns {Promise<void>} that resolves when publishing can be done
      */
     async startServer(privateKey) {
         if (this.mode) { return Promise.reject(new Error(`Already started as ${this.mode}`))}
