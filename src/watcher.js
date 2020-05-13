@@ -510,3 +510,4 @@ module.exports = /** @class */ (function (_super) {
     };
     return MonoplasmaWatcher;
 }(EventEmitter));
+//# sourceMappingURL=watcher.js.map

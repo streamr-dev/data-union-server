@@ -246,3 +246,4 @@ module.exports = /** @class */ (function () {
     };
     return MonoplasmaOperator;
 }());
+//# sourceMappingURL=operator.js.map
