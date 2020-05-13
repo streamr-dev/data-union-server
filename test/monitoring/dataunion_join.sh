@@ -14,20 +14,22 @@ else
 fi
 echo "Joining a new member every $POLL_INTERVAL_SECONDS seconds. Press Ctrl+C to stop."
 
+starttime=$(date +"%s")
 
 # 899999 minutes = 624 days
 # seq -w for uniform width if numbers were not uniform width...
 for i in $(seq -w 100000 999999)
 do
-    export ETHEREUM_PRIVATE_KEY=0x1000000000000000000000000000000000000000000000000000000000$i
+    export ETHEREUM_PRIVATE_KEY=0x100000000000000000000000000000000000000000000000$starttime$i
     MEMBER_ADDRESS=`node -p "require('ethers').utils.computeAddress('$ETHEREUM_PRIVATE_KEY')"`
 
     node scripts/join_dataunion.js
 
     sleep 1
 
+    # curl -f gets exit code 22 when HTTP request returns 404
     POLL_URL=https://streamr.network/api/v1/dataunions/$DATAUNION_ADDRESS/members/$MEMBER_ADDRESS
-    curl -s -S $POLL_URL > /dev/null
+    curl -s -S -f $POLL_URL > /dev/null
     assert_exit_code_zero dus-join-monitor
 
     sleep $POLL_INTERVAL_SECONDS
