@@ -89,7 +89,7 @@ describe("MonoplasmaWatcher", () => {
             const tokenBatchSize = j.toString()
             log(`Sending ${tokenBatchSize} tokens...`)
             const transferTx = await token.transfer(contract.address, parseEther(tokenBatchSize))
-            await transferTx.wait(1)
+            await transferTx.wait(2)
 
             // wait for revenue to arrive
             let revenue
@@ -98,6 +98,7 @@ describe("MonoplasmaWatcher", () => {
                 await sleep(timeout *= 2)
                 const stats = await fetch(`http://localhost:${WEBSERVER_PORT}/dataunions/${contract.address}/stats`).then(resp => resp.json())
                 revenue = stats.totalEarnings
+                if (!revenue) { throw new Error(`Bad stats response: ${JSON.stringify(stats)}`) }
                 log(`   Total revenue: ${formatEther(revenue)}`)
             } while (revenue == oldRevenue)
             oldRevenue = revenue
@@ -116,14 +117,18 @@ describe("MonoplasmaWatcher", () => {
             contractAddress: contract.address,
         })
 
+        // +1 for admin
+        assertEqual(watcher.plasma.members.length, 1 + batchSize * batchCount, "Wrong joined member count")
+
         // check balances are correct
-        assertEqual(watcher.plasma.members.length, batchSize * batchCount, "Wrong joined member count")
         const earnings = {}
         watcher.plasma.members.forEach(m => {
             earnings[m.address] = m.earnings
+            console.log(JSON.stringify(m))
         })
-        for (let b = 0, j = 0; b < 10; b++) {
-            for (let i = 0; i < 10; i++, j++) { // TODO
+        console.log("Earnings ", JSON.stringify(earnings))
+        for (let b = 0, j = 0; b < batchCount; b++) {
+            for (let i = 0; i < batchSize; i++, j++) { // TODO
                 const key = "0x1" + j.toString().padStart(63, "0")
                 const address = computeAddress(key)
                 assertEqual(earnings[address], formatEther(batchSize - b), "Wrong earnings")
