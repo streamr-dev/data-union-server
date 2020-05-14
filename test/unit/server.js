@@ -14,7 +14,7 @@ const MockStreamrChannel = require("../utils/mockStreamrChannel")
 const deployTestToken = require("../utils/deployTestToken")
 const pollingIntervalSeconds = 0.1
 
-const { until } = require("../utils/await-until")
+const until = require("../../src/utils/await-until")
 
 const DataUnionServer = require("../../src/server")
 

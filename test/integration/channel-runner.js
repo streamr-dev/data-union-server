@@ -5,7 +5,7 @@ const log = require("debug")("Streamr::dataunion::test::integration::channel")
 
 const { STREAMR_WS_URL, STREAMR_HTTP_URL } = require("../CONFIG")
 
-const { untilStreamContains } = require("../utils/await-until")
+const { untilStreamContains } = require("../utils/await-process-stream")
 const sleep = require("../../src/utils/sleep-promise")
 const Channel = require("../../src/streamrChannel")
 

@@ -2,10 +2,8 @@ const assert = require("assert")
 
 const assertEqual = require("../utils/assertEqual")
 
-const {
-    until,
-    untilStreamContains,
-} = require("../utils/await-until")
+const until = require("../../src/utils/await-until")
+const { untilStreamContains } = require("../utils/await-process-stream")
 
 const EventEmitter = require("events")
 const sleep = require("../../src/utils/sleep-promise")

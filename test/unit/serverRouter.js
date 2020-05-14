@@ -14,7 +14,7 @@ const TokenContract = require("../../build/TestToken")
 
 const ganache = require("ganache-core")
 
-const { until } = require("../utils/await-until")
+const until = require("../../src/utils/await-until")
 
 const MockStreamrChannel = require("../utils/mockStreamrChannel")
 const mockStore = require("../utils/mockStore")

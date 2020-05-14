@@ -13,7 +13,7 @@ const {
 } = require("ethers")
 
 const sleep = require("../../src/utils/sleep-promise")
-const { untilStreamContains } = require("../utils/await-until")
+const { untilStreamContains } = require("../utils/await-process-stream")
 const deployContract = require("../../src/utils/deployContract")
 
 const ERC20Mintable = require("../../build/ERC20Mintable.json")

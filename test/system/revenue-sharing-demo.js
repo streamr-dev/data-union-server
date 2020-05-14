@@ -12,7 +12,7 @@ const {
 } = require("ethers")
 
 const sleep = require("../../src/utils/sleep-promise")
-const { untilStreamContains, untilStreamMatches, capture } = require("../utils/await-until")
+const { untilStreamContains, untilStreamMatches, capture } = require("../utils/await-process-stream")
 
 const ERC20Mintable = require("../../build/ERC20Mintable.json")
 const MonoplasmaJson = require("../../build/Monoplasma.json")
