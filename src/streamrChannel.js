@@ -3,6 +3,8 @@ const StreamrClient = require("streamr-client")
 const { utils: { computeAddress } } = require("ethers")
 const log = require("debug")("Streamr::dataunion::StreamrChannel")
 
+const until = require("./utils/await-until")
+
 /**
  * @typedef {string} State
  * @enum {string}
@@ -139,15 +141,17 @@ module.exports = class StreamrChannel extends EventEmitter {
 
         sub.on("error", this.emit.bind(this, "error"))
 
+        console.log("Waiting for resends")
         await new Promise((done, fail) => {
             sub.on("error", fail)
-            sub.on("resent", done)
-            sub.on("no_resend", done)
+            //sub.on("resent", done)
+            //sub.on("no_resend", done)
             // possible substitute to two lines above:
-            // sub.on("initial_resend_done", done)
+            sub.on("initial_resend_done", done)
             setTimeout(fail, playbackTimeoutMs)
         })
         log(`Playback of ${this.stream.id} done`)
+        console.log("Queue length " + queue.length)
 
         // TODO: remove this hack and just emit messages directly from realtime stream
         this.consumerInterval = setInterval(() => {
@@ -155,7 +159,10 @@ module.exports = class StreamrChannel extends EventEmitter {
             const {msg, meta} = queue.shift()
             log(`Sending message ${JSON.stringify(msg)}, queue length = ${queue.length}}`)
             emitMessage(msg, meta)
-        }, 100)
+        }, 10)
+
+        // fix a problem caused by the above hack by waiting until queue is empty
+        await until(() => queue.length < 1)
 
         this.mode = State.CLIENT
     }
