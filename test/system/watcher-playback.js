@@ -2,11 +2,11 @@ const { spawn } = require("child_process")
 const os = require("os")
 const path = require("path")
 const fetch = require("node-fetch")
-const log = console.log //require("debug")("Streamr::dataunion::test::system::http-api")
+const log = require("debug")("Streamr::dataunion::test::system::http-api")
 
 const {
     Contract,
-    utils: { parseEther, formatEther, parseUnits, computeAddress },
+    utils: { parseEther, formatEther, computeAddress },
     Wallet,
     providers: { JsonRpcProvider }
 } = require("ethers")
@@ -49,7 +49,7 @@ describe("MonoplasmaWatcher", () => {
     afterEach(killServerProcess)
 
     it("Correctly replays a 1000000 long joinPartStream history", async () => {
-        //await startServer()
+        await startServer()
         const provider = new JsonRpcProvider(ETHEREUM_SERVER)
         const privateKey = "0xe5af7834455b7239881b85be89d905d6881dcb4751063897f12be1b0dd546bdb"
 

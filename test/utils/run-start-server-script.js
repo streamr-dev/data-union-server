@@ -1,3 +1,21 @@
+const { spawn } = require("child_process")
+const os = require("os")
+const path = require("path")
+
+const log = require("debug")("Streamr::dataunion::test::utils::start-server")
+
+const { untilStreamContains } = require("./await-process-stream")
+
+const {
+    STREAMR_WS_URL,
+    STREAMR_HTTP_URL,
+    ETHEREUM_SERVER,
+    OPERATOR_PRIVATE_KEY,
+    TOKEN_ADDRESS,
+    WEBSERVER_PORT,
+    BLOCK_FREEZE_SECONDS,
+} = require("../CONFIG")
+
 function onServerClose(code, signal) {
     throw new Error(`start_server.js exited with code ${code}, signal ${signal}`)
 }
@@ -18,7 +36,7 @@ async function startServer() {
             ETHEREUM_SERVER,
             OPERATOR_PRIVATE_KEY,
             TOKEN_ADDRESS,
-            STORE_DIR,
+            STORE_DIR: path.join(os.tmpdir(), `test-server-store-${+new Date()}`),
             WEBSERVER_PORT,
             BLOCK_FREEZE_SECONDS,
             RESET: "yesplease",
