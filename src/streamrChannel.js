@@ -141,7 +141,6 @@ module.exports = class StreamrChannel extends EventEmitter {
 
         sub.on("error", this.emit.bind(this, "error"))
 
-        console.log("Waiting for resends")
         await new Promise((done, fail) => {
             sub.on("error", fail)
             //sub.on("resent", done)
@@ -151,7 +150,6 @@ module.exports = class StreamrChannel extends EventEmitter {
             setTimeout(fail, playbackTimeoutMs)
         })
         log(`Playback of ${this.stream.id} done`)
-        console.log("Queue length " + queue.length)
 
         // TODO: remove this hack and just emit messages directly from realtime stream
         this.consumerInterval = setInterval(() => {
