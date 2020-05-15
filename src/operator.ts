@@ -12,6 +12,16 @@ const debug = require("debug")
 
 module.exports = class MonoplasmaOperator {
     wallet : Wallet;
+    watcher: any;
+    lastSavedBlock: any;
+    log: any;
+    finalityWaitPeriodSeconds: any;
+    address: any;
+    gasPrice: any;
+    contract: Contract;
+    minIntervalBlocks: any;
+    finalPlasma: any;
+    inProgressPublish: any;
 
     constructor(wallet : Wallet, joinPartChannel, store : Store) {
         this.wallet = wallet

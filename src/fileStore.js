@@ -125,18 +125,15 @@ module.exports = class FileStore {
 
     async makeLatestSymlink(blockNum) {
         const path = this.getBlockPath(blockNum)
-        const latest = this.getLatestPath()
-        const exists = fs.existsSync(latest)
-        if (exists) {
-            const latestBlock = await this.getLatestBlock()
-            // only link if block is newer
-            this.log(`NM symlink ${latestBlock.blockNumber} to ${blockNum}`)
-            if (latestBlock.blockNumber > blockNum) { return }
-            fs.unlinkSync(latest)
-        }
-        this.log(`making symlink ${latest} to ${path} ${exists}`)
-        //create latest.json link
-        fs.symlinkSync(path, latest)
+
+        // only update link if block is newer than current latest
+        const latestBlock = await this.getLatestBlock()
+        if (latestBlock && latestBlock.blockNumber > blockNum) { return }
+
+        // create latest.json link
+        const latestPath = this.getLatestPath()
+        try { fs.unlinkSync(latestPath) } catch (e) { /* ignore */ }
+        fs.symlinkSync(path, latestPath)
     }
 
     /**

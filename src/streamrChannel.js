@@ -57,6 +57,7 @@ module.exports = class StreamrChannel extends EventEmitter {
 
     /**
      * After this, call .publish(type, data) to send
+     * @returns {Promise<void>} that resolves when publishing can be done
      */
     async startServer(privateKey) {
         if (this.mode) { return Promise.reject(new Error(`Already started as ${this.mode}`))}
@@ -78,10 +79,11 @@ module.exports = class StreamrChannel extends EventEmitter {
     /**
      * Send a join/part event into the stream
      * @param {string} type "join" or "part"
-     * @param {Array<Address>} addresses that joined/parted
+     * @param {Array<Address> | Address} addresses that joined/parted
      */
     async publish(type, addresses) {
         if (this.mode !== State.SERVER) { return Promise.reject(new Error("Must startServer() first!")) }
+        if (typeof addresses === "string") { addresses = [addresses] }
 
         return this.stream.publish({
             type,
@@ -108,10 +110,15 @@ module.exports = class StreamrChannel extends EventEmitter {
 
         const self = this
         function emitMessage(msg, meta) {
+            if (!msg.type) { throw new Error("JoinPartStream message must have a 'type'") }
             self.lastMessageTimestamp = meta.messageId.timestamp
             self.lastMessageNumber = msg.number
-            self.emit(msg.type, msg.addresses)
-            self.emit("message", msg.type, msg.addresses, meta)
+            const addresses =
+                !msg.addresses ? [] :
+                msg.addresses.constructor.name !== "Array" ? [msg.addresses] :
+                msg.addresses
+            self.emit(msg.type, addresses)
+            self.emit("message", msg.type, addresses, meta)
         }
 
         log(`Starting playback of ${this.stream.id}`)

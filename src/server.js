@@ -253,7 +253,7 @@ module.exports = class DataUnionServer {
     async getStoreFor(dataUnionAddress) {
         const address = getAddress(dataUnionAddress)
         const storeDir = `${this.storeDir}/${address}`
-        this.log(`Storing dataUnion ${dataUnionAddress} data at ${storeDir}`)
+        this.log(`Storing data union ${dataUnionAddress} data at ${storeDir}`)
         const fileStore = new FileStore(storeDir)
         return fileStore
     }
