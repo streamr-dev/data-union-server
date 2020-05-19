@@ -2,7 +2,7 @@ const os = require("os")
 const path = require("path")
 const assert = require("assert")
 const crypto = require("crypto")
-const { utils: { getAddress, BigNumber }} = require("ethers")
+const { utils: { parseEther, getAddress, BigNumber }} = require("ethers")
 
 const now = require("../../src/utils/now")
 const MonoplasmaState = require("../../src/state")
@@ -287,6 +287,34 @@ describe("MonoplasmaState", () => {
         )), "all members should still have 0 earnings")
 
         assert.equal(plasma.getTotalRevenue(), revenue * 2, "total revenue should be what was added")
+    })
+
+    describe("clone", () => {
+        it("preserves state", async () => {
+            const initialMembers = []
+            while (initialMembers.length < 3) {
+                initialMembers.push({
+                    address: `0x${crypto.randomBytes(20).toString("hex")}`,
+                    earnings: 0,
+                })
+            }
+            const plasma = new MonoplasmaState({
+                blockFreezeSeconds: 0,
+                initialMembers,
+                store: fileStore,
+                adminAddress: admin,
+                adminFeeFraction: 0,
+            })
+            const revenue = parseEther("1")
+            plasma.addRevenue(revenue)
+            const plasma2 = plasma.clone()
+            assert.deepEqual(plasma.getMembers(), plasma2.getMembers(), "members should be identical")
+            assert.deepEqual(plasma.adminAddress, plasma2.adminAddress, "admin address should be identical")
+            assert.deepEqual(await plasma.getMember(admin), await plasma.getMember(admin), "admin member should be identical")
+            assert.deepEqual(String(plasma.adminFeeFraction), String(plasma2.adminFeeFraction), "admin adminFeeFraction should be identical")
+            assert.deepEqual(plasma.getTotalRevenue(), plasma2.getTotalRevenue(), "revenue should be identical")
+            assert.deepEqual(plasma.getLatestBlock(), plasma2.getLatestBlock(), "latest block should be identical")
+        })
     })
 
     it("should remember past blocks' earnings", async () => {

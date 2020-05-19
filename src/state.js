@@ -31,7 +31,8 @@ module.exports = class MonoplasmaState {
         adminAddress,
         adminFeeFraction,
         initialBlockNumber = 0,
-        initialTimestamp = 0
+        initialTimestamp = 0,
+        initialTotalEarnings = initialMembers.reduce((sum, m) => sum.add(m.earnings), new BN(0)),
     }) {
         this.id = ID++
         this.log = log.extend(this.id)
@@ -44,8 +45,9 @@ module.exports = class MonoplasmaState {
         this.store = store
         /** @property {number} blockFreezeSeconds after which blocks become withdrawable */
         this.blockFreezeSeconds = blockFreezeSeconds
-        /** @property {number} totalEarnings by all members together; should equal balanceOf(contract) + contract.totalWithdrawn */
-        this.totalEarnings = initialMembers.reduce((sum, m) => sum.add(m.earnings), new BN(0))
+
+        /** @property {BN} totalEarnings by all members together; should roughly equal balanceOf(contract) + contract.totalWithdrawn */
+        this.totalEarnings = initialTotalEarnings
 
         /** @property {Array<Block>} latestBlocks that have been stored. Kept to figure out  */
         this.latestBlocks = []
@@ -92,7 +94,8 @@ module.exports = class MonoplasmaState {
             adminAddress: this.adminAddress,
             adminFeeFraction: this.adminFeeFraction,
             initialBlockNumber: this.currentBlock,
-            currentTimestamp: this.currentTimestamp
+            currentTimestamp: this.currentTimestamp,
+            initialTotalEarnings: this.totalEarnings,
         })
     }
 
