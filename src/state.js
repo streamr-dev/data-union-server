@@ -177,6 +177,7 @@ module.exports = class MonoplasmaState {
         if (i === undefined) { return null }
         const m = this.members[i]
         if (!m) { throw new Error(`Bad index ${i}`) }   // TODO: change to return null in production
+        if (m.address !== address) { throw new Error(`Bad index ${i} for address ${address}, found member with address ${m.address}`) }
         const obj = m.toObject()
         obj.active = m.isActive()
         return obj
