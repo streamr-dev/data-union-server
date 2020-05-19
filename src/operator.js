@@ -38,7 +38,8 @@ module.exports = class MonoplasmaOperator {
             adminAddress: this.watcher.plasma.adminAddress,
             adminFeeFraction: this.watcher.plasma.adminFeeFraction,
             initialBlockNumber: this.watcher.plasma.currentBlock,
-            initialTimestamp: this.watcher.plasma.currentTimestamp
+            initialTimestamp: this.watcher.plasma.currentTimestamp,
+            initialTotalEarnings: this.watcher.plasma.totalEarnings,
         });
         this.watcher.on("tokensReceived", event => this.onTokensReceived(event).catch(this.log));
     }

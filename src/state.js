@@ -47,7 +47,7 @@ module.exports = class MonoplasmaState {
         this.blockFreezeSeconds = blockFreezeSeconds
 
         /** @property {BN} totalEarnings by all members together; should roughly equal balanceOf(contract) + contract.totalWithdrawn */
-        this.totalEarnings = initialTotalEarnings
+        this.totalEarnings = new BN(initialTotalEarnings || 0)
 
         /** @property {Array<Block>} latestBlocks that have been stored. Kept to figure out  */
         this.latestBlocks = []
