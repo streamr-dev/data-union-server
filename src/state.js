@@ -69,15 +69,18 @@ module.exports = class MonoplasmaState {
 
         this.indexOf = {}
         this.members.forEach((m, i) => { this.indexOf[m.address] = i })
-
-        const wasNew = this.addMember(adminAddress, "admin")
-        const i = this.indexOf[adminAddress]
-        this.adminMember = this.members[i]
-
-        // don't enable adminMember to participate into profit-sharing (unless it was also in initialMembers)
-        if (wasNew) {
+        // add admin member if not already added
+        this.adminMember = this._getMember(adminAddress)
+        if (!this.adminMember) {
+            this.addMember(adminAddress, "admin")
+            this.adminMember = this._getMember(adminAddress)
+            // don't enable adminMember to participate into profit-sharing by default
             this.adminMember.setActive(false)
         }
+    }
+
+    _getMember(address) {
+        return this.members[this.indexOf[address]]
     }
 
     clone(storeOverride) {

@@ -16,6 +16,42 @@ const fileStore = new FileStore(tmpDir, log)
 const admin = "0x0000000000000000000000000000000000123564"
 
 describe("MonoplasmaState", () => {
+    describe("admin handling", () => {
+        it("should create admin member if not supplied", async () => {
+            const plasma = new MonoplasmaState({
+                blockFreezeSeconds: 0,
+                initialMembers: [],
+                store: fileStore,
+                adminAddress: admin,
+                adminFeeFraction: 0
+            })
+            const adminMember = await plasma.getMember(admin)
+            assert.ok(adminMember, "admin member exists")
+            assert.strictEqual(adminMember.address, admin, "admin member address matches")
+            assert.ok(!adminMember.active, "admin member not active by default")
+            assert.deepStrictEqual(await plasma.getMembers(), [], "inactive admin not in members")
+        })
+
+        it("should leave admin active state alone if supplied", async () => {
+            const plasma = new MonoplasmaState({
+                blockFreezeSeconds: 0,
+                initialMembers: [{
+                    address: admin,
+                    active: true,
+                    earnings: 0,
+                }],
+                store: fileStore,
+                adminAddress: admin,
+                adminFeeFraction: 0
+            })
+            const adminMember = await plasma.getMember(admin)
+            assert.ok(adminMember, "admin member exists")
+            assert.equal(adminMember.address, admin, "admin member address matches")
+            assert.ok(adminMember.active, "admin member not active by default")
+            assert.deepStrictEqual(await plasma.getMembers(), [adminMember], "active admin in members")
+        })
+    })
+
     it("should return member passed to constructor and then remove it successfully", () => {
         const plasmaAdmin = new MonoplasmaState({
             blockFreezeSeconds: 0,
