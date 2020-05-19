@@ -69,8 +69,8 @@ module.exports = class MonoplasmaState {
 
         this.indexOf = {}
         this.members.forEach((m, i) => { this.indexOf[m.address] = i })
-        // add admin member if not already added
         this.adminMember = this._getMember(adminAddress)
+        // add admin member if not already added
         if (!this.adminMember) {
             this.addMember(adminAddress, "admin")
             this.adminMember = this._getMember(adminAddress)
@@ -348,6 +348,7 @@ module.exports = class MonoplasmaState {
             m.setActive(false)
             this.members = this.members.slice()
             this.members[i] = m
+            delete this.indexOf[address]
         }
         this.log("removeMember", {
             i,

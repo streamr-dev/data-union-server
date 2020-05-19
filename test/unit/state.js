@@ -52,7 +52,7 @@ describe("MonoplasmaState", () => {
         })
     })
 
-    it("should return member passed to constructor and then remove it successfully", () => {
+    it("should return member passed to constructor and then remove it successfully", async () => {
         const plasmaAdmin = new MonoplasmaState({
             blockFreezeSeconds: 0,
             initialMembers: [{
@@ -70,6 +70,7 @@ describe("MonoplasmaState", () => {
         }])
         plasmaAdmin.removeMember("0xfF019d79C31114c811e68e68C9863966F22370ef")
         assert.deepStrictEqual(plasmaAdmin.getMembers(), [])
+        assert.ok(!await plasmaAdmin.getMember("0xfF019d79C31114c811e68e68C9863966F22370ef"))
     })
 
     it("should return correct members and member count", () => {
