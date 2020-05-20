@@ -311,6 +311,8 @@ describe("MonoplasmaState", () => {
             assert.deepEqual(plasma.getMembers(), plasma2.getMembers(), "members should be identical")
             assert.deepEqual(plasma.adminAddress, plasma2.adminAddress, "admin address should be identical")
             assert.deepEqual(await plasma.getMember(admin), await plasma.getMember(admin), "admin member should be identical")
+            assert.ok(!(await plasma.getMember(admin)).active, "admin member should be inactive")
+            assert.ok(!(await plasma2.getMember(admin)).active, "cloned admin member should be inactive")
             assert.deepEqual(String(plasma.adminFeeFraction), String(plasma2.adminFeeFraction), "admin adminFeeFraction should be identical")
             assert.deepEqual(plasma.getTotalRevenue(), plasma2.getTotalRevenue(), "revenue should be identical")
             assert.deepEqual(plasma.getLatestBlock(), plasma2.getLatestBlock(), "latest block should be identical")
