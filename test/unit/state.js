@@ -17,10 +17,15 @@ const admin = "0x0000000000000000000000000000000000123564"
 
 describe("MonoplasmaState", () => {
     describe("admin handling", () => {
+        const otherMembers = [{
+            address: "0xfF019d79C31114c811e68e68C9863966F22370ef",
+            earnings: "10",
+            active: true,
+        }]
         it("should create admin member if not supplied", async () => {
             const plasma = new MonoplasmaState({
                 blockFreezeSeconds: 0,
-                initialMembers: [],
+                initialMembers: [...otherMembers],
                 store: fileStore,
                 adminAddress: admin,
                 adminFeeFraction: 0
@@ -29,7 +34,7 @@ describe("MonoplasmaState", () => {
             assert.ok(adminMember, "admin member exists")
             assert.strictEqual(adminMember.address, admin, "admin member address matches")
             assert.ok(!adminMember.active, "admin member not active by default")
-            assert.deepStrictEqual(await plasma.getMembers(), [], "inactive admin not in members")
+            assert.deepStrictEqual(await plasma.getMembers(), otherMembers, "inactive admin not in members")
         })
 
         it("should leave admin active state alone if supplied", async () => {
@@ -39,7 +44,7 @@ describe("MonoplasmaState", () => {
                     address: admin,
                     active: true,
                     earnings: 0,
-                }],
+                }].concat(otherMembers),
                 store: fileStore,
                 adminAddress: admin,
                 adminFeeFraction: 0
@@ -47,8 +52,27 @@ describe("MonoplasmaState", () => {
             const adminMember = await plasma.getMember(admin)
             assert.ok(adminMember, "admin member exists")
             assert.equal(adminMember.address, admin, "admin member address matches")
-            assert.ok(adminMember.active, "admin member not active by default")
-            assert.deepStrictEqual(await plasma.getMembers(), [adminMember], "active admin in members")
+            assert.ok(adminMember.active, "admin member should be active")
+            assert.deepStrictEqual(await plasma.getMembers(), [adminMember, ...otherMembers], "active admin in members")
+        })
+
+        it("should leave admin inactive state alone if supplied", async () => {
+            const plasma = new MonoplasmaState({
+                blockFreezeSeconds: 0,
+                initialMembers: [{
+                    address: admin,
+                    active: false,
+                    earnings: 0,
+                }].concat(otherMembers),
+                store: fileStore,
+                adminAddress: admin,
+                adminFeeFraction: 0
+            })
+            const adminMember = await plasma.getMember(admin)
+            assert.ok(adminMember, "admin member exists")
+            assert.equal(adminMember.address, admin, "admin member address matches")
+            assert.ok(!adminMember.active, "admin member should not be active")
+            assert.deepStrictEqual(await plasma.getMembers(), otherMembers, "inactive admin not in members")
         })
     })
 
