@@ -59,7 +59,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         const network = await this.eth.getNetwork();
         this.log(`Connected to Ethereum network: ${JSON.stringify(network)}`);
         if (network.chainId === 1) {
-            this.blockTimestampCache = require("../mainnet_timestamp_cache.json");
+            this.blockTimestampCache = require("../cache/mainnet_timestamps.json");
             this.log(`Loaded ${Object.keys(this.blockTimestampCache).length} block timestamps from disk`);
         }
         // this.state should be broken up into state.js, and rest called this.config
