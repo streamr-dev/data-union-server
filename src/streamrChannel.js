@@ -3,6 +3,8 @@ const StreamrClient = require("streamr-client")
 const { utils: { computeAddress } } = require("ethers")
 const log = require("debug")("Streamr::dataunion::StreamrChannel")
 
+const until = require("./utils/await-until")
+
 /**
  * @typedef {string} State
  * @enum {string}
@@ -108,6 +110,22 @@ module.exports = class StreamrChannel extends EventEmitter {
         this.client = sharedClients[this.clientOptions.url]
         this.stream = await this.client.getStream(this.joinPartStreamId) // will throw if joinPartStreamId is bad
 
+        // swash cache hack; TODO: generalize?
+        if (this.joinPartStreamId === "szZk2t2JTZylrRwN6CYJNg") {
+            try {
+                log(`Reading cached events for ${this.joinPartStreamId}`)
+                const cachedEvents = require(`../cache/stream-${this.joinPartStreamId}.json`)
+                log(`Playing back ${cachedEvents.length} cached events`)
+                for (const {type, addresses, timestamp} of cachedEvents) {
+                    this.emit(type, addresses)
+                    this.emit("message", type, addresses, { messageId: { timestamp } })
+                }
+                syncStartTimestamp = cachedEvents.slice(-1)[0].timestamp + 1
+            } catch (e) {
+                log(`Error when reading from cache: ${e.stack}`)
+            }
+        }
+
         const self = this
         function emitMessage(msg, meta) {
             if (!msg.type) { throw new Error("JoinPartStream message must have a 'type'") }
@@ -121,7 +139,7 @@ module.exports = class StreamrChannel extends EventEmitter {
             self.emit("message", msg.type, addresses, meta)
         }
 
-        log(`Starting playback of ${this.stream.id}`)
+        log(`Starting playback of ${this.stream.id} from ${syncStartTimestamp}(${new Date(syncStartTimestamp).toString()})`)
 
         const queue = []
         const sub = this.client.subscribe({
@@ -141,10 +159,10 @@ module.exports = class StreamrChannel extends EventEmitter {
 
         await new Promise((done, fail) => {
             sub.on("error", fail)
-            sub.on("resent", done)
-            sub.on("no_resend", done)
+            //sub.on("resent", done)
+            //sub.on("no_resend", done)
             // possible substitute to two lines above:
-            // sub.on("initial_resend_done", done)
+            sub.on("initial_resend_done", done)
             setTimeout(fail, playbackTimeoutMs)
         })
         log(`Playback of ${this.stream.id} done`)
@@ -155,7 +173,10 @@ module.exports = class StreamrChannel extends EventEmitter {
             const {msg, meta} = queue.shift()
             log(`Sending message ${JSON.stringify(msg)}, queue length = ${queue.length}}`)
             emitMessage(msg, meta)
-        }, 100)
+        }, 10)
+
+        // fix a problem caused by the above hack by waiting until queue is empty
+        await until(() => queue.length < 1)
 
         this.mode = State.CLIENT
     }

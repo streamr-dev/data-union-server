@@ -15,7 +15,7 @@ const DataUnionContract = require("../../build/DataunionVault.json")
 
 const log = require("debug")("Streamr::CPS::test::integration::exit-everyone-script")
 
-const { untilStreamContains, untilStreamMatches } = require("../utils/await-until")
+const { untilStreamContains, untilStreamMatches } = require("../utils/await-process-stream")
 
 const sleep = require("../../src/utils/sleep-promise")
 

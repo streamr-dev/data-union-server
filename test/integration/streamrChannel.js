@@ -4,7 +4,7 @@ const assert = require("assert")
 const Channel = require("../../src/streamrChannel")
 const sleep = require("../../src/utils/sleep-promise")
 
-const { until } = require("../utils/await-until")
+const until = require("../../src/utils/await-until")
 const assertFails = require("../utils/assert-promise-fails")
 
 const privateKey = "0x5e98cce00cff5dea6b454889f359a4ec06b9fa6b88e9d69b86de8e1c81887da0"  // ganache 0

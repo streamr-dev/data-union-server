@@ -11,7 +11,7 @@ const {
     providers: { JsonRpcProvider }
 } = require("ethers")
 
-const { untilStreamContains, untilStreamMatches, capture } = require("../utils/await-until")
+const { untilStreamContains, untilStreamMatches, capture } = require("../utils/await-process-stream")
 
 const sleep = require("../../src/utils/sleep-promise")
 const deployContract = require("../../src/utils/deployContract")

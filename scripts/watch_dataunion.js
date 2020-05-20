@@ -6,6 +6,7 @@ const fs = require("mz/fs")
 const express = require("express")
 const cors = require("cors")
 const bodyParser = require("body-parser")
+const os = require("os")
 
 const {
     Contract,
@@ -52,7 +53,7 @@ async function start() {
     log("Connected to Ethereum network: ", JSON.stringify(network))
 
     const contractAddress = await throwIfNotContract(provider, DATAUNION_ADDRESS, "Environment variable DATAUNION_ADDRESS")
-    const storeDir = fs.existsSync(STORE_DIR) ? STORE_DIR : `${__dirname}/store/${contractAddress}-${Date.now()}`
+    const storeDir = STORE_DIR && fs.existsSync(STORE_DIR) ? STORE_DIR : `${os.tmpdir()}/watcher-store/${contractAddress}-${Date.now()}`
     const fileStore = new FileStore(storeDir)
 
     const config = {
