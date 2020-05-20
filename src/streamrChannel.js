@@ -139,7 +139,7 @@ module.exports = class StreamrChannel extends EventEmitter {
             self.emit("message", msg.type, addresses, meta)
         }
 
-        log(`Starting playback of ${this.stream.id}`)
+        log(`Starting playback of ${this.stream.id} from ${syncStartTimestamp}(${new Date(syncStartTimestamp).toString()})`)
 
         const queue = []
         const sub = this.client.subscribe({
