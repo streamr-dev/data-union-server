@@ -110,6 +110,22 @@ module.exports = class StreamrChannel extends EventEmitter {
         this.client = sharedClients[this.clientOptions.url]
         this.stream = await this.client.getStream(this.joinPartStreamId) // will throw if joinPartStreamId is bad
 
+        // swash cache hack; TODO: generalize?
+        if (this.joinPartStreamId === "szZk2t2JTZylrRwN6CYJNg") {
+            try {
+                log(`Reading cached events for ${this.joinPartStreamId}`)
+                const cachedEvents = require(`../cache/stream-${this.joinPartStreamId}.json`)
+                log(`Playing back ${cachedEvents.length} cached events`)
+                for (const {type, addresses, timestamp} of cachedEvents) {
+                    this.emit(type, addresses)
+                    this.emit("message", type, addresses, { messageId: { timestamp } })
+                }
+                syncStartTimestamp = cachedEvents.slice(-1)[0].timestamp + 1
+            } catch (e) {
+                log(`Error when reading from cache: ${e.stack}`)
+            }
+        }
+
         const self = this
         function emitMessage(msg, meta) {
             if (!msg.type) { throw new Error("JoinPartStream message must have a 'type'") }
