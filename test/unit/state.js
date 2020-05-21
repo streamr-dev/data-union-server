@@ -2,7 +2,7 @@ const os = require("os")
 const path = require("path")
 const assert = require("assert")
 const crypto = require("crypto")
-const { utils: { getAddress, BigNumber }} = require("ethers")
+const { utils: { parseEther, getAddress, BigNumber }} = require("ethers")
 
 const now = require("../../src/utils/now")
 const MonoplasmaState = require("../../src/state")
@@ -16,7 +16,67 @@ const fileStore = new FileStore(tmpDir, log)
 const admin = "0x0000000000000000000000000000000000123564"
 
 describe("MonoplasmaState", () => {
-    it("should return member passed to constructor and then remove it successfully", () => {
+    describe("admin handling", () => {
+        const otherMembers = [{
+            address: "0xfF019d79C31114c811e68e68C9863966F22370ef",
+            earnings: "10",
+            active: true,
+        }]
+        it("should create admin member if not supplied", async () => {
+            const plasma = new MonoplasmaState({
+                blockFreezeSeconds: 0,
+                initialMembers: [...otherMembers],
+                store: fileStore,
+                adminAddress: admin,
+                adminFeeFraction: 0
+            })
+            const adminMember = await plasma.getMember(admin)
+            assert.ok(adminMember, "admin member exists")
+            assert.strictEqual(adminMember.address, admin, "admin member address matches")
+            assert.ok(!adminMember.active, "admin member not active by default")
+            assert.deepStrictEqual(await plasma.getMembers(), otherMembers, "inactive admin not in members")
+        })
+
+        it("should leave admin active state alone if supplied", async () => {
+            const plasma = new MonoplasmaState({
+                blockFreezeSeconds: 0,
+                initialMembers: [{
+                    address: admin,
+                    active: true,
+                    earnings: 0,
+                }].concat(otherMembers),
+                store: fileStore,
+                adminAddress: admin,
+                adminFeeFraction: 0
+            })
+            const adminMember = await plasma.getMember(admin)
+            assert.ok(adminMember, "admin member exists")
+            assert.equal(adminMember.address, admin, "admin member address matches")
+            assert.ok(adminMember.active, "admin member should be active")
+            assert.deepStrictEqual(await plasma.getMembers(), [adminMember, ...otherMembers], "active admin in members")
+        })
+
+        it("should leave admin inactive state alone if supplied", async () => {
+            const plasma = new MonoplasmaState({
+                blockFreezeSeconds: 0,
+                initialMembers: [{
+                    address: admin,
+                    active: false,
+                    earnings: 0,
+                }].concat(otherMembers),
+                store: fileStore,
+                adminAddress: admin,
+                adminFeeFraction: 0
+            })
+            const adminMember = await plasma.getMember(admin)
+            assert.ok(adminMember, "admin member exists")
+            assert.equal(adminMember.address, admin, "admin member address matches")
+            assert.ok(!adminMember.active, "admin member should not be active")
+            assert.deepStrictEqual(await plasma.getMembers(), otherMembers, "inactive admin not in members")
+        })
+    })
+
+    it("should return member passed to constructor and then remove it successfully", async () => {
         const plasmaAdmin = new MonoplasmaState({
             blockFreezeSeconds: 0,
             initialMembers: [{
@@ -34,6 +94,7 @@ describe("MonoplasmaState", () => {
         }])
         plasmaAdmin.removeMember("0xfF019d79C31114c811e68e68C9863966F22370ef")
         assert.deepStrictEqual(plasmaAdmin.getMembers(), [])
+        assert.ok(!await plasmaAdmin.getMember("0xfF019d79C31114c811e68e68C9863966F22370ef"))
     })
 
     it("should return correct members and member count", () => {
@@ -250,6 +311,36 @@ describe("MonoplasmaState", () => {
         )), "all members should still have 0 earnings")
 
         assert.equal(plasma.getTotalRevenue(), revenue * 2, "total revenue should be what was added")
+    })
+
+    describe("clone", () => {
+        it("preserves state", async () => {
+            const initialMembers = []
+            while (initialMembers.length < 3) {
+                initialMembers.push({
+                    address: `0x${crypto.randomBytes(20).toString("hex")}`,
+                    earnings: 0,
+                })
+            }
+            const plasma = new MonoplasmaState({
+                blockFreezeSeconds: 0,
+                initialMembers,
+                store: fileStore,
+                adminAddress: admin,
+                adminFeeFraction: 0,
+            })
+            const revenue = parseEther("1")
+            plasma.addRevenue(revenue)
+            const plasma2 = plasma.clone()
+            assert.deepEqual(plasma.getMembers(), plasma2.getMembers(), "members should be identical")
+            assert.deepEqual(plasma.adminAddress, plasma2.adminAddress, "admin address should be identical")
+            assert.deepEqual(await plasma.getMember(admin), await plasma.getMember(admin), "admin member should be identical")
+            assert.ok(!(await plasma.getMember(admin)).active, "admin member should be inactive")
+            assert.ok(!(await plasma2.getMember(admin)).active, "cloned admin member should be inactive")
+            assert.deepEqual(String(plasma.adminFeeFraction), String(plasma2.adminFeeFraction), "admin adminFeeFraction should be identical")
+            assert.deepEqual(plasma.getTotalRevenue(), plasma2.getTotalRevenue(), "revenue should be identical")
+            assert.deepEqual(plasma.getLatestBlock(), plasma2.getLatestBlock(), "latest block should be identical")
+        })
     })
 
     it("should remember past blocks' earnings", async () => {

@@ -106,6 +106,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             members: [],
             blockNumber: 0,
             timestamp: 0,
+            totalEarnings: 0,
         }
         /*
         if (lastPublishedBlockNumber) {
@@ -125,6 +126,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         }
         this.log(`Syncing Monoplasma state starting from block ${lastBlock.blockNumber} (t=${lastBlock.timestamp}) with ${lastBlock.members.length} members`)
         const playbackStartingTimestampMs = lastBlock.timestamp || lastBlock.blockNumber && await this.getBlockTimestamp(lastBlock.blockNumber) || 0
+
         this.plasma = new MonoplasmaState({
             blockFreezeSeconds: this.state.blockFreezeSeconds,
             initialMembers: lastBlock.members,
@@ -133,6 +135,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             adminFeeFraction: this.state.adminFee,
             initialBlockNumber: lastBlock.blockNumber,
             initialTimestamp: playbackStartingTimestampMs / 1000,
+            initialTotalEarnings: lastBlock.totalEarnings,
         })
 
         this.log(`Getting joins/parts from the Channel starting from t=${playbackStartingTimestampMs}, ${new Date(playbackStartingTimestampMs).toISOString()}`)
@@ -230,6 +233,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             adminFeeFraction: this.state.adminFee,
             initialBlockNumber: monoplasmaState.blockNumber,
             initialTimestamp: monoplasmaState.timestamp,
+            initialTotalEarnings: monoplasmaState.totalEarnings,
         })
     }
 

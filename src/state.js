@@ -31,7 +31,8 @@ module.exports = class MonoplasmaState {
         adminAddress,
         adminFeeFraction,
         initialBlockNumber = 0,
-        initialTimestamp = 0
+        initialTimestamp = 0,
+        initialTotalEarnings = initialMembers.reduce((sum, m) => sum.add(m.earnings), new BN(0)),
     }) {
         this.id = ID++
         this.log = log.extend(this.id)
@@ -44,8 +45,9 @@ module.exports = class MonoplasmaState {
         this.store = store
         /** @property {number} blockFreezeSeconds after which blocks become withdrawable */
         this.blockFreezeSeconds = blockFreezeSeconds
-        /** @property {number} totalEarnings by all members together; should equal balanceOf(contract) + contract.totalWithdrawn */
-        this.totalEarnings = initialMembers.reduce((sum, m) => sum.add(m.earnings), new BN(0))
+
+        /** @property {BN} totalEarnings by all members together; should roughly equal balanceOf(contract) + contract.totalWithdrawn */
+        this.totalEarnings = new BN(initialTotalEarnings || 0)
 
         /** @property {Array<Block>} latestBlocks that have been stored. Kept to figure out  */
         this.latestBlocks = []
@@ -69,15 +71,18 @@ module.exports = class MonoplasmaState {
 
         this.indexOf = {}
         this.members.forEach((m, i) => { this.indexOf[m.address] = i })
-
-        const wasNew = this.addMember(adminAddress, "admin")
-        const i = this.indexOf[adminAddress]
-        this.adminMember = this.members[i]
-
-        // don't enable adminMember to participate into profit-sharing (unless it was also in initialMembers)
-        if (wasNew) {
+        this.adminMember = this._getMember(adminAddress)
+        // add admin member if not already added
+        if (!this.adminMember) {
+            this.addMember(adminAddress, "admin")
+            this.adminMember = this._getMember(adminAddress)
+            // don't enable adminMember to participate into profit-sharing by default
             this.adminMember.setActive(false)
         }
+    }
+
+    _getMember(address) {
+        return this.members[this.indexOf[address]]
     }
 
     clone(storeOverride) {
@@ -89,7 +94,8 @@ module.exports = class MonoplasmaState {
             adminAddress: this.adminAddress,
             adminFeeFraction: this.adminFeeFraction,
             initialBlockNumber: this.currentBlock,
-            currentTimestamp: this.currentTimestamp
+            currentTimestamp: this.currentTimestamp,
+            initialTotalEarnings: this.totalEarnings,
         })
     }
 
@@ -171,6 +177,7 @@ module.exports = class MonoplasmaState {
         if (i === undefined) { return null }
         const m = this.members[i]
         if (!m) { throw new Error(`Bad index ${i}`) }   // TODO: change to return null in production
+        if (m.address !== address) { throw new Error(`Bad index ${i} for address ${address}, found member with address ${m.address}`) }
         const obj = m.toObject()
         obj.active = m.isActive()
         return obj
@@ -345,6 +352,7 @@ module.exports = class MonoplasmaState {
             m.setActive(false)
             this.members = this.members.slice()
             this.members[i] = m
+            delete this.indexOf[address]
         }
         this.log("removeMember", {
             i,

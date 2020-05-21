@@ -90,6 +90,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             members: [],
             blockNumber: 0,
             timestamp: 0,
+            totalEarnings: 0,
         };
         /*
         if (lastPublishedBlockNumber) {
@@ -117,6 +118,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             adminFeeFraction: this.state.adminFee,
             initialBlockNumber: lastBlock.blockNumber,
             initialTimestamp: playbackStartingTimestampMs / 1000,
+            initialTotalEarnings: lastBlock.totalEarnings,
         });
         this.log(`Getting joins/parts from the Channel starting from t=${playbackStartingTimestampMs}, ${new Date(playbackStartingTimestampMs).toISOString()}`);
         // replay and cache messages until in sync
@@ -205,6 +207,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             adminFeeFraction: this.state.adminFee,
             initialBlockNumber: monoplasmaState.blockNumber,
             initialTimestamp: monoplasmaState.timestamp,
+            initialTotalEarnings: monoplasmaState.totalEarnings,
         });
     }
     /**
