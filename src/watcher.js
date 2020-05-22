@@ -286,7 +286,11 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
                 return block.timestamp * 1000;
             })();
         }
-        return await this.blockTimestampCache[blockNumber];
+        if (this.blockTimestampCache[blockNumber].constructor.name === "Promise") {
+            const timestamp = await this.blockTimestampCache[blockNumber];
+            this.blockTimestampCache[blockNumber] = timestamp;
+        }
+        return this.blockTimestampCache[blockNumber];
     }
     /**
      * @returns {BigNumber} the number of token-wei held in the Monoplasma contract
