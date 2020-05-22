@@ -176,7 +176,7 @@ module.exports = class StreamrChannel extends EventEmitter {
         }, 10)
 
         // fix a problem caused by the above hack by waiting until queue is empty
-        await until(() => queue.length < 1)
+        await until(() => queue.length < 1, 3600000)    // 1 hour
 
         this.mode = State.CLIENT
     }
