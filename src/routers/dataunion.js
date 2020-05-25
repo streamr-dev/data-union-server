@@ -3,6 +3,7 @@ const express = require("express")
 const {
     utils: { getAddress, BigNumber }
 } = require("ethers")
+const StreamrClient = require("streamr-client")
 
 const log = require("debug")("Streamr::dataunion::routers::dataunion")
 
@@ -88,22 +89,49 @@ router.get("/members", (req, res) => {
 })
 
 // NOTE: this function gets the highest query load
-router.get("/members/:address", (req, res) => {
-    const state = req.monoplasmaState
-    // TODO: dataUnionAddress = state.contractAddress
-    //log(`HTTP ${state.dataUnionAddress}> Requested member ${address}`)
-
+router.get("/members/:address", async (req, res) => {
     const address = parseAddress(req.params.address)
+    // TODO: dataUnionAddress = state.contractAddress
+
     if (!address) {
         res.status(400).send({error: `Bad Ethereum address: ${req.params.address}`})
         return
     }
-    log(`HTTP ${req.params.dataUnionAddress}> Requested member ${address}`)
-    // TODO: revert to plasma.getMember after monoplasma update
-    //const member = state.getMember(address)
+    const state = req.monoplasmaState
+    log(`HTTP ${req.dataUnionAddress}> Requested member ${address}`)
+    await new Promise(async (resolve) => {
+        const c = new StreamrClient({
+            url: req.server.operatorConfig.streamrWsUrl,
+            restUrl: req.server.operatorConfig.streamrHttpUrl,
+        })
+        c.ensureConnected()
+        const { joinPartStreamId } = req.server.dataUnions[req.dataUnionAddress]
+        const sub = c.subscribe({
+            stream: joinPartStreamId,
+            resend: {
+                from: {
+                    timestamp: 0,
+                    sequenceNumber: 0,
+                },
+            },
+        }, (msg, meta) => {
+            log({ msg, meta })
+        }).on('subscribed', () => {
+            resolve()
+        })
+        .on('error', (error) => log('error', error))
+        .on('no_resend', () => log('no_resend'))
+        .on('resent', () => log('resent'))
+        .on('groupKeyMissing', (...args) => log('groupKeyMissing', ...args))
+        .on('unsubscribed', () => log('unsubscribed'))
+        .on('gap', (...args) => log('gap', ...args))
+        .on('disconnected', () => log('disconnected'))
+        .on('done', () => log('done'))
+    })
+
     const member = state.getMembers().find(m => m.address === address)
     if (!member) {
-        res.status(404).send({error: `Member not found: ${address} in ${req.params.dataUnionAddress}`})
+        res.status(404).send({error: `Member not found: ${address} in ${req.dataUnionAddress}`})
         return
     }
 

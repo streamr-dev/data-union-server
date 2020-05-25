@@ -30,6 +30,8 @@ module.exports = (server) => {
             res.status(503).send({error: `dataUnion is being started @ ${address}`, dataUnion})
             return
         }
+        req.server = server
+        req.dataUnionAddress = address
 
         req.monoplasmaState = dataUnion.operator.watcher.plasma
         req.joinPartStreamId = dataUnion.operator.watcher.channel.stream.id
