@@ -42,11 +42,17 @@ async function deployContract(wallet, operatorAddress, tokenAddress, streamrNode
     const stream = await client.createStream({ name: joinPartStreamName })
 
     // every watcher should be able to read joins and parts in order to sync the state
-    const res1 = await stream.grantPermission("read", null)
-    log("Grant public read", JSON.stringify(res1))
+    const res1 = [
+        await stream.grantPermission("stream_get", null),
+        await stream.grantPermission("stream_subscribe", null),
+    ]
+    log("Grant public get & subscribe", JSON.stringify(res1))
 
     // streamrNode must be able to handle accepted JoinRequests
-    const res2 = await stream.grantPermission("write", streamrNodeAddress)
+    const res2 = [
+        await stream.grantPermission("stream_get", streamrNodeAddress),
+        await stream.grantPermission("stream_publish", streamrNodeAddress),
+    ]
     log("Grant E&E write", JSON.stringify(res2))
 
     const options = {}
