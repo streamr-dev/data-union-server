@@ -129,12 +129,8 @@ module.exports = class DataUnionServer {
         if (!contract.version) { return 0 }
         return contract.version().then(v => v.toNumber()).catch(e => {
             // there is no version getter in the contract, return zero
-            // ethers+mainnet seems to say "call exception"
-            // ganache seems to say "revert"
-            if (e.message.startsWith("call exception") || e.message.endsWith("revert")) {
-                return 0
-            }
-            throw e
+            this.error(`Error message "${e.message}" calling version(). Method may not exist in old DU contract. Returning 0.`)
+            return 0
         })
     }
 
