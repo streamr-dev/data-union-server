@@ -46,14 +46,14 @@ async function deployContract(wallet, operatorAddress, tokenAddress, streamrNode
         await stream.grantPermission("stream_get", null),
         await stream.grantPermission("stream_subscribe", null),
     ]
-    log("Grant public get & subscribe", JSON.stringify(res1))
+    log("Grant public stream_get & stream_subscribe", JSON.stringify(res1))
 
     // streamrNode must be able to handle accepted JoinRequests
     const res2 = [
         await stream.grantPermission("stream_get", streamrNodeAddress),
         await stream.grantPermission("stream_publish", streamrNodeAddress),
     ]
-    log("Grant E&E write", JSON.stringify(res2))
+    log("Grant E&E stream_get & stream_publish", JSON.stringify(res2))
 
     const options = {}
     if (gasPriceGwei) { options.gasPrice = parseUnits(gasPriceGwei.toString(), "gwei") }
