@@ -126,11 +126,19 @@ async function start() {
         try {
             const perms = await stream.getPermissions()
             log(`  Permissions: ${JSON.stringify(perms)}`)
-            const nodeWritePerm = perms.find(p => p.operation === "write" && p.user === streamrNodeAddress)
-            if (nodeWritePerm) {
-                log("  Streamr node has write permission")
+
+            const nodePublishPerm = perms.find(p => p.operation === "stream_publish" && p.user === streamrNodeAddress)
+            if (nodePublishPerm) {
+                log("  Streamr node has stream_publish permission")
             } else {
-                log("!!! STREAMR NODE NEEDS WRITE PERMISSION, otherwise joins and parts won't work !!!")
+                log("!!! STREAMR NODE NEEDS stream_publish permission, otherwise joins and parts won't work !!!")
+            }
+
+            const nodeGetPerm = perms.find(p => p.operation === "stream_get" && p.user === streamrNodeAddress)
+            if (nodeGetPerm) {
+                log("  Streamr node has stream_get permission")
+            } else {
+                log("!!! STREAMR NODE NEEDS stream_get permission, otherwise joins and parts won't work !!!")
             }
         } catch (e) {
             if (e.message.includes("403")) {
