@@ -59,3 +59,10 @@ jobs:
       after_failure:
         - docker ps
         - docker logs streamr_dev_cp
+notifications:
+  slack:
+    secure: s87T3PMGQpEbwyyG6xOj1Xfar5ESn+SeHb1O/0FR6tZcOyxrVdAM11m5ptEjEoJfGuTAHz4OinFlF/Vrh8OoY6xTwrA/izzFkW4fmBzgUb7Ik/K98k3/hWeATXxq+GskgQRAi6Zl2I29c5vmah5Ug+Mx0RMkdwseAx0vlB1lSEpnIZIpidw5phe2EVNV0fXqmW+vOPCKJMZx57RTZkP4zMqLnEEf+DeN1z5+YG1/wlfSXZQDy0vRfuRNO1hmPBWwbkUz6dBiFCG2RRw1KxoPXteOzvb53KO7J73HO4un68LGLfcY0GgFtA/KhgU5nCVMoRBsIx5B5iM5/xDjOL1JmNHUxTqmKjJ7Ri836XMTfGid9YTdc8543+yoLzu8J36Ge/lucFAsyJC9DC3/aNNlUBKrw6GIOOJAC/oFx/gecO8z04warULPfP8x311s1H5zQFbmDYsFxiKYYpefG3csF7F0RRV4TwG0e7khnGS7qOnz0HJ58NyEL/yOkByn/hy1eXRhs65yLRYdVMDB/y0IYW/EftNXzPcIrPgduKanxJW/aW+SJ0hdsUnLwi6F3FsoJPoLETckI10Hi50JxH0G4/m0rU5hO0X8bm5OBmofRe1h9rljcLann53swTL6hVWrZDY7genXauCMr4X2sgUa6gdqUK8Hrttbq4G/MB+H0oQ=
+  if: branch = master
+  on_success: change
+  on_failure: always
+  on_pull_requests: false
