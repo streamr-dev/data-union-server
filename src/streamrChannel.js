@@ -96,11 +96,11 @@ module.exports = class StreamrChannel extends EventEmitter {
 
     /**
      * Start listening to events
-     * @param {Number} syncStartTimestamp resend messages starting from (from beginning if omitted)
+     * @param {Number} syncStartTimestampMs resend messages starting from (from beginning if omitted)
      * @param {Number} playbackTimeoutMs give up with error after timeout (default 10 minutes)
      * @returns {Promise<ResendResponseResent>} resolves when all events up to now are received
      */
-    async listen(syncStartTimestamp, playbackTimeoutMs = 600000) {
+    async listen(syncStartTimestampMs, playbackTimeoutMs = 600000) {
         if (this.mode) { return Promise.reject(new Error(`Already started as ${this.mode}`))}
 
         // share the client on each Streamr server. Authentication doesn't matter since all joinPartStreams should be public
@@ -116,7 +116,7 @@ module.exports = class StreamrChannel extends EventEmitter {
                 log(`Reading cached events for ${this.joinPartStreamId}`)
                 const rawCache = require(`../cache/stream-${this.joinPartStreamId}.json`)
                 log(`Found ${rawCache.length} events from cache`)
-                const cachedEvents = rawCache.filter(e => e.timestamp >= syncStartTimestamp)
+                const cachedEvents = rawCache.filter(e => e.timestamp >= syncStartTimestampMs)
                 if (cachedEvents.length < 1) {
                     log("Nothing to play back")
                 } else {
@@ -125,7 +125,7 @@ module.exports = class StreamrChannel extends EventEmitter {
                         this.emit(type, addresses)
                         this.emit("message", type, addresses, { messageId: { timestamp } })
                     }
-                    syncStartTimestamp = cachedEvents.slice(-1)[0].timestamp + 1
+                    syncStartTimestampMs = cachedEvents.slice(-1)[0].timestamp + 1
                 }
             } catch (e) {
                 log(`Error when reading from cache: ${e.stack}`)
@@ -145,14 +145,14 @@ module.exports = class StreamrChannel extends EventEmitter {
             self.emit("message", msg.type, addresses, meta)
         }
 
-        log(`Starting playback of ${this.stream.id} from ${syncStartTimestamp}(${new Date(syncStartTimestamp).toString()})`)
+        log(`Starting playback of ${this.stream.id} from ${syncStartTimestampMs}(${new Date(syncStartTimestampMs).toString()})`)
 
         const queue = []
         const sub = this.client.subscribe({
             stream: this.stream.id,
             resend: {
                 from: {
-                    timestamp: syncStartTimestamp || 1,
+                    timestamp: syncStartTimestampMs || 1,
                     sequenceNumber: 0,
                 },
             },
@@ -182,7 +182,7 @@ module.exports = class StreamrChannel extends EventEmitter {
         }, 10)
 
         // fix a problem caused by the above hack by waiting until queue is empty
-        await until(() => queue.length < 1)
+        await until(() => queue.length < 1, playbackTimeoutMs)
 
         this.mode = State.CLIENT
     }
