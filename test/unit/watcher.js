@@ -90,6 +90,20 @@ describe("MonoplasmaWatcher", () => {
         })
     }
 
+    it("ignores invalid addresses in joins", async () => {
+        const cb = sinon.fake()
+        watcher.on("join", cb)
+        joinPartChannel.publish("join", [
+            "0x1234567812345678123456781234567812345678", // valid address
+            "0xD5478e81E5EBbDE8847F9424A18F993824312DEdasda", // invalid address
+            "0x1234567812345678123456781234567812345670", // another valid address
+        ])
+        await sleep(1000)
+
+        // invalid address should be missing, processing includes all valid addresses
+        assert(cb.calledOnceWithExactly(["0x1234567812345678123456781234567812345678", "0x1234567812345678123456781234567812345670"]))
+    })
+
     it("catches Transfer events", async () => {
         const cb = sinon.fake()
         watcher.on("tokensReceived", cb)

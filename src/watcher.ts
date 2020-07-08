@@ -144,7 +144,8 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         // TODO: cache only starting from given block (that operator/validator have loaded state from store)
         this.channel.on("message", (type, addresses, meta) => {
             this.log(`Message received: ${type} ${addresses}`)
-            const addressList = addresses.map(utils.getAddress)
+            const addressList = this.getValidAddresses(addresses)
+            if (!addressList.length) { return }
             const event = { type, addressList, timestamp: meta.messageId.timestamp }
             this.messageCache.push(event)
         })
@@ -158,8 +159,10 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
 
         // for messages from now on: add to cache but also replay directly to "realtime plasma"
         this.channel.on("message", async (type, addresses, meta) => {
-            // convert incoming addresses to checksum addresses
-            const addressList = addresses.map(utils.getAddress)
+            // validate & convert incoming addresses to checksum addresses
+            const addressList = this.getValidAddresses(addresses)
+            if (!addressList.length) { return }
+            addresses = addressList.map((addr) => addr.toLowerCase()) // convert back to regular case after validation
             const event = { type, addressList, timestamp: meta.messageId.timestamp }
             this.log(`Members ${type}: ${addressList}`)
             await replayOn(this.plasma, [event])
@@ -209,6 +212,18 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
 
         // TODO: maybe state saving function should create the state object instead of continuously mutating "state" member
         await this.saveState()
+    }
+
+    getValidAddresses(addresses = []) {
+        // validate & convert incoming addresses to checksum addresses
+        return addresses.map((address) => {
+            try {
+                return utils.getAddress(address)
+            } catch (err) {
+                // ignore invalid addresses
+                this.log(`Ignoring invalid address: ${address}: ${err}`)
+            }
+        }).filter(Boolean)
     }
 
     async saveState() {
