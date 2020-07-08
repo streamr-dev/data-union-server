@@ -406,7 +406,7 @@ module.exports = class MonoplasmaState {
      * @param {number} timestamp in seconds of NewCommit event
      */
     async storeBlock(blockNumber, timestamp) {
-        if (!Number.isSafeInteger(timestamp)) { throw new Error("Timestamp should be a positive Number, got: " + timestamp) }
+        if (!Number.isSafeInteger(timestamp) || timestamp < 1) { throw new Error("Timestamp should be a positive Number, got: " + timestamp) }
         if (!Number.isSafeInteger(blockNumber) || !(blockNumber > 0)) { throw new Error("blockNumber must be a positive integer")}
         const newerBlock = this.latestBlocks.find((block) => block.blockNumber >= blockNumber)
         if (newerBlock) {
