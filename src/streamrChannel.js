@@ -1,7 +1,7 @@
 const EventEmitter = require("events")
 const StreamrClient = require("streamr-client")
 const { utils: { computeAddress } } = require("ethers")
-const log = require("debug")("Streamr::dataunion::StreamrChannel")
+const debug = require("debug")
 
 const until = require("./utils/await-until")
 
@@ -45,6 +45,10 @@ module.exports = class StreamrChannel extends EventEmitter {
         if (streamrHttpUrl) { this.clientOptions.restUrl = streamrHttpUrl }
         this.joinPartStreamId = joinPartStreamId
         this.mode = State.CLOSED
+        this.log = debug("Streamr::dataunion::StreamrChannel").extend(`StreamId.${this.joinPartStreamId}`)
+        this.on("error", (error) => {
+            this.log(error)
+        })
     }
 
     /**
@@ -65,7 +69,8 @@ module.exports = class StreamrChannel extends EventEmitter {
         if (this.mode) { return Promise.reject(new Error(`Already started as ${this.mode}`))}
         if (!privateKey) { throw new Error("Must supply a private key to startServer") }
         this.ethereumAddress = computeAddress(privateKey)
-        log(`Starting server as ${this.ethereumAddress}`)
+        this.log = debug("Streamr::dataunion::StreamrChannel").extend(this.ethereumAddress) // change logger to prefix with eth address
+        this.log("Starting server")
 
         this.clientOptions.auth = { privateKey }
         this.client = new StreamrClient(this.clientOptions)
@@ -73,7 +78,7 @@ module.exports = class StreamrChannel extends EventEmitter {
 
         // TODO: throw if client doesn't have write permission to the stream
 
-        log(`Writing to stream ${JSON.stringify(this.stream.toObject())}`)
+        this.log("Writing to stream", this.stream.toObject())
         this.messageNumber = +Date.now()
         this.mode = State.SERVER
     }
@@ -86,6 +91,7 @@ module.exports = class StreamrChannel extends EventEmitter {
     async publish(type, addresses) {
         if (this.mode !== State.SERVER) { return Promise.reject(new Error("Must startServer() first!")) }
         if (typeof addresses === "string") { addresses = [addresses] }
+        this.log("Publishing", { type, addresses })
 
         return this.stream.publish({
             type,
@@ -101,7 +107,7 @@ module.exports = class StreamrChannel extends EventEmitter {
      * @returns {Promise<ResendResponseResent>} resolves when all events up to now are received
      */
     async listen(syncStartTimestampMs, playbackTimeoutMs = 600000) {
-        if (this.mode) { return Promise.reject(new Error(`Already started as ${this.mode}`))}
+        if (this.mode) { throw new Error(`Already started as ${this.mode}`) }
 
         // share the client on each Streamr server. Authentication doesn't matter since all joinPartStreams should be public
         if (!sharedClients[this.clientOptions.url]) {
@@ -113,22 +119,22 @@ module.exports = class StreamrChannel extends EventEmitter {
         // swash cache hack; TODO: generalize?
         if (this.joinPartStreamId === "szZk2t2JTZylrRwN6CYJNg") {
             try {
-                log(`Reading cached events for ${this.joinPartStreamId}`)
+                this.log(`Reading cached events for ${this.joinPartStreamId}`)
                 const rawCache = require(`../cache/stream-${this.joinPartStreamId}.json`)
-                log(`Found ${rawCache.length} events from cache`)
+                this.log(`Found ${rawCache.length} events from cache`)
                 const cachedEvents = rawCache.filter(e => e.timestamp >= syncStartTimestampMs)
                 if (cachedEvents.length < 1) {
-                    log("Nothing to play back")
+                    this.log("Nothing to play back")
                 } else {
-                    log(`Playing back ${cachedEvents.length} cached events`)
+                    this.log(`Playing back ${cachedEvents.length} cached events`)
                     for (const {type, addresses, timestamp} of cachedEvents) {
                         this.emit(type, addresses)
                         this.emit("message", type, addresses, { messageId: { timestamp } })
                     }
                     syncStartTimestampMs = cachedEvents.slice(-1)[0].timestamp + 1
                 }
-            } catch (e) {
-                log(`Error when reading from cache: ${e.stack}`)
+            } catch (err) {
+                this.log("Error when reading from cache", err)
             }
         }
 
@@ -145,7 +151,7 @@ module.exports = class StreamrChannel extends EventEmitter {
             self.emit("message", msg.type, addresses, meta)
         }
 
-        log(`Starting playback of ${this.stream.id} from ${syncStartTimestampMs}(${new Date(syncStartTimestampMs).toString()})`)
+        this.log(`Starting playback from ${syncStartTimestampMs}(${new Date(syncStartTimestampMs).toString()})`)
 
         const queue = []
         const sub = this.client.subscribe({
@@ -157,28 +163,35 @@ module.exports = class StreamrChannel extends EventEmitter {
                 },
             },
         }, (msg, meta) => {
-            const len = queue.push({msg, meta})
-            log(`Got message ${JSON.stringify(msg)}, queue length = ${len}}`)
+            const len = queue.push({ msg, meta })
+            this.log(`Got message, queue length = ${len}}`, msg)
         })
 
         sub.on("error", this.emit.bind(this, "error"))
 
         await new Promise((done, fail) => {
-            sub.on("error", fail)
+            sub.once("error", fail)
             //sub.on("resent", done)
             //sub.on("no_resend", done)
             // possible substitute to two lines above:
-            sub.on("initial_resend_done", done)
-            setTimeout(fail, playbackTimeoutMs)
+            const t = setTimeout(() => fail(new Error(`Playback timed out after ${playbackTimeoutMs}ms for stream: ${this.stream.id}`)), playbackTimeoutMs)
+            sub.once("initial_resend_done", () => {
+                clearTimeout(t)
+                done()
+            })
         })
-        log(`Playback of ${this.stream.id} done`)
+        this.log("Playback done.")
 
         // TODO: remove this hack and just emit messages directly from realtime stream
         this.consumerInterval = setInterval(() => {
             if (queue.length < 1) { return }
             const {msg, meta} = queue.shift()
-            log(`Sending message ${JSON.stringify(msg)}, queue length = ${queue.length}}`)
-            emitMessage(msg, meta)
+            this.log(`Sending message, queue length = ${queue.length}}`, msg)
+            try {
+                emitMessage(msg, meta)
+            } catch (error) {
+                this.log("Error sending message.", { error, msg })
+            }
         }, 10)
 
         // fix a problem caused by the above hack by waiting until queue is empty

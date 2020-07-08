@@ -98,6 +98,7 @@ module.exports = class DataUnionServer {
         const startAllTime = Date.now()
         await pAll(addresses.map((contractAddress) => () => {
             const startEventTime = Date.now()
+            this.log(`Playing back ${contractAddress} operator change event...`)
             return this.onOperatorChangedEventAt(contractAddress).catch((err) => {
                 // TODO: while developing, 404 for joinPartStream could just mean
                 //   mysql has been emptied by streamr-ganache docker not,
@@ -111,6 +112,7 @@ module.exports = class DataUnionServer {
                 numErrors++
             }).then(() => {
                 numComplete++
+                this.log(`Played back ${contractAddress} operator change event.`)
                 this.log(`Event ${numComplete} of ${total} processed in ${Date.now() - startEventTime}ms, ${Math.round((numComplete / total) * 100)}% complete.`)
             })
         }), { concurrency: 6 })
