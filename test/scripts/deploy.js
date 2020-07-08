@@ -2,7 +2,7 @@ const fetch = require("node-fetch")
 const { spawn } = require("child_process")
 const assert = require("assert")
 
-const log = require("debug")("Streamr::Streamr::dataunion::test::integration::deploy-dataUnion-script")
+const log = require("debug")("Streamr::dataunion::test::integration::deploy-dataunion-script")
 
 const {
     Contract,
