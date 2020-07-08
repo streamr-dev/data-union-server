@@ -145,7 +145,6 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         this.channel.on("message", (type, addresses, meta) => {
             this.log(`Message received: ${type} ${addresses}`)
             const addressList = this.getValidAddresses(addresses)
-            if (!addressList.length) { return }
             const event = { type, addressList, timestamp: meta.messageId.timestamp }
             this.messageCache.push(event)
         })
@@ -161,7 +160,6 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         this.channel.on("message", async (type, addresses, meta) => {
             // validate & convert incoming addresses to checksum addresses
             const addressList = this.getValidAddresses(addresses)
-            if (!addressList.length) { return }
             addresses = addressList.map((addr) => addr.toLowerCase()) // convert back to regular case after validation
             const event = { type, addressList, timestamp: meta.messageId.timestamp }
             this.log(`Members ${type}: ${addressList}`)
