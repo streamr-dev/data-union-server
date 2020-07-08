@@ -20,7 +20,7 @@ const {
     STREAMR_HTTP_URL,
 } = process.env
 
-const log = require("debug")("CPS::scripts::join_dataunion")
+const log = require("debug")("Streamr::dataunion::scripts::join_dataunion")
 const error = (e, ...args) => {
     console.error(e.stack, ...args)
     process.exit(1)
