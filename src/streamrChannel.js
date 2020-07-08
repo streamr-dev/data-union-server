@@ -114,13 +114,19 @@ module.exports = class StreamrChannel extends EventEmitter {
         if (this.joinPartStreamId === "szZk2t2JTZylrRwN6CYJNg") {
             try {
                 log(`Reading cached events for ${this.joinPartStreamId}`)
-                const cachedEvents = require(`../cache/stream-${this.joinPartStreamId}.json`)
-                log(`Playing back ${cachedEvents.length} cached events`)
-                for (const {type, addresses, timestamp} of cachedEvents) {
-                    this.emit(type, addresses)
-                    this.emit("message", type, addresses, { messageId: { timestamp } })
+                const rawCache = require(`../cache/stream-${this.joinPartStreamId}.json`)
+                log(`Found ${rawCache.length} events from cache`)
+                const cachedEvents = rawCache.filter(e => e.timestamp >= syncStartTimestamp)
+                if (cachedEvents.length < 1) {
+                    log("Nothing to play back")
+                } else {
+                    log(`Playing back ${cachedEvents.length} cached events`)
+                    for (const {type, addresses, timestamp} of cachedEvents) {
+                        this.emit(type, addresses)
+                        this.emit("message", type, addresses, { messageId: { timestamp } })
+                    }
+                    syncStartTimestamp = cachedEvents.slice(-1)[0].timestamp + 1
                 }
-                syncStartTimestamp = cachedEvents.slice(-1)[0].timestamp + 1
             } catch (e) {
                 log(`Error when reading from cache: ${e.stack}`)
             }
