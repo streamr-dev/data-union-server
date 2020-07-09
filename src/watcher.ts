@@ -122,7 +122,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         if (await this.store.hasLatestBlock()) {
             this.log("Getting latest block from store")
             lastBlock = await this.store.getLatestBlock()
-            this.log(`Got ${JSON.stringify(lastBlock)}`)
+            this.log("Got", lastBlock)
         }
         this.log(`Syncing Monoplasma state starting from block ${lastBlock.blockNumber} (t=${lastBlock.timestamp}) with ${lastBlock.members.length} members`)
         const playbackStartingTimestampSeconds = lastBlock.timestamp || lastBlock.blockNumber && await this.getBlockTimestamp(lastBlock.blockNumber) || 0
@@ -148,11 +148,11 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             const event = { type, addressList, timestamp: meta.messageId.timestamp }
             this.messageCache.push(event)
         })
+        this.channel.on("error", this.log)
         await this.channel.listen(playbackStartingTimestampMs)
         this.log(`Playing back ${this.messageCache.length} messages from joinPartStream`)
 
         // messages are now cached => do the Ethereum event playback, sync up this.plasma
-        this.channel.on("error", this.log)
         const currentBlock = await this.eth.getBlockNumber()
         this.state.lastPublishedBlock = await this.playbackUntilBlock(currentBlock, this.plasma)
 
