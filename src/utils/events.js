@@ -20,7 +20,7 @@ async function replayEvent(plasma, event) {
             log(`${revenueBN} tokens received @ block ${event.blockNumber}`)
             plasma.addRevenue(revenueBN)
         } break
-        // event BlockCreated(uint blockNumber, bytes32 rootHash, string ipfsHash);
+        // event NewCommit(uint blockNumber, bytes32 rootHash, string ipfsHash);
         case "NewCommit": {
             const blockNumber = +event.args.blockNumber
             const eventTimestampSeconds = event.timestamp / 1000
@@ -35,7 +35,6 @@ async function replayEvent(plasma, event) {
             const { addressList } = event
             plasma.removeMembers(addressList)
         } break
-        // TODO: this event is not yet implemented in dataunion (it is in Monoplasma...)
         case "OwnershipTransferred": {
             const { previousOwner, newOwner } = event.args
             log(`Owner (admin) address changed to ${newOwner} from ${previousOwner} @ block ${event.blockNumber}`)
