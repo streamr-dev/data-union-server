@@ -12,10 +12,11 @@ module.exports = class MonoplasmaOperator {
         this.wallet = wallet;
         this.watcher = new MonoplasmaWatcher(wallet.provider, joinPartChannel, store);
         this.lastSavedBlock = null;
+        this.log = debug("Streamr::dataunion::operator");
     }
     async start(config) {
         throwIfBadAddress(config.operatorAddress, "MonoplasmaOperator argument config.operatorAddress");
-        this.log = debug("Streamr::dataunion::operator::" + config.contractAddress);
+        this.log = this.log.extend(config.contractAddress);
         this.finalityWaitPeriodSeconds = config.finalityWaitPeriodSeconds || 1; // TODO: in production || 3600
         this.address = config.operatorAddress;
         this.gasPrice = config.gasPrice || 4000000000; // 4 gwei

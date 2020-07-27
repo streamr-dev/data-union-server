@@ -122,11 +122,11 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         if (await this.store.hasLatestBlock()) {
             this.log("Getting latest block from store")
             lastBlock = await this.store.getLatestBlock()
-            this.log(`Got ${JSON.stringify(lastBlock)}`)
+            this.log("Got", lastBlock)
         }
         this.log(`Syncing Monoplasma state starting from block ${lastBlock.blockNumber} (t=${lastBlock.timestamp}) with ${lastBlock.members.length} members`)
-        const playbackStartingTimestampMs = lastBlock.timestamp || lastBlock.blockNumber && await this.getBlockTimestamp(lastBlock.blockNumber) || 0
-
+        const playbackStartingTimestampSeconds = lastBlock.timestamp || lastBlock.blockNumber && await this.getBlockTimestamp(lastBlock.blockNumber) || 0
+        const playbackStartingTimestampMs = playbackStartingTimestampSeconds * 1000
         this.plasma = new MonoplasmaState({
             blockFreezeSeconds: this.state.blockFreezeSeconds,
             initialMembers: lastBlock.members,
@@ -134,7 +134,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             adminAddress: this.state.adminAddress,
             adminFeeFraction: this.state.adminFee,
             initialBlockNumber: lastBlock.blockNumber,
-            initialTimestamp: playbackStartingTimestampMs / 1000,
+            initialTimestamp: playbackStartingTimestampSeconds,
             initialTotalEarnings: lastBlock.totalEarnings,
         })
 
@@ -144,22 +144,23 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         // TODO: cache only starting from given block (that operator/validator have loaded state from store)
         this.channel.on("message", (type, addresses, meta) => {
             this.log(`Message received: ${type} ${addresses}`)
-            const addressList = addresses.map(utils.getAddress)
+            const addressList = this.getValidAddresses(addresses)
             const event = { type, addressList, timestamp: meta.messageId.timestamp }
             this.messageCache.push(event)
         })
+        this.channel.on("error", this.log)
         await this.channel.listen(playbackStartingTimestampMs)
         this.log(`Playing back ${this.messageCache.length} messages from joinPartStream`)
 
         // messages are now cached => do the Ethereum event playback, sync up this.plasma
-        this.channel.on("error", this.log)
         const currentBlock = await this.eth.getBlockNumber()
         this.state.lastPublishedBlock = await this.playbackUntilBlock(currentBlock, this.plasma)
 
         // for messages from now on: add to cache but also replay directly to "realtime plasma"
         this.channel.on("message", async (type, addresses, meta) => {
-            // convert incoming addresses to checksum addresses
-            const addressList = addresses.map(utils.getAddress)
+            // validate & convert incoming addresses to checksum addresses
+            const addressList = this.getValidAddresses(addresses)
+            addresses = addressList.map((addr) => addr.toLowerCase()) // convert back to regular case after validation
             const event = { type, addressList, timestamp: meta.messageId.timestamp }
             this.log(`Members ${type}: ${addressList}`)
             await replayOn(this.plasma, [event])
@@ -209,6 +210,18 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
 
         // TODO: maybe state saving function should create the state object instead of continuously mutating "state" member
         await this.saveState()
+    }
+
+    getValidAddresses(addresses = []) {
+        // validate & convert incoming addresses to checksum addresses
+        return addresses.map((address) => {
+            try {
+                return utils.getAddress(address)
+            } catch (err) {
+                // ignore invalid addresses
+                this.log(`Ignoring invalid address: ${address}: ${err}`)
+            }
+        }).filter(Boolean)
     }
 
     async saveState() {

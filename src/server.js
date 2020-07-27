@@ -98,6 +98,7 @@ module.exports = class DataUnionServer {
         const startAllTime = Date.now()
         await pAll(addresses.map((contractAddress) => () => {
             const startEventTime = Date.now()
+            this.log(`Playing back ${contractAddress} operator change event...`)
             return this.onOperatorChangedEventAt(contractAddress).catch((err) => {
                 // TODO: while developing, 404 for joinPartStream could just mean
                 //   mysql has been emptied by streamr-ganache docker not,
@@ -111,6 +112,7 @@ module.exports = class DataUnionServer {
                 numErrors++
             }).then(() => {
                 numComplete++
+                this.log(`Played back ${contractAddress} operator change event.`)
                 this.log(`Event ${numComplete} of ${total} processed in ${Date.now() - startEventTime}ms, ${Math.round((numComplete / total) * 100)}% complete.`)
             })
         }), { concurrency: 6 })
@@ -129,12 +131,8 @@ module.exports = class DataUnionServer {
         if (!contract.version) { return 0 }
         return contract.version().then(v => v.toNumber()).catch(e => {
             // there is no version getter in the contract, return zero
-            // ethers+mainnet seems to say "call exception"
-            // ganache seems to say "revert"
-            if (e.message.startsWith("call exception") || e.message.endsWith("revert")) {
-                return 0
-            }
-            throw e
+            this.error(`Error message "${e.message}" calling version(). Method may not exist in old DU contract. Returning 0.`)
+            return 0
         })
     }
 

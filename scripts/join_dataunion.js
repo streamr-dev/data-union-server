@@ -20,7 +20,7 @@ const {
     STREAMR_HTTP_URL,
 } = process.env
 
-const log = require("debug")("CPS::scripts::join_dataunion")
+const log = require("debug")("Streamr::dataunion::scripts::join_dataunion")
 const error = (e, ...args) => {
     console.error(e.stack, ...args)
     process.exit(1)
@@ -55,8 +55,7 @@ async function start() {
 
     log(`secret: ${SECRET}`)
     log(`Adding https://streamr.com/api/v1/dataunions/${dataUnionAddress}/members/${memberAddress} ...`)
-    //const res = await client.joinDataUnion(dataUnionAddress, SECRET)
-    const res = await client.joinCommunity(dataUnionAddress, SECRET)
+    const res = await client.joinDataUnion(dataUnionAddress, SECRET)
 
     log(`dataUnion join sent, response: ${JSON.stringify(res)}`)
     log(`Network was ${JSON.stringify(network)}`)
