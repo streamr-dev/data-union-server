@@ -229,8 +229,7 @@ describe.skip("Data Union demo but through a running E&E instance", () => {
             await transferTx.wait(2)
 
             // check total revenue
-            //const res3 = await client.getDataUnionStats(dataUnion.address)
-            const res3 = await client.getCommunityStats(dataUnion.address)
+            const res3 = await client.getDataUnionStats(dataUnion.address)
             log(`   Total revenue: ${formatEther(res3.totalEarnings)}`)
         }
 
