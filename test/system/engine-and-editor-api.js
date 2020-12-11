@@ -141,7 +141,7 @@ describe("Data Union demo but through a running E&E instance", () => {
         const sessionToken = await client.session.getSessionToken()
         await client.ensureDisconnected()
         log("Session token: " + sessionToken)
-        assert(sessionToken)
+        assert(sessionToken, "Opening session failed!")
 
         // wrap fetch; with the Authorization header the noise is just too much...
         async function GET(url) {
@@ -179,7 +179,7 @@ describe("Data Union demo but through a running E&E instance", () => {
         const streamCreateResponse = await POST("/streams", stream)
         log(`     Response: ${JSON.stringify(streamCreateResponse)}`)
         const streamId = streamCreateResponse.id
-        assert(streamId)
+        assert(streamId, "Creating stream failed!")
 
         log("1.3) Create product in the database")
         const product = {
@@ -200,7 +200,7 @@ describe("Data Union demo but through a running E&E instance", () => {
         const productCreateResponse = await POST("/products", product)
         log(`     Response: ${JSON.stringify(productCreateResponse)}`)
         const productId = productCreateResponse.id
-        assert(productId)
+        assert(productId, "Creating product failed!")
 
         log("1.4) Create joinPartStream")   // done inside deployContract below
         log("1.5) Deploy data union contract")
