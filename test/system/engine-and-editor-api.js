@@ -136,7 +136,9 @@ describe("Data Union demo but through a running E&E instance", () => {
             url: STREAMR_WS_URL,
             restUrl: STREAMR_HTTP_URL,
         })
-        const sessionToken = await client.session.sessionTokenPromise
+        await client.ensureConnected()
+        await sleep(1000)
+        const sessionToken = await client.session.getSessionToken()
         await client.ensureDisconnected()
         log("Session token: " + sessionToken)
         assert(sessionToken)
