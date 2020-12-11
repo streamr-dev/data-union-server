@@ -124,9 +124,9 @@ describe("MonoplasmaWatcher", () => {
         const earnings = {}
         watcher.plasma.members.forEach(m => {
             earnings[m.address] = m.earnings
-            console.log(JSON.stringify(m))
+            log(JSON.stringify(m))
         })
-        console.log("Earnings ", JSON.stringify(earnings))
+        log("Earnings ", JSON.stringify(earnings))
         for (let b = 0, j = 0; b < batchCount; b++) {
             for (let i = 0; i < batchSize; i++, j++) { // TODO
                 const key = "0x1" + j.toString().padStart(63, "0")
