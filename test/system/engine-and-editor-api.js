@@ -239,33 +239,44 @@ describe("Data Union demo but through a running E&E instance", () => {
         ]
 
         log("2.1) Add data union secret")
-        const secretCreateResponse = await POST(`/dataunions/${dataUnionAddress}/secrets`, {
-            name: "PLEASE DELETE ME, I'm a data union Product server test secret",
-        })
-        log(`     Response: ${JSON.stringify(secretCreateResponse)}`)
-        const { secret } = secretCreateResponse
+        let secret
+        for (let retrySecret = 0; retrySecret < 10; retrySecret++) {
+            const secretCreateResponse = await POST(`/dataunions/${dataUnionAddress}/secrets`, {
+                name: "PLEASE DELETE ME, I'm a data union Product server test secret",
+            })
+            log(`     Response: ${JSON.stringify(secretCreateResponse)}`)
+            secret = secretCreateResponse.secret
+            if (secret) { break }
+            await sleep(retrySecret * 100)
+        }
+        assert(secret, "Setting data union secret failed!")
 
         log("2.2) Send JoinRequests")
-        for (const privateKey of memberKeys) {
-            const memberAddress = computeAddress(privateKey)
+        for (const key of memberKeys) {
+            const memberAddress = computeAddress(key)
             const tempClient = new StreamrClient({
-                auth: { privateKey },
+                auth: { privateKey: key },
                 url: STREAMR_WS_URL,
                 restUrl: STREAMR_HTTP_URL,
             })
-            const joinResponse = await POST(`/dataunions/${dataUnionAddress}/joinRequests`, {
-                memberAddress,
-                secret,
-                metadata: { test: "PLEASE DELETE ME, I'm a data union Product server test joinRequest" },
-            }, await tempClient.session.sessionTokenPromise)
+            const memberSessionToken = await tempClient.session.getSessionToken()
+            for (let retryJoin = 0; retryJoin < 10; retryJoin++) {
+                const joinResponse = await POST(`/dataunions/${dataUnionAddress}/joinRequests`, {
+                    memberAddress,
+                    secret,
+                    metadata: { test: "PLEASE DELETE ME, I'm a data union Product server test joinRequest" },
+                }, memberSessionToken)
+                log(`     Response: ${JSON.stringify(joinResponse)}`)
+                if (!joinResponse.code) { break }   // indicates an error
+                await sleep(retryJoin * 100)
+            }
             await tempClient.ensureDisconnected()
-            log(`     Response: ${JSON.stringify(joinResponse)}`)
         }
 
         log("2.3) Wait until members have been added")
         let members = []
         sleepTime = 1000
-        while (!(members.length >= 10)) {
+        while (members.length < 10) {
             await sleep(sleepTime)
             members = await GET(`/dataunions/${dataUnionAddress}/members`)
             log("members: ", members)
