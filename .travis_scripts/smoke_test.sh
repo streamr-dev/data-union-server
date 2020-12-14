@@ -12,6 +12,9 @@ git clone https://github.com/streamr-dev/streamr-docker-dev.git
 sed -i "s#$OWNER/$IMAGE_NAME:dev#$OWNER/$IMAGE_NAME:local#g" "$TRAVIS_BUILD_DIR/streamr-docker-dev/docker-compose.override.yml"
 
 ## Start up services needed
+"$TRAVIS_BUILD_DIR/streamr-docker-dev/streamr-docker-dev/bin.sh" start --wait parity-node0
+
+## Start up DUS
 "$TRAVIS_BUILD_DIR/streamr-docker-dev/streamr-docker-dev/bin.sh" start data-union-server
 
 ## Wait for the service to come online and test
