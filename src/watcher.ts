@@ -163,7 +163,7 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             const event = { type, addressList, timestamp: meta.messageId.timestamp }
             this.log(`Members ${type}: ${addressList}`)
             await replayOn(this.plasma, [event])
-            this.emit(type, addresses)
+            this.emit(type, addressList)
         })
 
         this.log("Listening to Ethereum events...")

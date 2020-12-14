@@ -5,7 +5,7 @@ const StreamrClient = require("streamr-client")
 const {
     getDefaultProvider,
     providers: { JsonRpcProvider },
-    utils: { computeAddress, getAddress },
+    utils: { getAddress },
 } = require("ethers")
 
 const {
