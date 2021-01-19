@@ -33,7 +33,7 @@ const {
     STORE_DIR,
     QUIET,
     GAS_PRICE_GWEI,
-    POLLING_INTERVAL_MS,
+    ETHEREUM_POLLING_INTERVAL_MS,
     //RESET,
 
     // Safety parameter
@@ -92,8 +92,8 @@ async function start() {
         throw new Error("Please provide either ETHEREUM_SERVER or ETHEREUM_NETWORK environment variable")
     }
 
-    if (POLLING_INTERVAL_MS > 0) {
-        provider.pollingInterval = +POLLING_INTERVAL_MS
+    if (ETHEREUM_POLLING_INTERVAL_MS > 0) {
+        provider.pollingInterval = +ETHEREUM_POLLING_INTERVAL_MS
     }
 
     const network = await provider.getNetwork().catch(e => {
