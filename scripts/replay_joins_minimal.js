@@ -5,7 +5,7 @@ new StreamrClient({
     retryResendAfter: 1000,
     orderMessages: false,
 }).resend({
-    stream: "gT4g0ZkiQ9GB_eWKN7DM9w",
+    stream: "szZk2t2JTZylrRwN6CYJNg",
     resend: {
         from: {
             timestamp: 1,
