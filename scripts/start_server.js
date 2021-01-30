@@ -125,7 +125,9 @@ async function start() {
         app.use(cors())
         app.use(bodyParser.json({limit: "50mb"}))
 
-        app.get("/config", (req, res) => { res.send(config) }) // TODO: remove
+        // TODO: remove; this here just for tests, but maybe they could get the config some other way
+        // also occasionally useful for debugging in production, but could be an issue if exposed outside (has streamr urls)
+        app.get("/config", (req, res) => { res.send(config) })
 
         const serverRouter = getServerRouter(server)
         app.use("/", serverRouter)
