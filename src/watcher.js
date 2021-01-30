@@ -164,27 +164,6 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
             await replayOn(this.plasma, [event]);
             this.emit("tokensReceived", event);
         });
-        /*
-        // TODO: ethers.js re-org handling
-        this.tokenFilter.on("changed", event => {
-            const i = this.eventQueue.findIndex(e => e.blockNumber === event.blockNumber && e.transactionIndex === event.transactionIndex)
-            if (i > -1) {
-                this.log(`Chain re-organization, event removed: ${JSON.stringify(event)}`)
-                this.eventQueue.splice(i, 1)
-            } else {
-                // TODO: how to handle? This might invalidate old commits or mess the state,
-                //   perhaps need to resync the whole thing (restart with config.reset=true),
-                this.error(`Event removed in reorg, but not found in eventQueue: ${JSON.stringify(event)}`)
-            }
-        })
-        this.tokenFilter.on("error", this.error)
-        */
-        this.eth.on("block", blockNumber => {
-            if (blockNumber % 10 === 0) {
-                this.log(`Block ${blockNumber} observed`);
-            }
-            this.state.lastObservedBlockNumber = blockNumber;
-        });
         // TODO: maybe state saving function should create the state object instead of continuously mutating "state" member
         await this.saveState();
     }
