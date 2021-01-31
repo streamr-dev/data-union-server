@@ -141,10 +141,14 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         // replay and cache messages until in sync
         // TODO: cache only starting from given block (that operator/validator have loaded state from store)
         this.channel.on("message", (type, addresses, meta) => {
-            this.log(`Message received: ${type} ${addresses}`)
+            this.log(`Message received: ${type} ${addresses} ${JSON.stringify(meta)}`)
             const addressList = this.getValidAddresses(addresses)
-            const event = { type, addressList, timestamp: meta.messageId.timestamp }
-            this.messageCache.push(event)
+            if (addressList.length < 1) {
+                this.log("EMPTY LIST!")
+            } else {
+                const event = { type, addressList, timestamp: meta.messageId.timestamp }
+                this.messageCache.push(event)
+            }
         })
         this.channel.on("error", this.log)
         await this.channel.listen(playbackStartingTimestampMs)
@@ -158,10 +162,14 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         this.channel.on("message", async (type, addresses, meta) => {
             // validate & convert incoming addresses to checksum addresses
             const addressList = this.getValidAddresses(addresses)
-            const event = { type, addressList, timestamp: meta.messageId.timestamp }
-            this.log(`Members ${type}: ${addressList}`)
-            await replayOn(this.plasma, [event])
-            this.emit(type, addressList)
+            if (addressList.length < 1) {
+                this.log(`Empty message: ${type} ${addresses} ${JSON.stringify(meta)}`)
+            } else {
+                const event = { type, addressList, timestamp: meta.messageId.timestamp }
+                this.log(`Members ${type}: ${addressList}`)
+                await replayOn(this.plasma, [event])
+                this.emit(type, addressList)
+            }
         })
 
         this.log("Listening to Ethereum events...")
@@ -190,6 +198,14 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
 
     getValidAddresses(addresses = []) {
         // validate & convert incoming addresses to checksum addresses
+        if (!addresses.map) {
+            if (typeof addresses === "string") {
+                addresses = [addresses]
+            } else {
+                this.log(`Bad message.addresses: ${JSON.stringify(addresses)}`)
+                return []
+            }
+        }
         return addresses.map((address) => {
             try {
                 return utils.getAddress(address)
