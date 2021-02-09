@@ -173,24 +173,33 @@ module.exports = class MonoplasmaWatcher extends EventEmitter {
         })
 
         this.log("Listening to Ethereum events...")
-        this.contract.on(this.adminFeeFilter, async (adminFee, event) => {
-            this.log(`Admin fee changed to ${utils.formatEther(adminFee)} at block ${event.blockNumber}`)
-            event.timestamp = await this.getBlockTimestamp(event.blockNumber)
-            await replayOn(this.plasma, [event])
-            this.emit("adminFeeChanged", event)
-        })
-        this.contract.on(this.blockCreateFilter, async (blockNumber, rootHash, ipfsHash, event) => {
-            this.log(`Observed creation of block ${+blockNumber} at block ${event.blockNumber} (root ${rootHash}, ipfs "${ipfsHash}")`)
-            event.timestamp = await this.getBlockTimestamp(event.blockNumber)
-            //this.state.lastPublishedBlock = event.args
-            this.emit("blockCreated", event)
-        })
-        this.token.on(this.tokenTransferFilter, async (to, from, amount, event) => {
-            this.log(`Received ${utils.formatEther(event.args.value)} DATA`)
-            event.timestamp = await this.getBlockTimestamp(event.blockNumber)
-            await replayOn(this.plasma, [event])
-            this.emit("tokensReceived", event)
-        })
+        function reloadListeners(self) {
+            self.contract.removeAllListeners("AdminFeeChanged")
+            self.contract.removeAllListeners("NewCommit")
+            self.token.removeAllListeners("Transfer")
+
+            self.contract.on(self.adminFeeFilter, async (adminFee, event) => {
+                self.log(`Admin fee changed to ${utils.formatEther(adminFee)} at block ${event.blockNumber}`)
+                event.timestamp = await self.getBlockTimestamp(event.blockNumber)
+                await replayOn(self.plasma, [event])
+                self.emit("adminFeeChanged", event)
+            })
+            self.contract.on(self.blockCreateFilter, async (blockNumber, rootHash, ipfsHash, event) => {
+                self.log(`Observed creation of block ${+blockNumber} at block ${event.blockNumber} (root ${rootHash}, ipfs "${ipfsHash}")`)
+                event.timestamp = await self.getBlockTimestamp(event.blockNumber)
+                //self.state.lastPublishedBlock = event.args
+                self.emit("blockCreated", event)
+            })
+            self.token.on(self.tokenTransferFilter, async (to, from, amount, event) => {
+                self.log(`Received ${utils.formatEther(event.args.value)} DATA`)
+                event.timestamp = await self.getBlockTimestamp(event.blockNumber)
+                await replayOn(self.plasma, [event])
+                self.emit("tokensReceived", event)
+            })
+        }
+        const self = this
+        reloadListeners(self)
+        setInterval(() => reloadListeners(self), 1000*60*10) // 10 minutes
 
         // TODO: maybe state saving function should create the state object instead of continuously mutating "state" member
         await this.saveState()
