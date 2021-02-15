@@ -1,2 +1,6 @@
 src/operator.js
 src/watcher.js
+
+# for some crazy reason eslint fails to parse object spread { ... }
+# could be because of husky (see https://stackoverflow.com/a/58285748)
+scripts/parse_stream_to_json.js
