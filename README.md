@@ -1,6 +1,6 @@
 # Streamr Data Union server
 
-[![Build Status](https://travis-ci.com/streamr-dev/data-union-server.svg?token=9unddqKugX2cPcyhtVxp&branch=master)](https://travis-ci.com/streamr-dev/data-union-server)
+**Warning: this repository is related to Data Unions framework version 1, which is now obsolete. From version 2.0 onwards, the framework no longer requires this centralized server component, and runs fully on-chain instead. You can find the smart contracts [here](https://github.com/streamr-dev/data-union).**
 
 # Running
 
